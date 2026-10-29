@@ -37,10 +37,10 @@
 - [x] `frontend/`, `backend/`, `database/`, `docs/` 폴더 존재
 - [x] `.gitignore`, `backend/.env.example` 존재
 - [x] README, MVP, PRD, SPEC, PLAN 문서 작성
-- [ ] `AGENTS.md` 작업 규칙 작성
-- [ ] 현재 폴더에 Git 저장소 초기화
-- [ ] 비밀값·원천 대용량 파일이 Git 대상에서 제외되는지 확인
-- [ ] 첫 커밋 생성
+- [x] `AGENTS.md` 작업 규칙 작성
+- [x] 현재 폴더의 Git 저장소와 GitHub 원격 연결 확인
+- [x] 비밀값·원천 대용량 파일이 Git 대상에서 제외되는지 확인
+- [x] 첫 커밋과 Phase 0 작업 규칙 커밋 확인
 
 **작업:**
 
@@ -262,8 +262,8 @@
 
 | Phase | 상태 |
 | --- | --- |
-| Phase 0. 프로젝트 기준선과 Git 준비 | 일부 준비됨, 구현 전 |
+| Phase 0. 프로젝트 기준선과 Git 준비 | 완료 |
 | Phase 1. 원천 데이터 수집과 go/no-go 검증 | 점포·매출·영역 확인, 인구 대기 |
 | Phase 2~8 | 시작 전 |
 
-다음 실행 단계는 **Phase 0**입니다. Phase 0 완료와 첫 저장점을 확인한 뒤 Phase 1의 인구 API 연결 검사로 넘어갑니다.
+다음 실행 단계는 **Phase 1**입니다. 먼저 인구 API를 `--check` 모드로 호출해 서비스명과 실제 응답 컬럼을 확인합니다.

@@ -1,4 +1,4 @@
-import type { ComparisonResponse, TradeArea } from "./types";
+import type { ChecklistResponse, ComparisonResponse, EvidenceResponse, TradeArea } from "./types";
 
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -19,5 +19,17 @@ export async function fetchComparison(codes: string[], signal?: AbortSignal): Pr
     throw new Error(body?.detail || "비교 정보를 불러오지 못했습니다.");
   }
   return response.json() as Promise<ComparisonResponse>;
+}
+
+export async function fetchEvidence(comparisonId: string, metricKey: string, signal?: AbortSignal): Promise<EvidenceResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/comparisons/${comparisonId}/evidence/${metricKey}`, { signal });
+  if (!response.ok) throw new Error("지표 근거를 불러오지 못했습니다.");
+  return response.json() as Promise<EvidenceResponse>;
+}
+
+export async function fetchChecklist(signal?: AbortSignal): Promise<ChecklistResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/field-checklist`, { signal });
+  if (!response.ok) throw new Error("현장 질문을 불러오지 못했습니다.");
+  return response.json() as Promise<ChecklistResponse>;
 }
 

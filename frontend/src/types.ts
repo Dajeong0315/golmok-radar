@@ -36,3 +36,33 @@ export type ComparisonResponse = {
   metrics: ComparisonMetric[];
 };
 
+export type EvidenceArea = {
+  trade_area_code: string;
+  trade_area_name: string;
+  status: "available" | "unavailable";
+  value: number | null;
+  reason: string | null;
+  filter: Record<string, string>;
+  numerator: number | null;
+  denominator: number | null;
+};
+
+export type EvidenceResponse = {
+  metric_key: string;
+  label: string;
+  unit: string;
+  dataset_name: string;
+  provider: string;
+  source_file: string;
+  fetched_at: string | null;
+  quarter_code: string;
+  formula: string | null;
+  rounding: string | null;
+  areas: EvidenceArea[];
+};
+
+export type ChecklistResponse = {
+  notice: string;
+  items: Array<{ category: string; question: string }>;
+};
+

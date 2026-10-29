@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { fetchComparison } from "./api";
+import { fetchChecklist, fetchComparison } from "./api";
 import { formatMetricValue, METRIC_GROUPS } from "./comparison";
-import type { ComparisonResponse } from "./types";
+import { EvidenceDrawer } from "./EvidenceDrawer";
+import type { ChecklistResponse, ComparisonResponse } from "./types";
 
 type Props = { codes: string[] };
 
 export function ComparisonPage({ codes }: Props) {
   const [data, setData] = useState<ComparisonResponse | null>(null);
+  const [checklist, setChecklist] = useState<ChecklistResponse | null>(null);
+  const [evidenceKey, setEvidenceKey] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -18,6 +21,12 @@ export function ComparisonPage({ codes }: Props) {
     });
     return () => controller.abort();
   }, [codes.join(",")]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchChecklist(controller.signal).then(setChecklist).catch(() => undefined);
+    return () => controller.abort();
+  }, []);
 
   const metrics = useMemo(() => new Map(data?.metrics.map((metric) => [metric.metric_key, metric]) || []), [data]);
 
@@ -55,7 +64,7 @@ export function ComparisonPage({ codes }: Props) {
                     <tr className="metric-group" key={`${group.title}-heading`}><th colSpan={data.trade_areas.length + 1}>{group.title}</th></tr>,
                     ...rows.map((metric) => metric && (
                       <tr key={metric.metric_key}>
-                        <th scope="row"><strong>{metric.label}</strong><small>{metric.unit}</small></th>
+                        <th scope="row"><strong>{metric.label}</strong><small>{metric.unit}</small><button className="evidence-button" onClick={() => setEvidenceKey(metric.metric_key)}>근거 보기</button></th>
                         {data.trade_areas.map((area) => {
                           const item = metric.values.find((value) => value.trade_area_code === area.code);
                           const unavailable = !item || item.status !== "available" || item.value === null;
@@ -73,7 +82,15 @@ export function ComparisonPage({ codes }: Props) {
           </div>
           <p className="scroll-hint">화면이 좁으면 표를 좌우로 움직여 모든 상권을 확인할 수 있습니다.</p>
         </section>
+
+        {checklist ? <section className="checklist-section" aria-labelledby="checklist-title">
+          <div className="checklist-intro"><p className="eyebrow">FIELD CHECK</p><h2 id="checklist-title">숫자 밖의 조건은<br />현장에서 확인하세요.</h2><p>{checklist.notice}</p></div>
+          <ol className="checklist-grid">
+            {checklist.items.map((item, index) => <li key={item.question}><span>0{index + 1}</span><small>{item.category}</small><strong>{item.question}</strong></li>)}
+          </ol>
+        </section> : null}
       </main>
+      {evidenceKey ? <EvidenceDrawer comparisonId={data.comparison_id} metricKey={evidenceKey} onClose={() => setEvidenceKey(null)} /> : null}
     </div>
   );
 }

@@ -193,3 +193,17 @@ def test_rent_benchmark_does_not_present_quarterly_statistics_as_live_listing(cl
     assert body["update_cycle"] == "분기"
     assert "공간 단위" in body["message"]
 
+
+def test_support_programs_require_official_api_configuration(client: TestClient) -> None:
+    response = client.post("/api/v1/support-programs", json={
+        "stage": "pre_startup",
+        "region": "서울",
+        "age": 31,
+    })
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "configuration_required"
+    assert body["required_setting"] == "K_STARTUP_API_KEY"
+    assert body["candidates"] == []
+    assert "가상 상품" in body["message"]
+

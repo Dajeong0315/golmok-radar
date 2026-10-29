@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import date
 from decimal import Decimal
 
 from fastapi import Depends, FastAPI, HTTPException, Query
@@ -27,6 +28,8 @@ from .schemas import (
     RecommendationRequest,
     RecommendationResponse,
     RentBenchmarkResponse,
+    SupportProgramQuery,
+    SupportProgramResponse,
     TradeAreaOut,
 )
 
@@ -195,6 +198,33 @@ def get_rent_benchmark(code: str, session: Session = Depends(get_db)) -> RentBen
         message="R-ONE 통계 상권과 서울 상권분석서비스 코드의 공간 단위가 달라 매핑 검증 전에는 수치를 표시하지 않습니다.",
         source_url="https://www.reb.or.kr/reb/cm/cntnts/cntntsView.do?cntntsId=1049",
         api_docs_url="https://www.reb.or.kr/r-one/portal/openapi/openApiDevPage.do",
+    )
+
+
+@app.post("/api/v1/support-programs", response_model=SupportProgramResponse)
+def support_programs(profile: SupportProgramQuery) -> SupportProgramResponse:
+    # profile is deliberately limited to non-sensitive eligibility hints. Credit,
+    # debt and approval predictions are outside the product scope.
+    if not settings.k_startup_api_key:
+        return SupportProgramResponse(
+            status="configuration_required",
+            provider="창업진흥원 K-Startup",
+            checked_at=date.today().isoformat(),
+            message="현재 모집 공고를 확인하려면 K-Startup Open API 인증키가 필요합니다. 키가 없으므로 오래된 공고나 가상 상품을 후보로 표시하지 않습니다.",
+            required_setting="K_STARTUP_API_KEY",
+            candidates=[],
+            source_url="https://www.k-startup.go.kr/",
+            disclaimer="지원 자격이나 선정 가능성을 보장하지 않습니다. 신청 전 공고 원문과 수행기관 안내를 확인하세요.",
+        )
+    return SupportProgramResponse(
+        status="configuration_required",
+        provider="창업진흥원 K-Startup",
+        checked_at=date.today().isoformat(),
+        message="인증키는 확인됐지만 운영 API 응답 계약 검증이 필요합니다. 검증 전에는 공고를 후보로 표시하지 않습니다.",
+        required_setting=None,
+        candidates=[],
+        source_url="https://www.k-startup.go.kr/",
+        disclaimer="지원 자격이나 선정 가능성을 보장하지 않습니다. 신청 전 공고 원문과 수행기관 안내를 확인하세요.",
     )
 
 

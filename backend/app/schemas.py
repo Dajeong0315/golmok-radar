@@ -146,3 +146,30 @@ class RentBenchmarkResponse(BaseModel):
     source_url: str
     api_docs_url: str
 
+
+class SupportProgramQuery(BaseModel):
+    stage: Literal["pre_startup", "existing"]
+    region: str
+    age: int | None = None
+    years_in_business: int | None = None
+
+
+class SupportProgramCandidate(BaseModel):
+    program_id: str
+    title: str
+    application_end: str
+    source_url: str
+    reasons: list[str]
+    needs_confirmation: list[str]
+
+
+class SupportProgramResponse(BaseModel):
+    status: Literal["available", "configuration_required"]
+    provider: str
+    checked_at: str
+    message: str
+    required_setting: str | None
+    candidates: list[SupportProgramCandidate]
+    source_url: str
+    disclaimer: str
+

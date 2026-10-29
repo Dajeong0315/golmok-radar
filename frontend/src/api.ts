@@ -1,4 +1,4 @@
-import type { AreaReportResponse, ChecklistResponse, ComparisonResponse, EvidenceResponse, RecommendationResponse, RentBenchmarkResponse, TradeArea } from "./types";
+import type { AreaReportResponse, ChecklistResponse, ComparisonResponse, EvidenceResponse, RecommendationResponse, RentBenchmarkResponse, SupportProgramResponse, TradeArea } from "./types";
 
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -54,5 +54,21 @@ export async function fetchRentBenchmark(code: string, signal?: AbortSignal): Pr
   const response = await fetch(`${API_BASE_URL}/api/v1/trade-areas/${code}/rent-benchmark`, { signal });
   if (!response.ok) throw new Error("임대 벤치마크 상태를 불러오지 못했습니다.");
   return response.json() as Promise<RentBenchmarkResponse>;
+}
+
+export async function fetchSupportPrograms(profile: {
+  stage: "pre_startup" | "existing";
+  region: string;
+  age?: number;
+  years_in_business?: number;
+}, signal?: AbortSignal): Promise<SupportProgramResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/support-programs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(profile),
+    signal,
+  });
+  if (!response.ok) throw new Error("지원사업 연동 상태를 확인하지 못했습니다.");
+  return response.json() as Promise<SupportProgramResponse>;
 }
 

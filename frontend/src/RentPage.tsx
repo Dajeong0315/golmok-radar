@@ -51,5 +51,6 @@ export function RentPage({ code }: { code: string }) {
       <div><p className="eyebrow">OFFICIAL BENCHMARK</p><h2>공식 임대 통계</h2>{benchmark ? <><span className="source-status">매핑 검증 필요</span><p>{benchmark.message}</p><dl><div><dt>제공기관</dt><dd>{benchmark.provider}</dd></div><div><dt>데이터셋</dt><dd>{benchmark.dataset_name}</dd></div><div><dt>갱신주기</dt><dd>{benchmark.update_cycle}</dd></div><div><dt>실시간 매물 여부</dt><dd>{benchmark.is_live_listing ? "예" : "아니오"}</dd></div></dl><a href={benchmark.source_url} target="_blank" rel="noreferrer">한국부동산원 원문 통계 보기 →</a></> : <p>공식 통계 연결 상태를 확인하고 있습니다.</p>}</div>
       <div><p className="eyebrow">LIVE LISTINGS</p><h2>개별 실매물</h2><span className="source-status source-status--muted">제휴 API 없음</span><p>네이버 부동산의 공개 매물 API가 확인되지 않아 매물을 복제하거나 크롤링하지 않습니다. 아래 링크에서 최신 매물과 중개사 정보를 직접 확인하고 조건을 위 계산기에 입력해 주세요.</p><a href="https://new.land.naver.com/" target="_blank" rel="noreferrer">네이버 부동산에서 직접 확인 →</a></div>
     </section>
+    <section className="pipeline-next"><div><p className="eyebrow">NEXT STEP</p><h2>상권과 비용을 검토했다면<br />공식 지원 조건을 확인하세요.</h2></div><a href="#funding">지원·자금 후보 확인 →</a></section>
   </main>;
 }

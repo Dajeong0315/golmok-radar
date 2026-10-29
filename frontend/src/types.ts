@@ -130,3 +130,23 @@ export type RentBenchmarkResponse = {
   api_docs_url: string;
 };
 
+export type SupportProgramCandidate = {
+  program_id: string;
+  title: string;
+  application_end: string;
+  source_url: string;
+  reasons: string[];
+  needs_confirmation: string[];
+};
+
+export type SupportProgramResponse = {
+  status: "available" | "configuration_required";
+  provider: string;
+  checked_at: string;
+  message: string;
+  required_setting: string | null;
+  candidates: SupportProgramCandidate[];
+  source_url: string;
+  disclaimer: string;
+};
+

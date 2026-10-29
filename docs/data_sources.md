@@ -77,3 +77,17 @@
 - R-ONE Open API: https://www.reb.or.kr/r-one/portal/openapi/openApiDevPage.do
 - 상업용부동산 임대동향조사: https://www.reb.or.kr/reb/cm/cntnts/cntntsView.do?cntntsId=1049
 - 임대료 산출 정의: https://www.reb.or.kr/reb/cm/cntnts/cntntsView.do?cntntsId=1184
+
+## 6. V2 창업 지원 데이터 조사
+
+| 출처 | 확인 결과 | 적용 원칙 |
+| --- | --- | --- |
+| 창업진흥원 K-Startup 지원사업 공고 Open API | 공고 정보용 공식 Open API와 개발자용 명세 페이지 확인 | 인증키와 운영 응답 필드를 검증한 뒤 모집 기간·지역·업력·연령·대상을 정규화 |
+| K-Startup 창업지원포털 | 현재 공고의 공식 원문·신청 경로 | API 미연결 시 포털 링크만 제공하고 과거 공고를 현재 후보로 대체하지 않음 |
+| 소상공인시장진흥공단 정책자금 | 정책자금 공식 안내·신청 경로 | 대출 비교·중개가 아닌 공식 확인 링크로만 제공 |
+
+현재 로컬 환경에는 `K_STARTUP_API_KEY`가 없으므로 API 응답은 `configuration_required`와 빈 후보를 반환합니다. 테스트 fixture는 기간·지역·단계·연령·업력 판정 계약 검증에만 사용하며 화면에는 노출하지 않습니다. 은행상품 추천, 신용·부채 수집, 대출 승인 가능성 예측은 제휴·법률 검토 전까지 하지 않습니다.
+
+- K-Startup 지원사업 공고 API: https://nidview.k-startup.go.kr/view/public/kisedKstartupService/announcementInformation
+- K-Startup 창업지원포털: https://www.k-startup.go.kr/
+- 소상공인 정책자금: https://ols.semas.or.kr/

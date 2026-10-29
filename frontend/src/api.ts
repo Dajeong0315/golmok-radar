@@ -1,4 +1,4 @@
-import type { AreaReportResponse, ChecklistResponse, ComparisonResponse, EvidenceResponse, RecommendationResponse, RentBenchmarkResponse, SupportProgramResponse, TradeArea } from "./types";
+import type { AreaReportResponse, ChecklistResponse, ComparisonResponse, EvidenceResponse, RecommendationResponse, RentBenchmarkResponse, ReviewAnalysisResponse, SupportProgramResponse, TradeArea } from "./types";
 
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -70,5 +70,21 @@ export async function fetchSupportPrograms(profile: {
   });
   if (!response.ok) throw new Error("지원사업 연동 상태를 확인하지 못했습니다.");
   return response.json() as Promise<SupportProgramResponse>;
+}
+
+export async function analyzeReviewText(payload: {
+  own_shop_name: string;
+  comparison_scope: string;
+  period_label: string;
+  own_reviews: string[];
+  nearby_reviews: string[];
+}): Promise<ReviewAnalysisResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/review-analysis`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error("리뷰 분석을 완료하지 못했습니다.");
+  return response.json() as Promise<ReviewAnalysisResponse>;
 }
 

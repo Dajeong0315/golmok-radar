@@ -173,3 +173,52 @@ class SupportProgramResponse(BaseModel):
     source_url: str
     disclaimer: str
 
+
+class ReviewAnalysisRequest(BaseModel):
+    own_shop_name: str
+    comparison_scope: str
+    period_label: str
+    own_reviews: list[str]
+    nearby_reviews: list[str]
+
+
+class ReviewEvidence(BaseModel):
+    review_index: int
+    snippet: str
+    sentiment: Literal["positive", "negative", "neutral"]
+
+
+class ReviewTopicSide(BaseModel):
+    mentions: int
+    positive: int
+    negative: int
+    neutral: int
+    evidence: list[ReviewEvidence]
+
+
+class ReviewTopicComparison(BaseModel):
+    topic_key: str
+    label: str
+    own: ReviewTopicSide
+    nearby: ReviewTopicSide
+
+
+class ReviewInsight(BaseModel):
+    topic_key: str
+    kind: Literal["strength", "caution"]
+    observation: str
+    action_idea: str
+
+
+class ReviewAnalysisResponse(BaseModel):
+    status: Literal["available", "insufficient_sample"]
+    source: Literal["user_provided"]
+    own_shop_name: str
+    comparison_scope: str
+    period_label: str
+    own_sample_count: int
+    nearby_sample_count: int
+    topics: list[ReviewTopicComparison]
+    insights: list[ReviewInsight]
+    notice: str
+

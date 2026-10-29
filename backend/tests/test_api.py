@@ -207,3 +207,35 @@ def test_support_programs_require_official_api_configuration(client: TestClient)
     assert body["candidates"] == []
     assert "가상 상품" in body["message"]
 
+
+def test_review_analysis_exposes_samples_topics_and_evidence(client: TestClient) -> None:
+    response = client.post("/api/v1/review-analysis", json={
+        "own_shop_name": "내 카페",
+        "comparison_scope": "반경 500m 동종 카페 3곳",
+        "period_label": "2026년 10월",
+        "own_reviews": ["서비스가 불친절해요", "응대가 불친절해요", "커피가 맛있어요", "가격이 비싸요", "공간이 깨끗해요"],
+        "nearby_reviews": ["서비스가 친절해요", "응대가 친절해요", "커피가 맛있어요", "가격이 저렴해요", "공간이 깨끗해요"],
+    })
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "available"
+    assert body["source"] == "user_provided"
+    assert body["own_sample_count"] == 5
+    service = next(topic for topic in body["topics"] if topic["topic_key"] == "service")
+    assert service["own"]["negative"] == 2
+    assert service["own"]["evidence"][0]["review_index"] == 1
+    assert any(item["kind"] == "caution" for item in body["insights"])
+
+
+def test_review_analysis_hides_strategy_when_sample_is_too_small(client: TestClient) -> None:
+    response = client.post("/api/v1/review-analysis", json={
+        "own_shop_name": "내 카페",
+        "comparison_scope": "주변",
+        "period_label": "최근",
+        "own_reviews": ["맛있어요"],
+        "nearby_reviews": ["맛있어요"],
+    })
+    assert response.status_code == 200
+    assert response.json()["status"] == "insufficient_sample"
+    assert response.json()["insights"] == []
+

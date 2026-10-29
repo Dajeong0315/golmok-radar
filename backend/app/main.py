@@ -15,6 +15,7 @@ from .metric_service import MetricValue, get_area_metrics
 from .models import DataSource, PopulationMetric, SalesMetric, StoreMetric, TradeArea
 from .recommendations import recommend, select_diverse
 from .reports import build_area_report
+from .review_analysis import analyze_reviews, build_insights
 from .schemas import (
     AreaReportResponse,
     ChecklistResponse,
@@ -28,6 +29,8 @@ from .schemas import (
     RecommendationRequest,
     RecommendationResponse,
     RentBenchmarkResponse,
+    ReviewAnalysisRequest,
+    ReviewAnalysisResponse,
     SupportProgramQuery,
     SupportProgramResponse,
     TradeAreaOut,
@@ -225,6 +228,48 @@ def support_programs(profile: SupportProgramQuery) -> SupportProgramResponse:
         candidates=[],
         source_url="https://www.k-startup.go.kr/",
         disclaimer="지원 자격이나 선정 가능성을 보장하지 않습니다. 신청 전 공고 원문과 수행기관 안내를 확인하세요.",
+    )
+
+
+@app.post("/api/v1/review-analysis", response_model=ReviewAnalysisResponse)
+def review_analysis(payload: ReviewAnalysisRequest) -> ReviewAnalysisResponse:
+    own_reviews = [item.strip() for item in payload.own_reviews if item.strip()]
+    nearby_reviews = [item.strip() for item in payload.nearby_reviews if item.strip()]
+    if len(own_reviews) > 500 or len(nearby_reviews) > 500:
+        raise HTTPException(400, "한 그룹당 리뷰는 최대 500개까지 분석할 수 있습니다.")
+    own = analyze_reviews(own_reviews)
+    nearby = analyze_reviews(nearby_reviews)
+
+    def side(stats):
+        return {
+            "mentions": stats.mentions,
+            "positive": stats.positive,
+            "negative": stats.negative,
+            "neutral": stats.neutral,
+            "evidence": [item.__dict__ for item in stats.evidence],
+        }
+
+    enough = len(own_reviews) >= 5 and len(nearby_reviews) >= 5
+    return ReviewAnalysisResponse(
+        status="available" if enough else "insufficient_sample",
+        source="user_provided",
+        own_shop_name=payload.own_shop_name.strip() or "내 가게",
+        comparison_scope=payload.comparison_scope.strip() or "사용자 선택 주변 동종 가게",
+        period_label=payload.period_label.strip() or "기간 미입력",
+        own_sample_count=len(own_reviews),
+        nearby_sample_count=len(nearby_reviews),
+        topics=[{
+            "topic_key": key,
+            "label": own[key].label,
+            "own": side(own[key]),
+            "nearby": side(nearby[key]),
+        } for key in own],
+        insights=build_insights(own, nearby) if enough else [],
+        notice=(
+            "사용자가 제공한 리뷰의 키워드 기반 요약입니다. 관찰과 실행 아이디어를 구분해 보며 개인을 식별하거나 성과를 보장하지 않습니다."
+            if enough
+            else "각 그룹 5개 이상이 필요합니다. 표본이 부족해 실행 아이디어를 만들지 않았습니다."
+        ),
     )
 
 

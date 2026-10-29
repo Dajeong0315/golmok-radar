@@ -150,3 +150,30 @@ export type SupportProgramResponse = {
   disclaimer: string;
 };
 
+export type ReviewEvidence = {
+  review_index: number;
+  snippet: string;
+  sentiment: "positive" | "negative" | "neutral";
+};
+
+export type ReviewTopicSide = {
+  mentions: number;
+  positive: number;
+  negative: number;
+  neutral: number;
+  evidence: ReviewEvidence[];
+};
+
+export type ReviewAnalysisResponse = {
+  status: "available" | "insufficient_sample";
+  source: "user_provided";
+  own_shop_name: string;
+  comparison_scope: string;
+  period_label: string;
+  own_sample_count: number;
+  nearby_sample_count: number;
+  topics: Array<{ topic_key: string; label: string; own: ReviewTopicSide; nearby: ReviewTopicSide }>;
+  insights: Array<{ topic_key: string; kind: "strength" | "caution"; observation: string; action_idea: string }>;
+  notice: string;
+};
+

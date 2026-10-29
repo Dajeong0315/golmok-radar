@@ -8,6 +8,7 @@ import { FundingPage } from "./FundingPage";
 import { loadProfile, SKIPPED_KEY } from "./founderProfile";
 import { RecommendationsPage } from "./RecommendationsPage";
 import { RentPage } from "./RentPage";
+import { ReviewInsightsPage } from "./ReviewInsightsPage";
 import { parseRentAreaCode } from "./rentCalculator";
 
 export default function Root() {
@@ -23,6 +24,7 @@ export default function Root() {
   if (hash.startsWith("#recommendations")) return <RecommendationsPage />;
   if (hash.startsWith("#rent")) return <RentPage code={parseRentAreaCode(hash)} />;
   if (hash.startsWith("#funding")) return <FundingPage />;
+  if (hash.startsWith("#reviews")) return <ReviewInsightsPage />;
   const shouldShowQuiz = hash.startsWith("#quiz") || (!loadProfile(localStorage) && localStorage.getItem(SKIPPED_KEY) !== "true");
   return shouldShowQuiz ? <FounderQuizPage /> : <App />;
 }

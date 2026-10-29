@@ -72,6 +72,7 @@ export default function App() {
           <span>골목 레이더</span>
         </a>
         <div className="header-context">
+          <a href="#quiz">창업 성향 진단</a>
           <span>서울 · 카페</span>
           <strong>2025년 4분기</strong>
         </div>

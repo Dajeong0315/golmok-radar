@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import App from "./App";
 import { parseComparisonCodes } from "./comparison";
 import { ComparisonPage } from "./ComparisonPage";
+import { FounderQuizPage } from "./FounderQuizPage";
+import { loadProfile, SKIPPED_KEY } from "./founderProfile";
 
 export default function Root() {
   const [hash, setHash] = useState(window.location.hash);
@@ -13,5 +15,7 @@ export default function Root() {
     return () => window.removeEventListener("hashchange", update);
   }, []);
 
-  return hash.startsWith("#compare") ? <ComparisonPage codes={parseComparisonCodes(hash)} /> : <App />;
+  if (hash.startsWith("#compare")) return <ComparisonPage codes={parseComparisonCodes(hash)} />;
+  const shouldShowQuiz = hash.startsWith("#quiz") || (!loadProfile(localStorage) && localStorage.getItem(SKIPPED_KEY) !== "true");
+  return shouldShowQuiz ? <FounderQuizPage /> : <App />;
 }

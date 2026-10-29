@@ -1,0 +1,31 @@
+# 비밀 설정 (실제 값은 절대 Git에 올리지 않음)
+.env
+.env.*
+!.env.example
+
+# 설치 폴더
+.venv/
+venv/
+node_modules/
+
+# 생성 결과
+dist/
+build/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# 로그
+*.log
+logs/
+
+# 원천·가공 데이터 (용량이 크고 재배포 조건 확인 전이므로 제외)
+database/raw/**
+!database/raw/**/
+!database/raw/**/.gitkeep
+database/processed/
+
+# OS·에디터
+.DS_Store
+Thumbs.db
+desktop.ini

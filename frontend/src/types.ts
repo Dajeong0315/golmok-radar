@@ -118,3 +118,15 @@ export type AreaReportResponse = {
   notice: string;
 };
 
+export type RentBenchmarkResponse = {
+  status: "mapping_required";
+  trade_area: TradeArea;
+  provider: string;
+  dataset_name: string;
+  update_cycle: string;
+  is_live_listing: boolean;
+  message: string;
+  source_url: string;
+  api_docs_url: string;
+};
+

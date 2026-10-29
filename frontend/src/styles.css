@@ -257,12 +257,46 @@ h1 em { color: var(--teal); font-style: normal; }
 .area-report footer { display: flex; justify-content: space-between; gap: 20px; align-items: center; margin-top: 15px; }
 .area-report footer p { color: #7a8385; font-size: 11px; }
 .area-report footer a { color: var(--teal); font-size: 12px; font-weight: 800; text-decoration: none; }
+.rent-link { display: inline-block; margin-top: 24px; color: var(--orange); font-size: 13px; font-weight: 800; text-decoration: none; }
 .recommendation-method { display: grid; grid-template-columns: .8fr 1.2fr; gap: 80px; padding: 90px clamp(20px, 8vw, 120px); color: white; background: var(--teal); }
 .recommendation-method h2 { margin: 0; font-size: clamp(42px, 6vw, 76px); line-height: 1.05; letter-spacing: -.055em; }
 .recommendation-method > div:last-child { align-self: end; }
 .recommendation-method > div:last-child p { padding: 15px 0; border-top: 1px solid #5c9b90; color: #d6e5e2; line-height: 1.6; }
 .recommendation-cta { display: flex; align-items: end; justify-content: space-between; gap: 40px; padding: 100px clamp(20px, 8vw, 120px) 130px; background: #ece9e1; }
 .recommendation-cta h2 { margin: 0; font-size: clamp(38px, 5vw, 66px); letter-spacing: -.05em; }
+.rent-page { min-height: 100vh; background: var(--paper); }
+.rent-hero { padding: 90px clamp(20px, 8vw, 120px); color: white; background: var(--navy); }
+.rent-hero h1 { font-size: clamp(48px, 7vw, 92px); }
+.rent-hero h1 em { color: #f4a47e; }
+.rent-hero > p:last-child { max-width: 750px; color: #c8d3d5; font-size: 17px; line-height: 1.7; }
+.rent-layout { display: grid; grid-template-columns: 1.35fr .65fr; max-width: 1400px; margin: 0 auto; padding: 80px clamp(18px, 5vw, 72px); }
+.rent-form { padding-right: clamp(30px, 6vw, 90px); }
+.rent-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.rent-fields label { display: block; }
+.rent-fields label > span { display: block; margin-bottom: 8px; color: #667174; font-size: 12px; font-weight: 700; }
+.rent-fields label div { display: flex; align-items: center; border-bottom: 1px solid #8b9393; }
+.rent-fields input { width: 100%; padding: 12px 4px; border: 0; outline: 0; color: var(--navy); background: transparent; font-size: 22px; font-weight: 800; }
+.rent-fields b { flex: 0 0 auto; color: #7b8384; font-size: 12px; }
+.rent-form__note { margin-top: 30px; padding: 16px; color: #6c7476; background: #f1efe9; font-size: 12px; line-height: 1.6; }
+.rent-result { padding: 34px; color: white; background: var(--teal); }
+.rent-result .eyebrow { color: #f4a47e; }
+.rent-result h2 { margin: 0; }
+.rent-result > strong { display: block; margin: 20px 0 30px; color: white; font-size: clamp(32px, 4vw, 52px); letter-spacing: -.04em; }
+.rent-result dl div { padding: 15px 0; border-top: 1px solid #65a095; }
+.rent-result dt { color: #b9d6d0; font-size: 12px; }
+.rent-result dd { margin: 5px 0 0; font-weight: 800; }
+.rent-result > p:last-child { color: #c9ded9; font-size: 11px; line-height: 1.55; }
+.rent-sources { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; padding: 90px clamp(20px, 8vw, 120px) 120px; background: #ece9e1; }
+.rent-sources > div { min-height: 370px; padding: 38px; background: var(--paper); }
+.rent-sources h2 { margin: 0 0 18px; font-size: 34px; }
+.rent-sources > div > p:not(.eyebrow) { color: #667174; line-height: 1.65; }
+.rent-sources dl { display: grid; grid-template-columns: 1fr 1fr; }
+.rent-sources dl div { padding: 12px 0; border-top: 1px solid var(--line); }
+.rent-sources dt { color: #798183; font-size: 11px; }
+.rent-sources dd { margin: 4px 0 0; font-size: 13px; font-weight: 700; }
+.rent-sources a { display: inline-block; margin-top: 20px; color: var(--teal); font-weight: 800; text-decoration: none; }
+.source-status { display: inline-block; padding: 6px 9px; color: #88462f; background: #fce6dc; font-size: 11px; font-weight: 800; }
+.source-status--muted { color: #606b6d; background: #e5e6e3; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
 @media (max-width: 900px) {
@@ -283,6 +317,8 @@ h1 em { color: var(--teal); font-style: normal; }
   .candidate-card { grid-template-columns: 110px 1fr; }
   .candidate-cautions { grid-column: 1 / -1; border-top: 1px solid var(--line); border-left: 0; }
   .recommendation-method { grid-template-columns: 1fr; }
+  .rent-layout { grid-template-columns: 1fr; gap: 35px; }
+  .rent-form { padding-right: 0; }
 }
 
 @media (max-width: 620px) {
@@ -331,5 +367,7 @@ h1 em { color: var(--teal); font-style: normal; }
   .report-groups { grid-template-columns: 1fr; }
   .recommendation-cta { align-items: stretch; flex-direction: column; }
   .recommendation-cta button { width: 100%; }
+  .rent-fields, .rent-sources { grid-template-columns: 1fr; }
+  .rent-result { margin: 0 -18px; }
 }
 

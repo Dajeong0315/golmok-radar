@@ -183,3 +183,13 @@ def test_area_report_links_every_statement_to_metric_evidence(client: TestClient
         assert item["percentile"] is not None
         assert item["summary"]
 
+
+def test_rent_benchmark_does_not_present_quarterly_statistics_as_live_listing(client: TestClient) -> None:
+    response = client.get("/api/v1/trade-areas/1/rent-benchmark")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "mapping_required"
+    assert body["is_live_listing"] is False
+    assert body["update_cycle"] == "분기"
+    assert "공간 단위" in body["message"]
+

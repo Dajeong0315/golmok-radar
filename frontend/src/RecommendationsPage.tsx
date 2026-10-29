@@ -53,6 +53,7 @@ export function RecommendationsPage() {
         <div className="candidate-main"><small>{candidate.trade_area.district_name} · {candidate.trade_area.area_type_name}</small><h2>{candidate.trade_area.name}</h2><p>데이터 완전성 {candidate.data_completeness}</p>
           <div className="candidate-reasons"><h3>이 후보가 먼저 나온 이유</h3>{candidate.reasons.map((reason) => <div key={`${candidate.trade_area.code}-${reason.metric_key}`}><strong>{reason.label}</strong><span>{reason.value.toLocaleString("ko-KR")} {reason.unit}</span><p>{reason.explanation} · 가중치 {reason.weight}</p></div>)}</div>
           {reports[candidate.trade_area.code] ? <AreaReport report={reports[candidate.trade_area.code]} comparisonCodes={codes} /> : <p className="report-loading">강점·주의점 리포트를 불러오는 중입니다.</p>}
+          <a className="rent-link" href={`#rent?code=${candidate.trade_area.code}`}>이 상권의 임대 비용 검토 →</a>
         </div>
         <aside className="candidate-cautions"><h3>현장에서 확인할 점</h3>{candidate.cautions.map((caution) => <p key={caution}>{caution}</p>)}</aside>
       </article>)}

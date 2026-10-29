@@ -74,6 +74,7 @@ erDiagram
 | GET | `/api/v1/trade-areas/{code}` | 상권 상세와 지표 |
 | POST | `/api/v1/recommendations` | 창업 성향 답변 기반 설명 가능한 카페 후보 2~3곳 |
 | GET | `/api/v1/trade-areas/{code}/report` | 82개 비교군 기준 강점·주의·수요 특성 리포트 |
+| GET | `/api/v1/trade-areas/{code}/rent-benchmark` | R-ONE 공간 매핑 상태와 공식 출처 확인 |
 | GET | `/api/v1/comparisons?codes=A,B&quarter=20254` | 서로 다른 상권 2~4곳, 지표 14개 비교 |
 | GET | `/api/v1/comparisons/{comparison_id}/evidence/{metric_key}` | 지표 출처·필터·수식·원천값 확인 |
 | GET | `/api/v1/field-checklist` | 현장 확인 질문 5개 |
@@ -90,4 +91,4 @@ erDiagram
 | API | 2·3·4곳 성공 및 잘못된 코드 수·중복·분기 실패 테스트 |
 | UI | 117곳 로딩, 관심 목록 유지, 최대 4곳 제한, 14지표·결측·근거 패널 확인 |
 
-2026-10-29 로컬 통합 검증 기준으로 백엔드 31개, 프런트엔드 9개 테스트와 Vite production build가 통과했습니다. Supabase와 카카오맵의 실제 연결은 사용자 소유 연결 정보가 준비된 환경에서 별도 확인합니다.
+2026-10-29 로컬 통합 검증 기준으로 백엔드 32개, 프런트엔드 12개 테스트와 Vite production build가 통과했습니다. Supabase와 카카오맵의 실제 연결은 사용자 소유 연결 정보가 준비된 환경에서 별도 확인합니다.

@@ -134,3 +134,15 @@ class AreaReportResponse(BaseModel):
     characteristics: list[AreaReportInsight]
     notice: str
 
+
+class RentBenchmarkResponse(BaseModel):
+    status: Literal["mapping_required"]
+    trade_area: TradeAreaOut
+    provider: str
+    dataset_name: str
+    update_cycle: str
+    is_live_listing: bool
+    message: str
+    source_url: str
+    api_docs_url: str
+

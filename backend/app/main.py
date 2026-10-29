@@ -26,6 +26,7 @@ from .schemas import (
     RecommendationReason,
     RecommendationRequest,
     RecommendationResponse,
+    RentBenchmarkResponse,
     TradeAreaOut,
 )
 
@@ -176,6 +177,24 @@ def get_trade_area_report(
         cautions=report["cautions"],
         characteristics=report["characteristics"],
         notice="상·하위 30%는 상대 위치이며 창업 성과나 인과관계를 의미하지 않습니다.",
+    )
+
+
+@app.get("/api/v1/trade-areas/{code}/rent-benchmark", response_model=RentBenchmarkResponse)
+def get_rent_benchmark(code: str, session: Session = Depends(get_db)) -> RentBenchmarkResponse:
+    area = session.get(TradeArea, code)
+    if not area:
+        raise HTTPException(404, "상권을 찾을 수 없습니다.")
+    return RentBenchmarkResponse(
+        status="mapping_required",
+        trade_area=area_out(session, area),
+        provider="한국부동산원",
+        dataset_name="상업용부동산 임대동향조사",
+        update_cycle="분기",
+        is_live_listing=False,
+        message="R-ONE 통계 상권과 서울 상권분석서비스 코드의 공간 단위가 달라 매핑 검증 전에는 수치를 표시하지 않습니다.",
+        source_url="https://www.reb.or.kr/reb/cm/cntnts/cntntsView.do?cntntsId=1049",
+        api_docs_url="https://www.reb.or.kr/r-one/portal/openapi/openApiDevPage.do",
     )
 
 

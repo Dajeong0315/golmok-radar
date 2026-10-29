@@ -1,4 +1,4 @@
-import type { AreaReportResponse, ChecklistResponse, ComparisonResponse, EvidenceResponse, RecommendationResponse, TradeArea } from "./types";
+import type { AreaReportResponse, ChecklistResponse, ComparisonResponse, EvidenceResponse, RecommendationResponse, RentBenchmarkResponse, TradeArea } from "./types";
 
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -48,5 +48,11 @@ export async function fetchAreaReport(code: string, signal?: AbortSignal): Promi
   const response = await fetch(`${API_BASE_URL}/api/v1/trade-areas/${code}/report?quarter=20254`, { signal });
   if (!response.ok) throw new Error("상권 리포트를 불러오지 못했습니다.");
   return response.json() as Promise<AreaReportResponse>;
+}
+
+export async function fetchRentBenchmark(code: string, signal?: AbortSignal): Promise<RentBenchmarkResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/trade-areas/${code}/rent-benchmark`, { signal });
+  if (!response.ok) throw new Error("임대 벤치마크 상태를 불러오지 못했습니다.");
+  return response.json() as Promise<RentBenchmarkResponse>;
 }
 

@@ -12,6 +12,7 @@ from .config import get_settings
 from .db import get_db
 from .metric_service import MetricValue, get_area_metrics
 from .models import DataSource, PopulationMetric, SalesMetric, StoreMetric, TradeArea
+from .recommendations import recommend, select_diverse
 from .schemas import (
     ChecklistResponse,
     ComparisonMetric,
@@ -19,6 +20,10 @@ from .schemas import (
     EvidenceArea,
     EvidenceResponse,
     MetricAreaValue,
+    RecommendationCandidate,
+    RecommendationReason,
+    RecommendationRequest,
+    RecommendationResponse,
     TradeAreaOut,
 )
 
@@ -120,7 +125,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=False,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"]
 )
 
@@ -147,6 +152,69 @@ def get_trade_area(code: str, session: Session = Depends(get_db)) -> TradeAreaOu
     if not area:
         raise HTTPException(404, "상권을 찾을 수 없습니다.")
     return area_out(session, area)
+
+
+@app.post("/api/v1/recommendations", response_model=RecommendationResponse)
+def recommend_trade_areas(
+    profile: RecommendationRequest,
+    session: Session = Depends(get_db),
+) -> RecommendationResponse:
+    if profile.business != "cafe":
+        return RecommendationResponse(
+            status="unsupported_business",
+            message="현재는 검증된 카페·디저트 데이터만 후보 상권을 제공합니다.",
+            quarter_code="20254",
+            quarter_label=SUPPORTED_QUARTERS["20254"],
+            weights_version="cafe-v1",
+            candidate_pool_size=0,
+            diversity_rule="적용 안 함",
+            candidates=[],
+        )
+
+    scored = recommend(
+        session,
+        demand=profile.demand,
+        risk=profile.risk,
+        competition=profile.competition,
+    )
+    selected = select_diverse(scored, 3)
+    candidates = []
+    for rank, candidate in enumerate(selected, start=1):
+        strongest = sorted(candidate.components, key=lambda item: item["fit_percentile"] * item["weight"], reverse=True)[:3]
+        weakest = sorted(candidate.components, key=lambda item: item["fit_percentile"])[:2]
+        reasons = []
+        for component in strongest:
+            if component["direction"] == "higher":
+                explanation = f"{component['label']}이 비교 가능한 카페 상권 중 {component['percentile']} 백분위입니다."
+            else:
+                explanation = f"{component['label']}이 비교군에서 낮을수록 선호 조건과 맞으며 현재 {component['percentile']} 백분위입니다."
+            reasons.append(RecommendationReason(**component, explanation=explanation))
+        cautions = [
+            (
+                f"{item['label']}이 비교군에서 높아 낮은 값 선호와 거리가 있습니다."
+                if item["direction"] == "lower"
+                else f"{item['label']}이 선호 조건 기준으로 상대적으로 낮아 현장 확인이 필요합니다."
+            )
+            for item in weakest
+        ]
+        candidates.append(RecommendationCandidate(
+            rank=rank,
+            score=candidate.score,
+            trade_area=area_out(session, candidate.area),
+            reasons=reasons,
+            cautions=cautions,
+            data_completeness="14/14",
+        ))
+    return RecommendationResponse(
+        status="available",
+        message="성공 예측이 아닌, 응답 조건과 검증된 지표가 잘 맞는 탐색 후보입니다.",
+        quarter_code="20254",
+        quarter_label=SUPPORTED_QUARTERS["20254"],
+        weights_version="cafe-v1",
+        candidate_pool_size=len(scored),
+        diversity_rule="기본 적합도에 다른 자치구 +2점, 다른 상권 유형 +1점의 선택 보너스를 적용합니다.",
+        candidates=candidates,
+    )
 
 
 @app.get("/api/v1/comparisons", response_model=ComparisonResponse)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -70,4 +72,45 @@ class ChecklistItem(BaseModel):
 class ChecklistResponse(BaseModel):
     notice: str
     items: list[ChecklistItem]
+
+
+class RecommendationRequest(BaseModel):
+    business: Literal["cafe", "food", "retail", "service"]
+    demand: Literal["neighborhood", "office", "destination", "nightlife"]
+    risk: Literal["lean", "balanced", "growth", "unknown"]
+    operation: Literal["solo", "partner", "team", "community"]
+    strength: Literal["product", "hospitality", "branding", "numbers"]
+    competition: Literal["avoid", "validated", "differentiate", "traffic"]
+
+
+class RecommendationReason(BaseModel):
+    metric_key: str
+    label: str
+    unit: str
+    value: float
+    percentile: float
+    fit_percentile: float
+    weight: float
+    direction: str
+    explanation: str
+
+
+class RecommendationCandidate(BaseModel):
+    rank: int
+    score: float
+    trade_area: TradeAreaOut
+    reasons: list[RecommendationReason]
+    cautions: list[str]
+    data_completeness: str
+
+
+class RecommendationResponse(BaseModel):
+    status: Literal["available", "unsupported_business"]
+    message: str
+    quarter_code: str
+    quarter_label: str
+    weights_version: str
+    candidate_pool_size: int
+    diversity_rule: str
+    candidates: list[RecommendationCandidate]
 

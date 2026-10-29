@@ -66,3 +66,35 @@ export type ChecklistResponse = {
   items: Array<{ category: string; question: string }>;
 };
 
+export type RecommendationReason = {
+  metric_key: string;
+  label: string;
+  unit: string;
+  value: number;
+  percentile: number;
+  fit_percentile: number;
+  weight: number;
+  direction: "higher" | "lower";
+  explanation: string;
+};
+
+export type RecommendationCandidate = {
+  rank: number;
+  score: number;
+  trade_area: TradeArea;
+  reasons: RecommendationReason[];
+  cautions: string[];
+  data_completeness: string;
+};
+
+export type RecommendationResponse = {
+  status: "available" | "unsupported_business";
+  message: string;
+  quarter_code: string;
+  quarter_label: string;
+  weights_version: string;
+  candidate_pool_size: number;
+  diversity_rule: string;
+  candidates: RecommendationCandidate[];
+};
+

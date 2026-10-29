@@ -58,6 +58,7 @@ export function FounderQuizPage() {
   };
 
   const openExplorer = () => { window.location.hash = "top"; };
+  const openRecommendations = () => { window.location.hash = "recommendations"; };
   const skip = () => { localStorage.setItem(SKIPPED_KEY, "true"); openExplorer(); };
 
   if (mode === "intro") {
@@ -87,7 +88,7 @@ export function FounderQuizPage() {
           <span>0{index + 1}</span><small>{question.eyebrow.split(" · ")[1]}</small><h2>{answerLabel(question.id, profile.answers[question.id])}</h2><p>{question.question}</p>
         </article>)}
       </section>
-      <section className="result-next"><div><p className="eyebrow">NEXT PIPELINE</p><h2>이제 조건에 맞는<br />상권 후보를 찾아볼까요?</h2><p>현재 검증된 카페 데이터부터 후보를 좁힙니다. 다른 업종은 성향 결과를 저장하고 데이터 준비 상태를 안내합니다.</p></div><div className="quiz-actions"><button className="primary-action" onClick={openExplorer}>상권 탐색 계속하기 <span>→</span></button><button className="text-action" onClick={() => { setStep(0); setMode("question"); }}>답변 수정하기</button></div></section>
+      <section className="result-next"><div><p className="eyebrow">NEXT PIPELINE</p><h2>이제 조건에 맞는<br />상권 후보를 찾아볼까요?</h2><p>현재 검증된 카페 데이터부터 후보를 좁힙니다. 다른 업종은 성향 결과를 저장하고 데이터 준비 상태를 안내합니다.</p></div><div className="quiz-actions"><button className="primary-action" onClick={openRecommendations}>내 조건에 맞는 후보 보기 <span>→</span></button><button className="text-action" onClick={() => { setStep(0); setMode("question"); }}>답변 수정하기</button></div></section>
     </main>;
   }
 

@@ -138,3 +138,36 @@ def test_checklist_and_health(client: TestClient) -> None:
     assert checklist.status_code == 200
     assert len(checklist.json()["items"]) == 5
 
+
+def test_recommendations_return_explainable_candidates(client: TestClient) -> None:
+    response = client.post("/api/v1/recommendations", json={
+        "business": "cafe",
+        "demand": "office",
+        "risk": "balanced",
+        "operation": "solo",
+        "strength": "product",
+        "competition": "validated",
+    })
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "available"
+    assert body["candidate_pool_size"] == 5
+    assert len(body["candidates"]) == 3
+    assert all(candidate["data_completeness"] == "14/14" for candidate in body["candidates"])
+    assert all(len(candidate["reasons"]) == 3 for candidate in body["candidates"])
+    assert body["candidates"][0]["score"] >= body["candidates"][1]["score"]
+
+
+def test_recommendations_do_not_invent_unsupported_industry(client: TestClient) -> None:
+    response = client.post("/api/v1/recommendations", json={
+        "business": "retail",
+        "demand": "neighborhood",
+        "risk": "lean",
+        "operation": "solo",
+        "strength": "branding",
+        "competition": "avoid",
+    })
+    assert response.status_code == 200
+    assert response.json()["status"] == "unsupported_business"
+    assert response.json()["candidates"] == []
+

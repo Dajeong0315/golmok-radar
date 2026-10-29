@@ -1,4 +1,4 @@
-import type { ChecklistResponse, ComparisonResponse, EvidenceResponse, TradeArea } from "./types";
+import type { ChecklistResponse, ComparisonResponse, EvidenceResponse, RecommendationResponse, TradeArea } from "./types";
 
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -31,5 +31,16 @@ export async function fetchChecklist(signal?: AbortSignal): Promise<ChecklistRes
   const response = await fetch(`${API_BASE_URL}/api/v1/field-checklist`, { signal });
   if (!response.ok) throw new Error("현장 질문을 불러오지 못했습니다.");
   return response.json() as Promise<ChecklistResponse>;
+}
+
+export async function fetchRecommendations(answers: Record<string, string>, signal?: AbortSignal): Promise<RecommendationResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/recommendations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(answers),
+    signal,
+  });
+  if (!response.ok) throw new Error("후보 상권을 계산하지 못했습니다.");
+  return response.json() as Promise<RecommendationResponse>;
 }
 

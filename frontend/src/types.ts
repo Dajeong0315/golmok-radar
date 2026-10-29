@@ -98,3 +98,23 @@ export type RecommendationResponse = {
   candidates: RecommendationCandidate[];
 };
 
+export type AreaReportInsight = {
+  metric_key: string;
+  label: string;
+  value: number | null;
+  unit: string;
+  percentile: number | null;
+  summary: string;
+};
+
+export type AreaReportResponse = {
+  quarter_code: string;
+  quarter_label: string;
+  comparison_count: number;
+  trade_area: TradeArea;
+  strengths: AreaReportInsight[];
+  cautions: AreaReportInsight[];
+  characteristics: AreaReportInsight[];
+  notice: string;
+};
+

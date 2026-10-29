@@ -171,3 +171,15 @@ def test_recommendations_do_not_invent_unsupported_industry(client: TestClient) 
     assert response.json()["status"] == "unsupported_business"
     assert response.json()["candidates"] == []
 
+
+def test_area_report_links_every_statement_to_metric_evidence(client: TestClient) -> None:
+    response = client.get("/api/v1/trade-areas/5/report")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["comparison_count"] == 5
+    assert body["strengths"]
+    for item in body["strengths"] + body["cautions"] + body["characteristics"]:
+        assert item["metric_key"]
+        assert item["percentile"] is not None
+        assert item["summary"]
+

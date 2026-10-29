@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 
-import { fetchRecommendations } from "./api";
+import { fetchAreaReport, fetchRecommendations } from "./api";
 import { FAVORITES_KEY, loadFavorites } from "./favorites";
 import { loadProfile } from "./founderProfile";
-import type { RecommendationResponse } from "./types";
+import type { AreaReportResponse, RecommendationResponse } from "./types";
 
 export function RecommendationsPage() {
   const profile = loadProfile(localStorage);
   const [data, setData] = useState<RecommendationResponse | null>(null);
+  const [reports, setReports] = useState<Record<string, AreaReportResponse>>({});
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -18,6 +19,15 @@ export function RecommendationsPage() {
     });
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (!data?.candidates.length) return;
+    const controller = new AbortController();
+    Promise.all(data.candidates.map((candidate) => fetchAreaReport(candidate.trade_area.code, controller.signal)))
+      .then((items) => setReports(Object.fromEntries(items.map((report) => [report.trade_area.code, report]))))
+      .catch((reason: Error) => { if (reason.name !== "AbortError") setError(reason.message); });
+    return () => controller.abort();
+  }, [data]);
 
   if (!profile) return <RecommendationState title="먼저 창업 성향을 알려주세요" copy="여섯 가지 답변이 있어야 후보 조건을 만들 수 있습니다." action="#quiz" actionLabel="성향 진단 시작" />;
   if (error) return <RecommendationState title="후보를 불러오지 못했습니다" copy={error} action="#top" actionLabel="상권 직접 탐색" />;
@@ -42,6 +52,7 @@ export function RecommendationsPage() {
         <div className="candidate-rank"><span>0{candidate.rank}</span><small>조건 적합도</small><strong>{candidate.score}</strong><em>/ 100</em></div>
         <div className="candidate-main"><small>{candidate.trade_area.district_name} · {candidate.trade_area.area_type_name}</small><h2>{candidate.trade_area.name}</h2><p>데이터 완전성 {candidate.data_completeness}</p>
           <div className="candidate-reasons"><h3>이 후보가 먼저 나온 이유</h3>{candidate.reasons.map((reason) => <div key={`${candidate.trade_area.code}-${reason.metric_key}`}><strong>{reason.label}</strong><span>{reason.value.toLocaleString("ko-KR")} {reason.unit}</span><p>{reason.explanation} · 가중치 {reason.weight}</p></div>)}</div>
+          {reports[candidate.trade_area.code] ? <AreaReport report={reports[candidate.trade_area.code]} comparisonCodes={codes} /> : <p className="report-loading">강점·주의점 리포트를 불러오는 중입니다.</p>}
         </div>
         <aside className="candidate-cautions"><h3>현장에서 확인할 점</h3>{candidate.cautions.map((caution) => <p key={caution}>{caution}</p>)}</aside>
       </article>)}
@@ -49,6 +60,19 @@ export function RecommendationsPage() {
     <section className="recommendation-method"><div><p className="eyebrow">HOW IT WORKS</p><h2>점수보다<br />이유를 보세요.</h2></div><div><p>모든 지표를 비교 가능한 카페 상권 {data.candidate_pool_size}곳 안에서 백분위로 바꾸고, 진단 답변에 공개된 가중치를 적용했습니다.</p><p>{data.diversity_rule}</p><p>조건 적합도는 창업 성공 확률이 아닙니다. 후보를 빠르게 좁히기 위한 탐색 순서입니다.</p></div></section>
     <section className="recommendation-cta"><div><p className="eyebrow">NEXT STEP</p><h2>세 후보의 14개 지표를<br />같은 표에서 확인하세요.</h2></div><button className="primary-action" onClick={saveAndExplore}>관심 목록에 저장하고 비교 <span>→</span></button></section>
   </main>;
+}
+
+function AreaReport({ report, comparisonCodes }: { report: AreaReportResponse; comparisonCodes: string[] }) {
+  const groups = [
+    { label: "상대적 강점", className: "strength", items: report.strengths },
+    { label: "주의 신호", className: "caution", items: report.cautions },
+    { label: "수요·경쟁 특성", className: "context", items: report.characteristics },
+  ];
+  return <section className="area-report" aria-label={`${report.trade_area.name} 강점과 주의점 리포트`}>
+    <div className="area-report__heading"><div><p className="eyebrow">AREA SNAPSHOT</p><h3>강점·주의점 리포트</h3></div><span>{report.comparison_count}개 상권 비교 · {report.quarter_label}</span></div>
+    <div className="report-groups">{groups.map((group) => <div className={group.className} key={group.label}><h4>{group.label}</h4>{group.items.length ? group.items.slice(0, 3).map((item) => <article data-metric-key={item.metric_key} key={item.metric_key}><strong>{item.label}</strong><span>{item.value?.toLocaleString("ko-KR")} {item.unit} · {item.percentile} 백분위</span><p>{item.summary}</p></article>) : <p>상·하위 30%에 해당하는 신호가 없습니다.</p>}</div>)}</div>
+    <footer><p>{report.notice}</p><a href={`#compare?codes=${comparisonCodes.join(",")}`}>비교표에서 수치와 근거 보기 →</a></footer>
+  </section>;
 }
 
 function RecommendationState({ title, copy, action, actionLabel, secondary, secondaryLabel }: { title: string; copy: string; action?: string; actionLabel?: string; secondary?: string; secondaryLabel?: string }) {

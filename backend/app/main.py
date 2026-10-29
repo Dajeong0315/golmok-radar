@@ -13,7 +13,9 @@ from .db import get_db
 from .metric_service import MetricValue, get_area_metrics
 from .models import DataSource, PopulationMetric, SalesMetric, StoreMetric, TradeArea
 from .recommendations import recommend, select_diverse
+from .reports import build_area_report
 from .schemas import (
+    AreaReportResponse,
     ChecklistResponse,
     ComparisonMetric,
     ComparisonResponse,
@@ -152,6 +154,29 @@ def get_trade_area(code: str, session: Session = Depends(get_db)) -> TradeAreaOu
     if not area:
         raise HTTPException(404, "상권을 찾을 수 없습니다.")
     return area_out(session, area)
+
+
+@app.get("/api/v1/trade-areas/{code}/report", response_model=AreaReportResponse)
+def get_trade_area_report(
+    code: str,
+    quarter: str = Query(default="20254"),
+    session: Session = Depends(get_db),
+) -> AreaReportResponse:
+    if quarter not in SUPPORTED_QUARTERS:
+        raise HTTPException(400, "지원하지 않는 기준분기입니다.")
+    report = build_area_report(session, code, quarter)
+    if not report:
+        raise HTTPException(404, "상권을 찾을 수 없습니다.")
+    return AreaReportResponse(
+        quarter_code=quarter,
+        quarter_label=SUPPORTED_QUARTERS[quarter],
+        comparison_count=report["comparison_count"],
+        trade_area=area_out(session, report["area"]),
+        strengths=report["strengths"],
+        cautions=report["cautions"],
+        characteristics=report["characteristics"],
+        notice="상·하위 30%는 상대 위치이며 창업 성과나 인과관계를 의미하지 않습니다.",
+    )
 
 
 @app.post("/api/v1/recommendations", response_model=RecommendationResponse)

@@ -239,6 +239,24 @@ h1 em { color: var(--teal); font-style: normal; }
 .candidate-cautions { padding: 28px; border-left: 1px solid var(--line); background: #f6efe9; }
 .candidate-cautions h3 { margin: 0 0 22px; font-size: 15px; }
 .candidate-cautions p { padding: 12px 0; border-top: 1px solid #ded1c6; color: #775447; font-size: 13px; line-height: 1.55; }
+.report-loading { margin-top: 25px; color: #7a8385; font-size: 13px; }
+.area-report { margin-top: 34px; padding-top: 28px; border-top: 1px solid var(--line); }
+.area-report__heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; }
+.area-report__heading .eyebrow { margin-bottom: 7px; }
+.area-report__heading h3 { margin: 0; font-size: 25px; }
+.area-report__heading > span { color: #7a8385; font-size: 12px; }
+.report-groups { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; }
+.report-groups > div { padding: 18px; border-top: 3px solid var(--teal); background: #f3f1eb; }
+.report-groups > .caution { border-color: var(--orange); }
+.report-groups > .context { border-color: var(--navy); }
+.report-groups h4 { margin: 0 0 15px; font-size: 13px; }
+.report-groups article { padding: 12px 0; border-top: 1px solid var(--line); }
+.report-groups article strong, .report-groups article span { display: block; }
+.report-groups article span { margin: 5px 0; color: var(--teal); font-size: 12px; font-weight: 700; }
+.report-groups article p, .report-groups > div > p { color: #697274; font-size: 12px; line-height: 1.5; }
+.area-report footer { display: flex; justify-content: space-between; gap: 20px; align-items: center; margin-top: 15px; }
+.area-report footer p { color: #7a8385; font-size: 11px; }
+.area-report footer a { color: var(--teal); font-size: 12px; font-weight: 800; text-decoration: none; }
 .recommendation-method { display: grid; grid-template-columns: .8fr 1.2fr; gap: 80px; padding: 90px clamp(20px, 8vw, 120px); color: white; background: var(--teal); }
 .recommendation-method h2 { margin: 0; font-size: clamp(42px, 6vw, 76px); line-height: 1.05; letter-spacing: -.055em; }
 .recommendation-method > div:last-child { align-self: end; }
@@ -309,6 +327,8 @@ h1 em { color: var(--teal); font-style: normal; }
   .candidate-reasons { grid-template-columns: 1fr; }
   .candidate-reasons h3 { grid-column: auto; }
   .candidate-cautions { margin: 0 -18px; }
+  .area-report__heading, .area-report footer { align-items: flex-start; flex-direction: column; }
+  .report-groups { grid-template-columns: 1fr; }
   .recommendation-cta { align-items: stretch; flex-direction: column; }
   .recommendation-cta button { width: 100%; }
 }

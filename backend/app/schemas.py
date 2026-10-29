@@ -114,3 +114,23 @@ class RecommendationResponse(BaseModel):
     diversity_rule: str
     candidates: list[RecommendationCandidate]
 
+
+class AreaReportInsight(BaseModel):
+    metric_key: str
+    label: str
+    value: float | None
+    unit: str
+    percentile: float | None
+    summary: str
+
+
+class AreaReportResponse(BaseModel):
+    quarter_code: str
+    quarter_label: str
+    comparison_count: int
+    trade_area: TradeAreaOut
+    strengths: list[AreaReportInsight]
+    cautions: list[AreaReportInsight]
+    characteristics: list[AreaReportInsight]
+    notice: str
+

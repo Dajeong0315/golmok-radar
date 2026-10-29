@@ -266,6 +266,7 @@
 | Phase 1. 원천 데이터 수집과 go/no-go 검증 | 완료 — 117개 중 세 데이터 공통 상권 82개, 최종 go |
 | Phase 2. 정규화 스키마와 적재 파이프라인 | 완료 — SQLite 117/110/82/117건 적재, 2 tests passed |
 | Phase 3. 지표 계산과 pytest | 완료 — 엑셀 기준표 8사례 일치, 11 tests passed |
-| Phase 4~8 | 시작 전 |
+| Phase 4. FastAPI 조회 API | 완료 — 117개 상권·2~4개 비교·근거·체크리스트, 22 tests passed |
+| Phase 5~8 | 시작 전 |
 
 다음 실행 단계는 **Phase 1**입니다. 먼저 인구 API를 `--check` 모드로 호출해 서비스명과 실제 응답 컬럼을 확인합니다.

@@ -14,6 +14,7 @@ build/
 __pycache__/
 *.pyc
 .pytest_cache/
+.pytest-tmp/
 
 # 로그
 *.log
@@ -24,6 +25,7 @@ database/raw/**
 !database/raw/**/
 !database/raw/**/.gitkeep
 database/processed/
+backend/data/
 
 # OS·에디터
 .DS_Store

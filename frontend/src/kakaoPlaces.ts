@@ -1,0 +1,89 @@
+declare global {
+  interface Window {
+    kakao?: any;
+  }
+}
+
+const KAKAO_KEY = import.meta.env.VITE_KAKAO_MAP_KEY;
+
+export type KakaoPlace = {
+  id: string;
+  name: string;
+  category: string;
+  address: string;
+  roadAddress: string;
+  latitude: number;
+  longitude: number;
+  distance: number | null;
+  placeUrl: string;
+};
+
+let sdkPromise: Promise<void> | null = null;
+
+export function loadKakaoSdk(): Promise<void> {
+  if (window.kakao?.maps?.services) return Promise.resolve();
+  if (!KAKAO_KEY) return Promise.reject(new Error("카카오 JavaScript 키가 설정되지 않았습니다."));
+  if (sdkPromise) return sdkPromise;
+
+  sdkPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>("script[data-kakao-sdk], script[data-kakao-map]");
+    const finish = () => window.kakao.maps.load(() => {
+      if (window.kakao?.maps?.services) resolve();
+      else reject(new Error("카카오 장소 검색 모듈을 불러오지 못했습니다. 화면을 새로고침해 주세요."));
+    });
+    if (existing) {
+      if (window.kakao?.maps) finish();
+      else {
+        existing.addEventListener("load", finish, { once: true });
+        existing.addEventListener("error", () => reject(new Error("카카오 서비스를 불러오지 못했습니다.")), { once: true });
+      }
+      return;
+    }
+    const script = document.createElement("script");
+    script.dataset.kakaoSdk = "true";
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_KEY}&autoload=false&libraries=services`;
+    script.onload = finish;
+    script.onerror = () => reject(new Error("카카오 서비스를 불러오지 못했습니다."));
+    document.head.appendChild(script);
+  });
+  return sdkPromise;
+}
+
+function normalizePlace(item: any): KakaoPlace {
+  return {
+    id: String(item.id),
+    name: item.place_name,
+    category: item.category_name,
+    address: item.address_name,
+    roadAddress: item.road_address_name,
+    latitude: Number(item.y),
+    longitude: Number(item.x),
+    distance: item.distance ? Number(item.distance) : null,
+    placeUrl: item.place_url,
+  };
+}
+
+export async function searchKakaoPlaces(
+  query: string,
+  options?: { latitude: number; longitude: number; radius: number },
+): Promise<KakaoPlace[]> {
+  await loadKakaoSdk();
+  return new Promise((resolve, reject) => {
+    const kakao = window.kakao;
+    const searchOptions = options ? {
+      location: new kakao.maps.LatLng(options.latitude, options.longitude),
+      radius: options.radius,
+      sort: kakao.maps.services.SortBy.DISTANCE,
+      size: 15,
+    } : { size: 10 };
+    new kakao.maps.services.Places().keywordSearch(query, (items: any[], status: string) => {
+      if (status === kakao.maps.services.Status.OK) resolve(items.map(normalizePlace));
+      else if (status === kakao.maps.services.Status.ZERO_RESULT) resolve([]);
+      else reject(new Error("가게 검색을 완료하지 못했습니다."));
+    }, searchOptions);
+  });
+}
+
+export function selectNearbyPlaces(places: KakaoPlace[], ownPlaceId: string, count: number): KakaoPlace[] {
+  return places.filter((place) => place.id !== ownPlaceId).slice(0, Math.max(0, count));
+}

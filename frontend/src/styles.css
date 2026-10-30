@@ -348,6 +348,28 @@ h1 em { color: var(--teal); font-style: normal; }
 .reviews-hero h1 { font-size: clamp(48px, 7vw, 92px); }
 .reviews-hero h1 em { color: #f4a47e; }
 .reviews-hero > p:last-child { max-width: 750px; color: #c8d3d5; line-height: 1.7; }
+.shop-finder { max-width: 1400px; margin: 0 auto; padding: 70px clamp(18px, 5vw, 72px) 0; }
+.shop-finder .review-section-heading { margin-top: 0; }
+.shop-search { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 28px; }
+.shop-search input { width: 100%; box-sizing: border-box; padding: 17px 18px; border: 1px solid rgba(0, 0, 0, .14); border-radius: 14px; background: white; font: inherit; }
+.shop-search button { padding: 0 24px; border: 0; border-radius: 14px; color: white; background: var(--accent); font-weight: 800; cursor: pointer; }
+.shop-search button:disabled { cursor: wait; opacity: .55; }
+.shop-search-results { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.shop-search-results button { display: flex; align-items: flex-start; flex-direction: column; gap: 5px; padding: 18px; border: 1px solid rgba(0, 0, 0, .09); border-radius: 14px; background: white; text-align: left; cursor: pointer; }
+.shop-search-results button:hover { border-color: var(--accent); }
+.shop-search-results span { color: #515b5e; }
+.shop-search-results small { color: #7a8386; }
+.selected-shop-panel { display: grid; grid-template-columns: .8fr 1.2fr; gap: 12px; margin-top: 24px; }
+.selected-shop-panel > div { padding: 24px; border: 1px solid rgba(0, 0, 0, .08); border-radius: 18px; background: white; }
+.selected-shop-panel h3 { margin: 7px 0; font-size: 26px; }
+.selected-shop-panel a { color: var(--accent); font-size: 13px; font-weight: 800; }
+.selected-shop-panel ol { margin: 16px 0 0; padding: 0; list-style: none; }
+.selected-shop-panel li { display: flex; justify-content: space-between; gap: 15px; padding: 12px 0; border-top: 1px solid rgba(0, 0, 0, .07); }
+.selected-shop-panel li span { font-weight: 750; }
+.selected-shop-panel li small { color: #6b7476; text-align: right; }
+.review-provider-status { display: grid; grid-template-columns: 150px 1fr; gap: 18px; margin-top: 12px; padding: 18px 22px; border-radius: 14px; color: #3f4a4d; background: #edf6ff; }
+.review-provider-status strong { color: #075985; }
+.review-provider-status p { margin: 0; line-height: 1.55; }
 .reviews-form { max-width: 1400px; margin: 0 auto; padding: 70px clamp(18px, 5vw, 72px); }
 .review-context { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; }
 .review-context label span, .review-inputs label > span { display: block; margin-bottom: 8px; color: #667174; font-size: 12px; font-weight: 800; }
@@ -360,6 +382,10 @@ h1 em { color: var(--teal); font-style: normal; }
 .file-button { position: relative; overflow: hidden; padding: 12px 16px; color: white; background: var(--teal); font-size: 12px; font-weight: 800; cursor: pointer; }
 .file-button input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .import-notice { color: var(--teal); font-size: 12px; font-weight: 800; }
+.review-manual-fallback { margin: 30px 0; padding: 18px; border: 1px solid rgba(0, 0, 0, .09); border-radius: 14px; background: #f7f7f9; }
+.review-manual-fallback summary { color: #606a6d; font-size: 13px; font-weight: 800; cursor: pointer; }
+.review-manual-fallback > p { color: #717a7d; font-size: 12px; }
+.review-manual-fallback .review-inputs { margin-top: 18px; }
 .review-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin-top: 45px; background: var(--line); }
 .review-inputs label { padding: 26px; background: #f3f1eb; }
 .review-inputs textarea { width: 100%; box-sizing: border-box; padding: 16px; border: 1px solid #ccd0ce; resize: vertical; font: inherit; line-height: 1.6; }
@@ -510,6 +536,10 @@ h1 em { color: var(--teal); font-style: normal; }
   .funding-result { margin: 0 -18px; }
   .review-import { align-items: stretch; flex-direction: column; }
   .review-context, .review-inputs, .insight-grid, .review-report-guide, .topic-cards { grid-template-columns: 1fr; }
+  .shop-search-results, .selected-shop-panel { grid-template-columns: 1fr; }
+  .shop-search { grid-template-columns: 1fr; }
+  .shop-search button { min-height: 50px; }
+  .review-provider-status { grid-template-columns: 1fr; gap: 6px; }
   .review-submit { align-items: stretch; flex-direction: column; }
   .review-submit button { width: 100%; }
   .review-summary { grid-template-columns: 1fr 1fr; }

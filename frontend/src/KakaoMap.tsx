@@ -1,13 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
+import { loadKakaoSdk } from "./kakaoPlaces";
 import type { TradeArea } from "./types";
-
-
-declare global {
-  interface Window {
-    kakao?: any;
-  }
-}
 
 type Props = {
   areas: TradeArea[];
@@ -26,25 +20,6 @@ export function detachMapLayers(layers: MapLayer[]) {
   layers.forEach((layer) => layer.setMap(null));
 }
 
-function loadKakaoMap(): Promise<void> {
-  if (window.kakao?.maps) return Promise.resolve();
-  const existing = document.querySelector<HTMLScriptElement>("script[data-kakao-map]");
-  if (existing) {
-    return new Promise((resolve, reject) => {
-      existing.addEventListener("load", () => window.kakao.maps.load(resolve), { once: true });
-      existing.addEventListener("error", () => reject(new Error("카카오맵을 불러오지 못했습니다.")), { once: true });
-    });
-  }
-  return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.dataset.kakaoMap = "true";
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_KEY}&autoload=false`;
-    script.onload = () => window.kakao.maps.load(resolve);
-    script.onerror = () => reject(new Error("카카오맵을 불러오지 못했습니다."));
-    document.head.appendChild(script);
-  });
-}
-
 export function KakaoMap({ areas, favorites, onToggleFavorite, showDistrictGuide = false }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const [error, setError] = useState("");
@@ -55,7 +30,7 @@ export function KakaoMap({ areas, favorites, onToggleFavorite, showDistrictGuide
     const mapContainer = container.current;
     const markers: MapLayer[] = [];
     const overlays: MapLayer[] = [];
-    loadKakaoMap()
+    loadKakaoSdk()
       .then(() => {
         if (disposed || !container.current) return;
         const kakao = window.kakao;

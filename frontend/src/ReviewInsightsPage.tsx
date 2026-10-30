@@ -1,7 +1,7 @@
-import { ChangeEvent, FormEvent, useState } from "react";
+import { FormEvent, useState } from "react";
 
 import { analyzeReviewText } from "./api";
-import { parseReviewCsv } from "./reviewCsv";
+import { searchKakaoPlaces, selectNearbyPlaces, type KakaoPlace } from "./kakaoPlaces";
 import type { ReviewAnalysisResponse } from "./types";
 
 const lines = (value: string) => value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
@@ -13,11 +13,16 @@ export function ReviewInsightsPage() {
   const [radius, setRadius] = useState(500);
   const [shopCount, setShopCount] = useState(3);
   const [period, setPeriod] = useState("최근 3개월");
+  const [shopQuery, setShopQuery] = useState("");
+  const [shopResults, setShopResults] = useState<KakaoPlace[]>([]);
+  const [selectedShop, setSelectedShop] = useState<KakaoPlace | null>(null);
+  const [nearbyShops, setNearbyShops] = useState<KakaoPlace[]>([]);
+  const [placeLoading, setPlaceLoading] = useState(false);
+  const [placeError, setPlaceError] = useState("");
   const [ownText, setOwnText] = useState("");
   const [nearbyText, setNearbyText] = useState("");
   const [ownershipConfirmed, setOwnershipConfirmed] = useState(false);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
-  const [importNotice, setImportNotice] = useState("");
   const [result, setResult] = useState<ReviewAnalysisResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,20 +33,39 @@ export function ReviewInsightsPage() {
     ? "리뷰가 더 모이면 실행 아이디어를 보여드릴게요."
     : "주제별 숫자와 리뷰 근거를 확인하며 작은 차이를 찾아보세요.");
 
-  const importCsv = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setError("");
+  const searchOwnShop = async () => {
+    if (!shopQuery.trim()) return;
+    setPlaceLoading(true);
+    setPlaceError("");
     try {
-      const parsed = parseReviewCsv(await file.text());
-      setOwnText(parsed.own.join("\n"));
-      setNearbyText(parsed.nearby.join("\n"));
-      setImportNotice(`CSV에서 내 가게 ${parsed.own.length}건, 주변 ${parsed.nearby.length}건을 불러왔습니다.`);
+      const places = await searchKakaoPlaces(shopQuery.trim());
+      setShopResults(places);
+      if (!places.length) setPlaceError("검색 결과가 없습니다. 가게 이름과 지역을 함께 입력해 보세요.");
     } catch (reason) {
-      setImportNotice("");
-      setError(reason instanceof Error ? reason.message : "CSV를 읽지 못했습니다.");
+      setPlaceError(reason instanceof Error ? reason.message : "가게를 검색하지 못했습니다.");
     } finally {
-      event.target.value = "";
+      setPlaceLoading(false);
+    }
+  };
+
+  const chooseShop = async (place: KakaoPlace) => {
+    setSelectedShop(place);
+    setShopName(place.name);
+    setShopResults([]);
+    setPlaceLoading(true);
+    setPlaceError("");
+    try {
+      const places = await searchKakaoPlaces(industry, {
+        latitude: place.latitude,
+        longitude: place.longitude,
+        radius,
+      });
+      setNearbyShops(selectNearbyPlaces(places, place.id, shopCount));
+    } catch (reason) {
+      setNearbyShops([]);
+      setPlaceError(reason instanceof Error ? reason.message : "주변 가게를 찾지 못했습니다.");
+    } finally {
+      setPlaceLoading(false);
     }
   };
 
@@ -60,7 +84,7 @@ export function ReviewInsightsPage() {
     try {
       setResult(await analyzeReviewText({
         own_shop_name: shopName,
-        comparison_scope: `반경 ${radius}m · ${industry} · 사용자가 선택한 ${shopCount}곳`,
+        comparison_scope: `반경 ${radius}m · ${industry} · 자동 선택한 ${nearbyShops.length || shopCount}곳`,
         period_label: period,
         ownership_confirmed: ownershipConfirmed,
         data_rights_confirmed: rightsConfirmed,
@@ -77,8 +101,17 @@ export function ReviewInsightsPage() {
   return <div className="reviews-page">
     <header className="site-header"><a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a><div className="header-context"><a href="#top">상권 탐색</a><strong>개업 후 운영</strong></div></header>
     <main>
-      <section className="reviews-hero"><p className="eyebrow">가게를 연 뒤 · 리뷰 보기</p><h1>손님 리뷰에서<br />다음에 고칠 일을 찾아보세요.</h1><p>내 가게와 직접 고른 주변 가게의 리뷰를 메뉴, 가격, 응대처럼 같은 기준으로 비교해요.<br />리뷰 작성자 정보는 받지 않고 입력 내용도 저장하지 않아요.</p></section>
+      <section className="reviews-hero"><p className="eyebrow">가게를 연 뒤 · 리뷰 보기</p><h1>손님 리뷰에서<br />다음에 고칠 일을 찾아보세요.</h1><p>내 가게를 찾으면 같은 업종의 가까운 가게를 자동으로 골라요.<br />허가된 리뷰 데이터만 연결해 메뉴, 가격, 응대처럼 같은 기준으로 비교합니다.</p></section>
+      <section className="shop-finder" aria-labelledby="shop-finder-title">
+        <div className="review-section-heading"><div><p className="eyebrow">1 · 내 가게 선택</p><h2 id="shop-finder-title">가게 이름을 검색하세요</h2></div><p>지역 이름을 함께 입력하면 더 정확해요. 선택한 가게를 기준으로 같은 업종의 가까운 가게를 자동으로 찾습니다.</p></div>
+        <div className="shop-search"><label><span className="sr-only">내 가게 검색</span><input value={shopQuery} onChange={(event) => setShopQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void searchOwnShop(); } }} placeholder="예: 성수동 골목 카페" /></label><button type="button" onClick={() => void searchOwnShop()} disabled={placeLoading}>{placeLoading ? "찾는 중" : "가게 찾기"}</button></div>
+        {placeError ? <p className="error-banner">{placeError}</p> : null}
+        {shopResults.length ? <div className="shop-search-results" aria-label="가게 검색 결과">{shopResults.map((place) => <button type="button" key={place.id} onClick={() => void chooseShop(place)}><strong>{place.name}</strong><span>{place.roadAddress || place.address}</span><small>{place.category}</small></button>)}</div> : null}
+        {selectedShop ? <div className="selected-shop-panel"><div><p className="eyebrow">선택한 내 가게</p><h3>{selectedShop.name}</h3><p>{selectedShop.roadAddress || selectedShop.address}</p><a href={selectedShop.placeUrl} target="_blank" rel="noreferrer">카카오맵에서 확인 ↗</a></div><div><p className="eyebrow">자동 선택한 주변 가게 {nearbyShops.length}곳</p>{nearbyShops.length ? <ol>{nearbyShops.map((place) => <li key={place.id}><span>{place.name}</span><small>{place.distance === null ? place.category : `${place.distance.toLocaleString("ko-KR")}m · ${place.category}`}</small></li>)}</ol> : <p>조건에 맞는 주변 가게를 찾지 못했습니다.</p>}</div></div> : null}
+        {selectedShop ? <div className="review-provider-status"><strong>장소 선택 완료</strong><p>리뷰 원문 자동 수집은 분석·재사용 권한이 확인된 제공자 연결이 필요합니다. 네이버·카카오 지도 화면을 임의로 크롤링하지 않습니다.</p></div> : null}
+      </section>
       <form className="reviews-form" onSubmit={submit}>
+        <div className="review-section-heading"><div><p className="eyebrow">2 · 리뷰 연결</p><h2>리뷰 데이터 준비</h2></div><p>정식 제공자가 연결되면 선택한 가게와 주변 가게의 리뷰가 이 단계에 자동으로 들어옵니다.</p></div>
         <div className="review-context">
           <label><span>내 가게 표시명</span><input value={shopName} onChange={(event) => setShopName(event.target.value)} /></label>
           <label><span>비교 업종</span><input value={industry} onChange={(event) => setIndustry(event.target.value)} /></label>
@@ -86,16 +119,7 @@ export function ReviewInsightsPage() {
           <label><span>비교 반경(m)</span><input type="number" min="100" max="5000" value={radius} onChange={(event) => setRadius(Number(event.target.value))} /></label>
           <label><span>주변 비교 가게 수</span><input type="number" min="1" max="20" value={shopCount} onChange={(event) => setShopCount(Number(event.target.value))} /></label>
         </div>
-        <div className="review-import">
-          <div><p className="eyebrow">CSV 가져오기</p><p><code>group,review</code> 두 열을 사용하고 group은 <code>own</code> 또는 <code>nearby</code>로 작성합니다.</p></div>
-          <label className="file-button">CSV 선택<input type="file" accept=".csv,text/csv" onChange={importCsv} /></label>
-          <a href="/review-import-template.csv" download>예시 CSV 받기</a>
-        </div>
-        {importNotice ? <p className="import-notice">{importNotice}</p> : null}
-        <div className="review-inputs">
-          <label><span>내 가게 리뷰 · 한 줄에 하나</span><textarea rows={12} value={ownText} onChange={(event) => setOwnText(event.target.value)} placeholder={'커피가 맛있고 직원이 친절해요\n가격이 조금 비싸요'} /></label>
-          <label><span>주변 동종 가게 리뷰 · 한 줄에 하나</span><textarea rows={12} value={nearbyText} onChange={(event) => setNearbyText(event.target.value)} placeholder={'커피 맛은 좋지만 대기가 오래 걸려요\n공간이 깨끗하고 조용해요'} /></label>
-        </div>
+        <details className="review-manual-fallback"><summary>제공자 연결 전 개발용 리뷰 입력</summary><p>자동 연동 계약 테스트가 끝날 때까지만 사용하는 임시 입력입니다. 실제 서비스 화면에서는 제거됩니다.</p><div className="review-inputs"><label><span>내 가게 리뷰 · 한 줄에 하나</span><textarea rows={10} value={ownText} onChange={(event) => setOwnText(event.target.value)} placeholder={'커피가 맛있고 직원이 친절해요\n가격이 조금 비싸요'} /></label><label><span>주변 동종 가게 리뷰 · 한 줄에 하나</span><textarea rows={10} value={nearbyText} onChange={(event) => setNearbyText(event.target.value)} placeholder={'커피 맛은 좋지만 대기가 오래 걸려요\n공간이 깨끗하고 조용해요'} /></label></div></details>
         <div className="review-rights">
           <label><input type="checkbox" checked={ownershipConfirmed} onChange={(event) => setOwnershipConfirmed(event.target.checked)} /> 나는 이 가게의 소유자·관리자이거나 분석을 위임받았습니다.</label>
           <label><input type="checkbox" checked={rightsConfirmed} onChange={(event) => setRightsConfirmed(event.target.checked)} /> 입력할 리뷰의 분석·이용 권한을 확인했고 작성자 이름 등 개인 식별정보를 제외했습니다.</label>

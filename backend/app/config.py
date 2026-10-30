@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     database_url: str = DEFAULT_SQLITE_URL
     app_name: str = "골목 레이더 API"
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    rone_api_key: str | None = None
     k_startup_api_key: str | None = None
 
     model_config = SettingsConfigDict(

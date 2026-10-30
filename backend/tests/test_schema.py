@@ -11,6 +11,7 @@ def test_schema_is_created_in_sqlite() -> None:
     assert set(inspect(engine).get_table_names()) == {
         "data_sources",
         "population_metrics",
+        "rent_benchmarks",
         "sales_metrics",
         "store_metrics",
         "trade_areas",

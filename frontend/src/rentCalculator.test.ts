@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { calculateRent, parseRentAreaCode } from "./rentCalculator";
+import { calculateRent, parseRentAreaCode, roundBenchmarkValue } from "./rentCalculator";
 
 describe("rent calculator", () => {
   it("separates deposit from recurring occupancy cost", () => {
@@ -19,5 +19,10 @@ describe("rent calculator", () => {
 
   it("parses the selected trade area", () => {
     expect(parseRentAreaCode("#rent?code=3110118")).toBe("3110118");
+  });
+
+  it("rounds official benchmark values to two decimal places for display", () => {
+    expect(roundBenchmarkValue(53.081)).toBe(53.08);
+    expect(roundBenchmarkValue(100.465)).toBe(100.47);
   });
 });

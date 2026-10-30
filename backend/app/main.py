@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from .config import get_settings
 from .db import get_db
 from .metric_service import MetricValue, get_area_metrics
-from .models import DataSource, PopulationMetric, SalesMetric, StoreMetric, TradeArea
+from .models import DataSource, PopulationMetric, RentBenchmark, SalesMetric, StoreMetric, TradeArea
 from .recommendations import recommend, select_diverse
 from .reports import build_area_report
 from .review_analysis import analyze_reviews, build_insights
@@ -191,16 +191,48 @@ def get_rent_benchmark(code: str, session: Session = Depends(get_db)) -> RentBen
     area = session.get(TradeArea, code)
     if not area:
         raise HTTPException(404, "상권을 찾을 수 없습니다.")
+    benchmarks = session.scalars(
+        select(RentBenchmark)
+        .where(RentBenchmark.region_code == "500002")
+        .order_by(RentBenchmark.metric_key)
+    ).all()
+    common = {
+        "trade_area": area_out(session, area),
+        "provider": "한국부동산원",
+        "dataset_name": "상업용부동산 임대동향조사",
+        "update_cycle": "분기",
+        "is_live_listing": False,
+        "source_url": "https://www.reb.or.kr/reb/cm/cntnts/cntntsView.do?cntntsId=1049&mi=10335&statId=S237220284",
+        "api_docs_url": "https://www.reb.or.kr/r-one/portal/openapi/openApiDevPage.do",
+        "disclaimer": "표본조사 기반 시장 참고값이며 개별 매물의 호가·계약조건이나 선택한 서울시 상권의 고유값이 아닙니다.",
+    }
+    if not benchmarks:
+        return RentBenchmarkResponse(
+            status="mapping_required",
+            message="R-ONE 원천 통계가 아직 적재되지 않았습니다. 서울시 상권 값으로 추정하거나 0으로 대체하지 않습니다.",
+            **common,
+        )
+    periods = sorted({item.period_label for item in benchmarks})
     return RentBenchmarkResponse(
-        status="mapping_required",
-        trade_area=area_out(session, area),
-        provider="한국부동산원",
-        dataset_name="상업용부동산 임대동향조사",
-        update_cycle="분기",
-        is_live_listing=False,
-        message="R-ONE 통계 상권과 서울 상권분석서비스 코드의 공간 단위가 달라 매핑 검증 전에는 수치를 표시하지 않습니다.",
-        source_url="https://www.reb.or.kr/reb/cm/cntnts/cntntsView.do?cntntsId=1049",
-        api_docs_url="https://www.reb.or.kr/r-one/portal/openapi/openApiDevPage.do",
+        status="available",
+        source_period=", ".join(periods),
+        source_region="서울 전체",
+        building_type="소규모상가",
+        mapping_scope="administrative_context",
+        confidence="contextual",
+        metrics=[
+            {
+                "metric_key": item.metric_key,
+                "label": item.metric_label,
+                "value": item.value,
+                "unit": item.unit,
+                "table_id": item.table_id,
+                "item_id": item.item_id,
+            }
+            for item in benchmarks
+        ],
+        message="선택한 상권의 정확한 임대료가 아니라 서울 전체 소규모상가의 공식 분기 참고값입니다. R-ONE 조사상권과 서울시 상권 경계는 서로 다릅니다.",
+        **common,
     )
 
 

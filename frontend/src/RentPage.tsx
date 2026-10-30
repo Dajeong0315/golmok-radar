@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { fetchRentBenchmark } from "./api";
-import { calculateRent } from "./rentCalculator";
+import { calculateRent, roundBenchmarkValue } from "./rentCalculator";
 import type { RentBenchmarkResponse } from "./types";
 
 export function RentPage({ code }: { code: string }) {
@@ -48,7 +48,7 @@ export function RentPage({ code }: { code: string }) {
       <aside className="rent-result"><p className="eyebrow">COST SNAPSHOT</p><h2>월 공간 고정비</h2><strong>{result.monthlyOccupancyCost.toLocaleString("ko-KR")}원</strong><dl><div><dt>연간 월세+관리비</dt><dd>{result.annualOccupancyCost.toLocaleString("ko-KR")}원</dd></div><div><dt>약 1평당 월 비용</dt><dd>{result.monthlyCostPerPyeong === null ? "면적 필요" : `${result.monthlyCostPerPyeong.toLocaleString("ko-KR")}원`}</dd></div><div><dt>예상매출 대비 공간비</dt><dd>{result.occupancyCostRatio === null ? "예상매출 필요" : `${result.occupancyCostRatio}%`}</dd></div><div><dt>별도 초기 보증금</dt><dd>{(form.deposit * 10_000).toLocaleString("ko-KR")}원</dd></div></dl><p>매출 대비 비율은 사용자가 입력한 예상매출을 사용한 단순 계산이며 적정성 판단이나 수익 보장이 아닙니다.</p></aside>
     </section>
     <section className="rent-sources">
-      <div><p className="eyebrow">OFFICIAL BENCHMARK</p><h2>공식 임대 통계</h2>{benchmark ? <><span className="source-status">매핑 검증 필요</span><p>{benchmark.message}</p><dl><div><dt>제공기관</dt><dd>{benchmark.provider}</dd></div><div><dt>데이터셋</dt><dd>{benchmark.dataset_name}</dd></div><div><dt>갱신주기</dt><dd>{benchmark.update_cycle}</dd></div><div><dt>실시간 매물 여부</dt><dd>{benchmark.is_live_listing ? "예" : "아니오"}</dd></div></dl><a href={benchmark.source_url} target="_blank" rel="noreferrer">한국부동산원 원문 통계 보기 →</a></> : <p>공식 통계 연결 상태를 확인하고 있습니다.</p>}</div>
+      <div><p className="eyebrow">OFFICIAL BENCHMARK</p><h2>공식 임대 통계</h2>{benchmark ? <><span className="source-status">{benchmark.status === "available" ? "서울 참고 벤치마크" : "원천 통계 준비 중"}</span><p>{benchmark.message}</p>{benchmark.metrics.length ? <dl>{benchmark.metrics.map((metric) => <div key={metric.metric_key}><dt>{metric.label}</dt><dd>{roundBenchmarkValue(metric.value).toLocaleString("ko-KR")} {metric.unit}</dd></div>)}</dl> : null}<dl><div><dt>공간 범위</dt><dd>{benchmark.source_region || "비교 불가"}</dd></div><div><dt>기준기간</dt><dd>{benchmark.source_period || "비교 불가"}</dd></div><div><dt>건물유형</dt><dd>{benchmark.building_type || "비교 불가"}</dd></div><div><dt>갱신주기</dt><dd>{benchmark.update_cycle}</dd></div><div><dt>실시간 매물 여부</dt><dd>{benchmark.is_live_listing ? "예" : "아니오"}</dd></div></dl><p>{benchmark.disclaimer}</p><a href={benchmark.source_url} target="_blank" rel="noreferrer">한국부동산원 원문 통계 보기 →</a></> : <p>공식 통계 연결 상태를 확인하고 있습니다.</p>}</div>
       <div><p className="eyebrow">LIVE LISTINGS</p><h2>개별 실매물</h2><span className="source-status source-status--muted">제휴 API 없음</span><p>네이버 부동산의 공개 매물 API가 확인되지 않아 매물을 복제하거나 크롤링하지 않습니다. 아래 링크에서 최신 매물과 중개사 정보를 직접 확인하고 조건을 위 계산기에 입력해 주세요.</p><a href="https://new.land.naver.com/" target="_blank" rel="noreferrer">네이버 부동산에서 직접 확인 →</a></div>
     </section>
     <section className="pipeline-next"><div><p className="eyebrow">NEXT STEP</p><h2>상권과 비용을 검토했다면<br />공식 지원 조건을 확인하세요.</h2></div><a href="#funding">지원·자금 후보 확인 →</a></section>

@@ -119,13 +119,27 @@ export type AreaReportResponse = {
 };
 
 export type RentBenchmarkResponse = {
-  status: "mapping_required";
+  status: "available" | "mapping_required";
   trade_area: TradeArea;
   provider: string;
   dataset_name: string;
   update_cycle: string;
   is_live_listing: boolean;
+  source_period: string | null;
+  source_region: string | null;
+  building_type: string | null;
+  mapping_scope: "administrative_context" | null;
+  confidence: "contextual" | null;
+  metrics: Array<{
+    metric_key: string;
+    label: string;
+    value: number;
+    unit: string;
+    table_id: string;
+    item_id: string;
+  }>;
   message: string;
+  disclaimer: string;
   source_url: string;
   api_docs_url: string;
 };

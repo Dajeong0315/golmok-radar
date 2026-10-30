@@ -84,3 +84,22 @@ class DataSource(Base):
     quarter_max: Mapped[str | None] = mapped_column(String(5))
     notes: Mapped[str | None] = mapped_column(Text)
 
+
+class RentBenchmark(Base):
+    __tablename__ = "rent_benchmarks"
+
+    period_code: Mapped[str] = mapped_column(String(10), primary_key=True)
+    region_code: Mapped[str] = mapped_column(String(20), primary_key=True)
+    building_type: Mapped[str] = mapped_column(String(40), primary_key=True)
+    metric_key: Mapped[str] = mapped_column(String(40), primary_key=True)
+    period_label: Mapped[str] = mapped_column(String(40), nullable=False)
+    region_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    metric_label: Mapped[str] = mapped_column(String(100), nullable=False)
+    value: Mapped[float] = mapped_column(Float, nullable=False)
+    unit: Mapped[str] = mapped_column(String(40), nullable=False)
+    table_id: Mapped[str] = mapped_column(String(40), nullable=False)
+    item_id: Mapped[str] = mapped_column(String(40), nullable=False)
+    mapping_scope: Mapped[str] = mapped_column(String(40), nullable=False)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    source_url: Mapped[str] = mapped_column(String(500), nullable=False)
+

@@ -26,3 +26,7 @@ export function calculateRent(inputs: RentInputs): RentResult {
 export function parseRentAreaCode(hash: string): string {
   return new URLSearchParams(hash.split("?")[1] || "").get("code") || "";
 }
+
+export function roundBenchmarkValue(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}

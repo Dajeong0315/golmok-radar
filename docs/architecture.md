@@ -10,6 +10,7 @@ flowchart LR
     F --> S[SQLAlchemy]
     S --> D[(SQLite 또는 Supabase PostgreSQL)]
     O[서울시 원천 ZIP·Open API] --> V[수집·검증·정규화 스크립트]
+    O2[R-ONE Open API] --> V
     V --> D
 ```
 
@@ -22,6 +23,15 @@ erDiagram
     TRADE_AREAS ||--o| STORE_METRICS : has
     TRADE_AREAS ||--o| SALES_METRICS : has
     TRADE_AREAS ||--o| POPULATION_METRICS : has
+    RENT_BENCHMARKS {
+        string period_code PK
+        string region_code PK
+        string building_type PK
+        string metric_key PK
+        float value
+        string unit
+        string mapping_scope
+    }
     DATA_SOURCES {
         string key PK
         string dataset_name
@@ -74,7 +84,7 @@ erDiagram
 | GET | `/api/v1/trade-areas/{code}` | 상권 상세와 지표 |
 | POST | `/api/v1/recommendations` | 창업 성향 답변 기반 설명 가능한 카페 후보 2~3곳 |
 | GET | `/api/v1/trade-areas/{code}/report` | 82개 비교군 기준 강점·주의·수요 특성 리포트 |
-| GET | `/api/v1/trade-areas/{code}/rent-benchmark` | R-ONE 공간 매핑 상태와 공식 출처 확인 |
+| GET | `/api/v1/trade-areas/{code}/rent-benchmark` | R-ONE 서울 전체 소규모상가 참고지표와 공간 범위·공식 출처 확인 |
 | POST | `/api/v1/support-programs` | 최소 조건 기반 공식 창업지원 연동 상태와 후보 확인 |
 | POST | `/api/v1/review-analysis` | 사용자 제공 리뷰의 주제별 내 가게·주변 비교군 분석 |
 | GET | `/api/v1/comparisons?codes=A,B&quarter=20254` | 서로 다른 상권 2~4곳, 지표 14개 비교 |
@@ -93,7 +103,9 @@ erDiagram
 | API | 2·3·4곳 성공 및 잘못된 코드 수·중복·분기 실패 테스트 |
 | UI | 117곳 로딩, 관심 목록 유지, 최대 4곳 제한, 14지표·결측·근거 패널 확인 |
 
-2026-10-30 통합 검증 기준으로 백엔드 42개, 프런트엔드 13개 테스트와 Vite production build가 통과했습니다. Supabase에 revision `20261029_0001`과 117/110/82/117/4건을 적재했고 FastAPI 상권 117건 조회를 확인했습니다. 로컬 카카오맵에서 지도 타일과 공식 상권 라벨 117개 렌더링, 관심 상권 저장·해제를 확인했습니다.
+2026-10-30 통합 검증 기준으로 백엔드 45개, 프런트엔드 14개 테스트와 Vite production build가 통과했습니다. Supabase에 revision `20261030_0002`까지 적용하고 기존 상권 데이터와 R-ONE 참고지표 3건을 적재했습니다. FastAPI에서 왕십리역 9번 요청에 서울 전체 소규모상가의 2026년 3분기 임대료·공실률·임대가격지수를 반환하는지 확인했고, PC·360px 화면에서 공간 범위와 비매물 경고를 검증했습니다. 로컬 카카오맵에서도 지도 타일과 공식 상권 라벨 117개 렌더링, 관심 상권 저장·해제를 확인했습니다.
+
+R-ONE 값은 `trade_areas`에 외래키로 결합하지 않습니다. 공식 경계 대응표가 없으므로 `mapping_scope=administrative_context`, `confidence=contextual`인 서울 전체 공유 벤치마크로만 반환하며, 조사상권 이름 유사도나 중심점으로 개별 상권 값을 추정하지 않습니다.
 
 Phase 13 지원사업 계층은 `K_STARTUP_API_KEY`를 설정 계약으로 사용합니다. 모집 기간·지역·창업 단계·연령·업력 판정은 순수 함수로 분리했고, 키 또는 운영 응답 계약이 검증되지 않으면 후보 배열을 비워 오래되거나 가상의 지원상품이 현재 추천처럼 보이지 않게 합니다. 신용·부채 정보와 대출 승인 예측은 수집하지 않습니다.
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TradeAreaOut(BaseModel):
@@ -135,14 +135,30 @@ class AreaReportResponse(BaseModel):
     notice: str
 
 
+class RentBenchmarkMetric(BaseModel):
+    metric_key: str
+    label: str
+    value: float
+    unit: str
+    table_id: str
+    item_id: str
+
+
 class RentBenchmarkResponse(BaseModel):
-    status: Literal["mapping_required"]
+    status: Literal["available", "mapping_required"]
     trade_area: TradeAreaOut
     provider: str
     dataset_name: str
     update_cycle: str
     is_live_listing: bool
+    source_period: str | None = None
+    source_region: str | None = None
+    building_type: str | None = None
+    mapping_scope: Literal["administrative_context"] | None = None
+    confidence: Literal["contextual"] | None = None
+    metrics: list[RentBenchmarkMetric] = Field(default_factory=list)
     message: str
+    disclaimer: str
     source_url: str
     api_docs_url: str
 

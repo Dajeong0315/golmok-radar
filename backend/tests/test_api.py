@@ -1,13 +1,15 @@
 from collections.abc import Generator
+from datetime import datetime
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from app.db import Base, get_db, make_engine
 from app.main import app
-from app.models import DataSource, PopulationMetric, SalesMetric, StoreMetric, TradeArea
+from app.models import DataSource, PopulationMetric, RentBenchmark, SalesMetric, StoreMetric, TradeArea
 
 
 @pytest.fixture
@@ -24,6 +26,31 @@ def client(tmp_path: Path) -> Generator[TestClient, None, None]:
                     source_file=f"{key}.csv",
                 )
                 for key in ("area", "store", "sales", "population")
+            ]
+        )
+        session.add_all(
+            [
+                RentBenchmark(
+                    period_code="202603",
+                    period_label="2026년 3분기",
+                    region_code="500002",
+                    region_name="서울",
+                    building_type="small_retail",
+                    metric_key=metric_key,
+                    metric_label=label,
+                    value=value,
+                    unit=unit,
+                    table_id=table_id,
+                    item_id="100001",
+                    mapping_scope="administrative_context",
+                    fetched_at=datetime(2026, 10, 30, 9, 0, 0),
+                    source_url="https://www.reb.or.kr/r-one/",
+                )
+                for metric_key, label, value, unit, table_id in (
+                    ("rent_per_sqm", "소규모상가 임대료", 53.08, "천원/㎡", "rent-table"),
+                    ("vacancy_rate", "소규모상가 공실률", 6.58, "%", "vacancy-table"),
+                    ("rent_price_index", "소규모상가 임대가격지수", 100.2, "지수", "index-table"),
+                )
             ]
         )
         for index in range(1, 6):
@@ -184,14 +211,36 @@ def test_area_report_links_every_statement_to_metric_evidence(client: TestClient
         assert item["summary"]
 
 
-def test_rent_benchmark_does_not_present_quarterly_statistics_as_live_listing(client: TestClient) -> None:
+def test_rent_benchmark_exposes_seoul_context_without_presenting_it_as_live_listing(client: TestClient) -> None:
+    response = client.get("/api/v1/trade-areas/1/rent-benchmark")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "available"
+    assert body["is_live_listing"] is False
+    assert body["update_cycle"] == "분기"
+    assert body["source_region"] == "서울 전체"
+    assert body["mapping_scope"] == "administrative_context"
+    assert body["confidence"] == "contextual"
+    assert len(body["metrics"]) == 3
+    assert "정확한 임대료가 아니라" in body["message"]
+
+
+def test_rent_benchmark_returns_reason_instead_of_zero_when_source_is_missing(client: TestClient) -> None:
+    override_db = app.dependency_overrides[get_db]
+    database = override_db()
+    session = next(database)
+    try:
+        session.execute(delete(RentBenchmark))
+        session.commit()
+    finally:
+        database.close()
+
     response = client.get("/api/v1/trade-areas/1/rent-benchmark")
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "mapping_required"
-    assert body["is_live_listing"] is False
-    assert body["update_cycle"] == "분기"
-    assert "공간 단위" in body["message"]
+    assert body["metrics"] == []
+    assert "0으로 대체하지 않습니다" in body["message"]
 
 
 def test_support_programs_require_official_api_configuration(client: TestClient) -> None:

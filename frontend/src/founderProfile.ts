@@ -14,6 +14,7 @@ export type FounderQuestion = {
   id: string;
   eyebrow: string;
   question: string;
+  questionLines: [string, string];
   helper: string;
   why: string;
   options: FounderAnswer[];
@@ -30,6 +31,7 @@ export const FOUNDER_QUESTIONS: FounderQuestion[] = [
     id: "business",
     eyebrow: "01 · 가게 아이디어",
     question: "지금 가장 먼저 열어 보고 싶은 가게는 무엇인가요?",
+    questionLines: ["지금 가장 먼저 열어 보고 싶은", "가게는 무엇인가요?"],
     helper: "아직 확정하지 않아도 괜찮아요. 지금 마음이 가장 가는 것을 골라 주세요.",
     why: "업종에 따라 확인해야 할 매출, 손님, 경쟁 가게의 기준이 달라져요.",
     options: [
@@ -43,6 +45,7 @@ export const FOUNDER_QUESTIONS: FounderQuestion[] = [
     id: "demand",
     eyebrow: "02 · 원하는 손님",
     question: "어떤 손님이 자주 찾아오는 가게를 만들고 싶나요?",
+    questionLines: ["어떤 손님이 자주 찾아오는", "가게를 만들고 싶나요?"],
     helper: "예쁜 분위기보다 실제로 누가 언제 방문할지를 떠올려 보세요.",
     why: "주요 손님에 따라 평일·주말, 낮·밤에 볼 숫자의 중요도가 달라져요.",
     options: [
@@ -56,6 +59,7 @@ export const FOUNDER_QUESTIONS: FounderQuestion[] = [
     id: "risk",
     eyebrow: "03 · 시작 비용",
     question: "첫 가게의 비용은 어떤 방식으로 정하고 싶나요?",
+    questionLines: ["첫 가게의 비용은", "어떤 방식으로 정하고 싶나요?"],
     helper: "정확한 금액을 몰라도 괜찮아요. 가장 편안한 시작 방식을 골라 주세요.",
     why: "임대료와 고정비를 어느 정도까지 감당할지 후보를 거르는 기준이 돼요.",
     options: [
@@ -69,6 +73,7 @@ export const FOUNDER_QUESTIONS: FounderQuestion[] = [
     id: "operation",
     eyebrow: "04 · 운영 방식",
     question: "문을 연 뒤에는 누가 가게를 운영할 계획인가요?",
+    questionLines: ["문을 연 뒤에는", "누가 가게를 운영할 계획인가요?"],
     helper: "첫 1년 동안 실제로 가능한 모습에 가깝게 골라 주세요.",
     why: "운영 인원에 따라 필요한 매출과 감당할 수 있는 가게 크기가 달라져요.",
     options: [
@@ -82,6 +87,7 @@ export const FOUNDER_QUESTIONS: FounderQuestion[] = [
     id: "strength",
     eyebrow: "05 · 내가 잘하는 일",
     question: "가게를 준비하면서 가장 즐겁게 할 수 있는 일은 무엇인가요?",
+    questionLines: ["가게를 준비하면서", "가장 즐겁게 할 수 있는 일은 무엇인가요?"],
     helper: "이미 잘하는 일이 없어도 괜찮아요. 가장 배우고 싶은 일을 골라도 됩니다.",
     why: "내가 직접 맡을 일과 도움을 받아야 할 일을 나누는 데 쓰여요.",
     options: [
@@ -95,6 +101,7 @@ export const FOUNDER_QUESTIONS: FounderQuestion[] = [
     id: "competition",
     eyebrow: "06 · 비슷한 가게",
     question: "근처에 비슷한 가게가 많다면 어떻게 느낄 것 같나요?",
+    questionLines: ["근처에 비슷한 가게가 많다면", "어떻게 느낄 것 같나요?"],
     helper: "정답은 없어요. 경쟁을 피할지, 손님이 많은 곳을 택할지 생각해 보세요.",
     why: "카페 수가 적은 곳과 이미 수요가 확인된 곳 중 어느 쪽을 먼저 볼지 정해요.",
     options: [

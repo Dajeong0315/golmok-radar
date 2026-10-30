@@ -8,6 +8,7 @@ describe("founder profile", () => {
     FOUNDER_QUESTIONS.forEach((question) => {
       expect(question.options).toHaveLength(4);
       expect(new Set(question.options.map((option) => option.id)).size).toBe(4);
+      expect(question.questionLines.join(" ")).toBe(question.question);
       expect(question.why.length).toBeGreaterThan(10);
       question.options.forEach((option) => expect(option.description.length).toBeGreaterThan(5));
     });

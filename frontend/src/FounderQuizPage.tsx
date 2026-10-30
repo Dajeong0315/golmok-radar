@@ -67,7 +67,7 @@ export function FounderQuizPage() {
       <div className="quiz-brand"><span className="brand-mark">G</span><span>골목 레이더</span></div>
       <div className="quiz-intro__copy">
         <p className="eyebrow">첫 가게 준비 · 1단계</p>
-        <h1>내가 원하는 가게의 모습을 먼저 정리해 보세요.</h1>
+        <h1>내가 원하는 가게의 모습을 먼저<br />정리해 보세요.</h1>
         <p>여섯 가지 질문에 답하면 업종, 손님, 비용, 운영 방식을 한 장의 준비 리포트로 정리해 드려요. 정답을 맞히는 검사가 아니라 상권을 찾기 전 생각을 정리하는 과정입니다.</p>
         <div className="quiz-actions"><button className="primary-action" onClick={() => setMode("question")}>창업 성향 알아보기 <span>→</span></button><button className="text-action" onClick={skip}>지금은 상권부터 보기</button></div>
       </div>
@@ -113,7 +113,7 @@ export function FounderQuizPage() {
   return <main className="quiz-shell quiz-question">
     <header className="quiz-question__header"><button className="text-action" onClick={step ? () => setStep(step - 1) : () => setMode("intro")}>← 이전</button><div className="quiz-progress" aria-label={`${step + 1}/${FOUNDER_QUESTIONS.length} 진행`}><span style={{ width: `${((step + 1) / FOUNDER_QUESTIONS.length) * 100}%` }} /></div><strong>{String(step + 1).padStart(2, "0")} / 06</strong></header>
     <section className="question-card">
-      <p className="eyebrow">{current.eyebrow}</p><h1>{current.question}</h1><p className="question-helper">{current.helper}</p>
+      <p className="eyebrow">{current.eyebrow}</p><h1>{current.questionLines.map((line, index) => <Fragment key={line}>{index > 0 && <br />}{line}</Fragment>)}</h1><p className="question-helper">{current.helper}</p>
       <div className="question-why"><strong>왜 묻나요?</strong><span>{current.why}</span></div>
       <div className="answer-grid" role="radiogroup" aria-label={current.question}>
         {current.options.map((option, index) => <button role="radio" aria-checked={selected === option.id} className={selected === option.id ? "selected" : ""} onClick={() => choose(option.id)} key={option.id}><span>0{index + 1}</span><span className="answer-copy"><strong>{option.label}</strong><small>{option.description}</small></span><i>{selected === option.id ? "✓" : ""}</i></button>)}

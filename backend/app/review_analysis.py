@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 
@@ -13,6 +14,13 @@ TOPICS = {
 }
 POSITIVE = ("좋아", "좋았", "맛있", "친절", "깨끗", "만족", "훌륭", "추천", "빠르", "편안", "예쁘", "저렴")
 NEGATIVE = ("별로", "맛없", "불친절", "더럽", "비싸", "느리", "오래", "시끄", "불편", "아쉽")
+
+PERSONAL_PATTERNS = (
+    (re.compile(r"\b[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}\b"), "[이메일 제거]"),
+    (re.compile(r"(?<!\d)(?:01[016789]|0\d{1,2})[-.\s]?\d{3,4}[-.\s]?\d{4}(?!\d)"), "[전화번호 제거]"),
+    (re.compile(r"https?://\S+|www\.\S+", re.IGNORECASE), "[링크 제거]"),
+    (re.compile(r"(?<!\w)@[A-Za-z0-9_.-]{2,}"), "[계정명 제거]"),
+)
 
 
 @dataclass(frozen=True)
@@ -31,6 +39,13 @@ class TopicStats:
     negative: int
     neutral: int
     evidence: tuple[Evidence, ...]
+
+
+def sanitize_review_text(text: str) -> str:
+    sanitized = text.strip()
+    for pattern, replacement in PERSONAL_PATTERNS:
+        sanitized = pattern.sub(replacement, sanitized)
+    return sanitized
 
 
 def classify_sentiment(text: str) -> str:

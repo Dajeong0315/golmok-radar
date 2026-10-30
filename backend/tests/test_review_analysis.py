@@ -1,4 +1,4 @@
-from app.review_analysis import analyze_reviews, build_insights, classify_sentiment
+from app.review_analysis import analyze_reviews, build_insights, classify_sentiment, sanitize_review_text
 
 
 def test_keyword_sentiment_is_deterministic() -> None:
@@ -22,3 +22,13 @@ def test_insight_separates_observation_from_action_idea() -> None:
     assert insights[0]["kind"] == "caution"
     assert "내 가게 100%" in insights[0]["observation"]
     assert "2주 뒤" in insights[0]["action_idea"]
+
+
+def test_personal_contact_fields_are_removed_before_evidence_is_built() -> None:
+    sanitized = sanitize_review_text("문의 010-1234-5678 test@example.com @reviewer https://example.com 친절해요")
+    assert "010-1234-5678" not in sanitized
+    assert "test@example.com" not in sanitized
+    assert "@reviewer" not in sanitized
+    assert "https://example.com" not in sanitized
+    assert "[전화번호 제거]" in sanitized
+    assert analyze_reviews([sanitized])["service"].evidence[0].snippet == sanitized[:80]

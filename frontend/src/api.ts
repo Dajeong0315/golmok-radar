@@ -76,6 +76,8 @@ export async function analyzeReviewText(payload: {
   own_shop_name: string;
   comparison_scope: string;
   period_label: string;
+  ownership_confirmed: boolean;
+  data_rights_confirmed: boolean;
   own_reviews: string[];
   nearby_reviews: string[];
 }): Promise<ReviewAnalysisResponse> {

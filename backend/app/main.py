@@ -15,7 +15,7 @@ from .metric_service import MetricValue, get_area_metrics
 from .models import DataSource, PopulationMetric, RentBenchmark, SalesMetric, StoreMetric, SupportProgram, TradeArea
 from .recommendations import recommend, select_diverse
 from .reports import build_area_report
-from .review_analysis import analyze_reviews, build_insights
+from .review_analysis import analyze_reviews, build_insights, sanitize_review_text
 from .support_programs import NormalizedProgram, SupportProfile, select_candidates
 from .schemas import (
     AreaReportResponse,
@@ -317,8 +317,12 @@ def support_programs(profile: SupportProgramQuery, db: Session = Depends(get_db)
 
 @app.post("/api/v1/review-analysis", response_model=ReviewAnalysisResponse)
 def review_analysis(payload: ReviewAnalysisRequest) -> ReviewAnalysisResponse:
-    own_reviews = [item.strip() for item in payload.own_reviews if item.strip()]
-    nearby_reviews = [item.strip() for item in payload.nearby_reviews if item.strip()]
+    if not payload.ownership_confirmed or not payload.data_rights_confirmed:
+        raise HTTPException(400, "가게 관리 권한과 리뷰 데이터 사용 권한을 모두 확인해야 합니다.")
+    if any(len(item) > 2000 for item in payload.own_reviews + payload.nearby_reviews):
+        raise HTTPException(400, "리뷰 한 건은 최대 2,000자까지 분석할 수 있습니다.")
+    own_reviews = [sanitize_review_text(item) for item in payload.own_reviews if item.strip()]
+    nearby_reviews = [sanitize_review_text(item) for item in payload.nearby_reviews if item.strip()]
     if len(own_reviews) > 500 or len(nearby_reviews) > 500:
         raise HTTPException(400, "한 그룹당 리뷰는 최대 500개까지 분석할 수 있습니다.")
     own = analyze_reviews(own_reviews)
@@ -350,9 +354,9 @@ def review_analysis(payload: ReviewAnalysisRequest) -> ReviewAnalysisResponse:
         } for key in own],
         insights=build_insights(own, nearby) if enough else [],
         notice=(
-            "사용자가 제공한 리뷰의 키워드 기반 요약입니다. 관찰과 실행 아이디어를 구분해 보며 개인을 식별하거나 성과를 보장하지 않습니다."
+            "사용자가 권한을 확인해 제공한 리뷰의 키워드 기반 요약입니다. 연락처·이메일·링크·계정명은 분석 전에 제거하며, 개인을 식별하거나 성과를 보장하지 않습니다."
             if enough
-            else "각 그룹 5개 이상이 필요합니다. 표본이 부족해 실행 아이디어를 만들지 않았습니다."
+            else "각 그룹 5개 이상이 필요합니다. 표본이 부족해 실행 아이디어를 만들지 않고 비식별 집계만 제공합니다."
         ),
     )
 

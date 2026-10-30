@@ -305,6 +305,8 @@ def test_review_analysis_exposes_samples_topics_and_evidence(client: TestClient)
         "own_shop_name": "내 카페",
         "comparison_scope": "반경 500m 동종 카페 3곳",
         "period_label": "2026년 10월",
+        "ownership_confirmed": True,
+        "data_rights_confirmed": True,
         "own_reviews": ["서비스가 불친절해요", "응대가 불친절해요", "커피가 맛있어요", "가격이 비싸요", "공간이 깨끗해요"],
         "nearby_reviews": ["서비스가 친절해요", "응대가 친절해요", "커피가 맛있어요", "가격이 저렴해요", "공간이 깨끗해요"],
     })
@@ -324,10 +326,32 @@ def test_review_analysis_hides_strategy_when_sample_is_too_small(client: TestCli
         "own_shop_name": "내 카페",
         "comparison_scope": "주변",
         "period_label": "최근",
+        "ownership_confirmed": True,
+        "data_rights_confirmed": True,
         "own_reviews": ["맛있어요"],
         "nearby_reviews": ["맛있어요"],
     })
     assert response.status_code == 200
     assert response.json()["status"] == "insufficient_sample"
     assert response.json()["insights"] == []
+
+
+def test_review_analysis_requires_rights_confirmation_and_redacts_contacts(client: TestClient) -> None:
+    payload = {
+        "own_shop_name": "내 카페",
+        "comparison_scope": "반경 500m · 카페 · 3곳",
+        "period_label": "최근 3개월",
+        "ownership_confirmed": False,
+        "data_rights_confirmed": True,
+        "own_reviews": ["연락처 010-1234-5678, 서비스가 친절해요"],
+        "nearby_reviews": ["서비스가 친절해요"],
+    }
+    denied = client.post("/api/v1/review-analysis", json=payload)
+    assert denied.status_code == 400
+
+    payload["ownership_confirmed"] = True
+    allowed = client.post("/api/v1/review-analysis", json=payload)
+    evidence = next(topic for topic in allowed.json()["topics"] if topic["topic_key"] == "service")["own"]["evidence"]
+    assert evidence[0]["snippet"].startswith("연락처 [전화번호 제거]")
+    assert "010-1234-5678" not in evidence[0]["snippet"]
 

@@ -198,6 +198,8 @@ class ReviewAnalysisRequest(BaseModel):
     own_shop_name: str
     comparison_scope: str
     period_label: str
+    ownership_confirmed: bool
+    data_rights_confirmed: bool
     own_reviews: list[str]
     nearby_reviews: list[str]
 

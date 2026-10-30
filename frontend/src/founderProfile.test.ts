@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { FOUNDER_QUESTIONS, profileTitle, sanitizeAnswers } from "./founderProfile";
+import { FOUNDER_QUESTIONS, profileTitle, profileTitleLines, sanitizeAnswers } from "./founderProfile";
 
 describe("founder profile", () => {
   it("has exactly six questions and four unique choices each", () => {
@@ -19,5 +19,12 @@ describe("founder profile", () => {
 
   it("builds a transparent result title from selected axes", () => {
     expect(profileTitle({ demand: "neighborhood", operation: "solo" })).toBe("동네 단골을 차근차근 만드는 1인 운영형");
+  });
+
+  it("splits the result title at a natural reading point", () => {
+    expect(profileTitleLines({ demand: "office", operation: "partner" })).toEqual([
+      "직장인의 일상에",
+      "들어가는 함께 운영형",
+    ]);
   });
 });

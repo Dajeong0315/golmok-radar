@@ -144,3 +144,15 @@ export function profileTitle(answers: Record<string, string>): string {
   const operation: Record<string, string> = { solo: "1인 운영형", partner: "함께 운영형", team: "팀 운영형", community: "관계 중심형" };
   return `${demand[answers.demand] || "방향을 찾아가는"} ${operation[answers.operation] || "예비 사장님"}`;
 }
+
+export function profileTitleLines(answers: Record<string, string>): [string, string] {
+  const demand: Record<string, [string, string]> = {
+    neighborhood: ["동네 단골을 차근차근", "만드는"],
+    office: ["직장인의 일상에", "들어가는"],
+    destination: ["찾아올 이유를", "만드는"],
+    nightlife: ["저녁 손님을", "맞이하는"],
+  };
+  const operation: Record<string, string> = { solo: "1인 운영형", partner: "함께 운영형", team: "팀 운영형", community: "관계 중심형" };
+  const [firstLine, secondLine] = demand[answers.demand] || ["방향을", "찾아가는"];
+  return [firstLine, `${secondLine} ${operation[answers.operation] || "예비 사장님"}`];
+}

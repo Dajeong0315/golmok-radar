@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 
 import {
   answerDescription,
@@ -9,7 +9,7 @@ import {
   loadProfile,
   PROFILE_KEY,
   PROFILE_VERSION,
-  profileTitle,
+  profileTitleLines,
   SKIPPED_KEY,
   type FounderProfile,
 } from "./founderProfile";
@@ -81,7 +81,7 @@ export function FounderQuizPage() {
       <section className="result-hero">
         <div className="result-report-meta"><span>나의 첫 가게 준비 리포트</span><span>{new Date(profile.completedAt).toLocaleDateString("ko-KR")}</span></div>
         <p className="eyebrow">진단 결과</p>
-        <h1>{profileTitle(profile.answers)}</h1>
+        <h1>{profileTitleLines(profile.answers).map((line, index) => <Fragment key={line}>{index > 0 && <br />}{line}</Fragment>)}</h1>
         <p>{answerLabel("business", profile.answers.business)} 가게를 생각하고 있고, {answerLabel("risk", profile.answers.risk)}을 원해요.</p>
         <div className="result-notice"><strong>이 리포트의 쓰임</strong><span>성공 가능성을 예측하는 검사가 아니에요. 내가 고른 답을 상권 탐색 조건으로 정리했으며, 언제든 다시 바꿀 수 있어요.</span></div>
       </section>
@@ -95,7 +95,7 @@ export function FounderQuizPage() {
         </div>
       </section>
       <section className="result-route" aria-labelledby="route-title">
-        <div><p className="eyebrow">다음 순서</p><h2 id="route-title">첫 가게 준비는 이렇게 이어져요.</h2><p>한 번에 결정하지 않아도 괜찮아요. 후보를 찾고, 같은 숫자로 비교한 뒤, 실제 비용을 확인하세요.</p></div>
+        <div><p className="eyebrow">다음 순서</p><h2 id="route-title">첫 가게 준비는<br />이렇게 이어져요.</h2><p>한 번에 결정하지 않아도 괜찮아요. 후보를 찾고, 같은 숫자로 비교한 뒤, 실제 비용을 확인하세요.</p></div>
         <ol><li><span>1</span><strong>후보 찾기</strong><p>내 답과 맞는 상권 3곳을 먼저 봐요.</p></li><li><span>2</span><strong>숫자 비교</strong><p>관심 상권 2~4곳을 같은 기준으로 봐요.</p></li><li><span>3</span><strong>현장 확인</strong><p>숫자로 알 수 없는 유동과 분위기를 확인해요.</p></li><li><span>4</span><strong>비용 확인</strong><p>보증금·월세와 지원 조건을 확인해요.</p></li></ol>
       </section>
       <section className="result-evidence" aria-labelledby="answers-title">
@@ -106,7 +106,7 @@ export function FounderQuizPage() {
           </article>)}
         </div>
       </section>
-      <section className="result-next"><div><p className="eyebrow">다음 단계</p><h2>내 조건과 맞는 상권 후보를 확인해 보세요.</h2><p>현재는 검증이 끝난 카페 데이터로 후보를 좁혀요. 다른 업종을 골랐다면 결과는 저장하고, 상권은 직접 둘러볼 수 있어요.</p></div><div className="quiz-actions"><button className="primary-action" onClick={openRecommendations}>상권 후보 3곳 보기 <span>→</span></button><button className="text-action" onClick={() => { setStep(0); setMode("question"); }}>답변 수정하기</button></div></section>
+      <section className="result-next"><div><p className="eyebrow">다음 단계</p><h2>내 조건과 맞는 상권<br />후보를 확인해 보세요.</h2><p>현재는 검증이 끝난 카페 데이터로 후보를 좁혀요. 다른 업종을 골랐다면 결과는 저장하고, 상권은 직접 둘러볼 수 있어요.</p></div><div className="quiz-actions"><button className="primary-action" onClick={openRecommendations}>상권 후보 3곳 보기 <span>→</span></button><button className="text-action" onClick={() => { setStep(0); setMode("question"); }}>답변 수정하기</button></div></section>
     </main>;
   }
 

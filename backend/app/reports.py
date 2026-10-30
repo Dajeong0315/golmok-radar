@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .metric_service import get_area_metrics
+from .metric_service import get_all_area_metrics
 from .models import TradeArea
 from .recommendations import percentile
 
@@ -28,8 +27,7 @@ def build_area_report(session: Session, code: str, quarter: str = "20254") -> di
         return None
 
     records: dict[str, dict[str, tuple[str, str, float]]] = {}
-    for area in session.scalars(select(TradeArea)).all():
-        _, metrics = get_area_metrics(session, area.code, quarter)
+    for area, metrics in get_all_area_metrics(session, quarter):
         available = {
             metric.metric_key: (metric.label, metric.unit, float(metric.value))
             for metric in metrics

@@ -7,8 +7,6 @@ import type { TradeArea } from "./types";
 import "./styles.css";
 
 
-const DISTRICTS = ["전체", "성동구", "광진구"];
-
 export default function App() {
   const [areas, setAreas] = useState<TradeArea[]>([]);
   const [favorites, setFavorites] = useState<string[]>(() => loadFavorites(localStorage));
@@ -40,15 +38,18 @@ export default function App() {
   }, [favorites]);
 
   const areaByCode = useMemo(() => new Map(areas.map((area) => [area.code, area])), [areas]);
+  const districts = useMemo(() => ["전체", ...new Set(areas.map((area) => area.district_name))].sort((a, b) => a === "전체" ? -1 : b === "전체" ? 1 : a.localeCompare(b, "ko")), [areas]);
   const favoriteCodes = useMemo(() => new Set(favorites), [favorites]);
   const filteredAreas = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return areas.filter((area) => {
       const districtMatch = district === "전체" || area.district_name === district;
-      const queryMatch = !normalized || `${area.name} ${area.area_type_name}`.toLowerCase().includes(normalized);
+      const queryMatch = !normalized || `${area.district_name} ${area.name} ${area.area_type_name}`.toLowerCase().includes(normalized);
       return districtMatch && queryMatch;
     });
   }, [areas, district, query]);
+  const mapAreas = district === "전체" && !query.trim() ? [] : filteredAreas;
+  const displayedAreas = district === "전체" && !query.trim() ? filteredAreas.slice(0, 80) : filteredAreas;
 
   const handleFavorite = useCallback((code: string) => {
     setFavorites((current) => toggleFavorite(current, code));
@@ -87,6 +88,7 @@ export default function App() {
           <p className="hero-copy">서울의 공식 상권을 둘러보고 관심 지역을 저장해 보세요. 그중 2~4곳을 골라 카페 수, 매출, 유동인구를 같은 기준으로 확인할 수 있어요.</p>
           <div className="hero-proof">
             <span><b>{loading ? "—" : areas.length.toLocaleString("ko-KR")}</b> 공식 상권</span>
+            <span><b>{loading ? "—" : Math.max(districts.length - 1, 0)}</b> 서울 자치구</span>
             <span><b>14</b> 비교 지표</span>
             <span><b>모든 수치</b> 출처 확인</span>
           </div>
@@ -112,11 +114,7 @@ export default function App() {
           </div>
 
           <div className="filters">
-            <div className="district-tabs" aria-label="자치구 필터">
-              {DISTRICTS.map((item) => (
-                <button className={district === item ? "active" : ""} key={item} onClick={() => setDistrict(item)}>{item}</button>
-              ))}
-            </div>
+            <label className="district-select"><span>자치구</span><select aria-label="자치구 필터" value={district} onChange={(event) => setDistrict(event.target.value)}>{districts.map((item) => <option key={item} value={item}>{item === "전체" ? "서울 전체" : item}</option>)}</select></label>
             <label className="search-field">
               <span className="sr-only">상권 이름 검색</span>
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상권 이름을 검색하세요" />
@@ -126,13 +124,14 @@ export default function App() {
 
           {error ? <div className="error-banner">{error} 백엔드 서버가 실행 중인지 확인해 주세요.</div> : null}
           <div className="explorer-grid">
-            <KakaoMap areas={filteredAreas} favorites={favoriteCodes} onToggleFavorite={handleFavorite} />
+            <KakaoMap areas={mapAreas} favorites={favoriteCodes} onToggleFavorite={handleFavorite} showDistrictGuide={district === "전체" && !query.trim()} />
             <div className="area-panel">
               <div className="area-panel__header"><strong>상권 목록</strong><span>{filteredAreas.length}곳</span></div>
               {loading ? <p className="panel-state">상권 데이터를 불러오는 중입니다.</p> : null}
               {!loading && !filteredAreas.length ? <p className="panel-state">조건에 맞는 상권이 없습니다.</p> : null}
+              {!loading && displayedAreas.length < filteredAreas.length ? <p className="panel-state panel-hint">먼저 80곳만 보여드려요. 자치구를 고르거나 이름을 검색하면 원하는 상권을 빠르게 찾을 수 있어요.</p> : null}
               <div className="area-list">
-                {filteredAreas.map((area) => (
+                {displayedAreas.map((area) => (
                   <article className="area-card" key={area.code}>
                     <button className={`favorite-button ${favorites.includes(area.code) ? "active" : ""}`} onClick={() => handleFavorite(area.code)} aria-label={`${area.name} 관심 상권 ${favorites.includes(area.code) ? "해제" : "추가"}`}>{favorites.includes(area.code) ? "★" : "☆"}</button>
                     <div>

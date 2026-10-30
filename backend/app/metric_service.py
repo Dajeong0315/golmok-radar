@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .calculations import (
@@ -56,17 +57,12 @@ def calculated_metric(
     )
 
 
-def get_area_metrics(
-    session: Session,
-    trade_area_code: str,
-    quarter_code: str,
-    industry_code: str = "CS100010",
+def build_area_metrics(
+    area: TradeArea | None,
+    store: StoreMetric | None,
+    sales: SalesMetric | None,
+    population: PopulationMetric | None,
 ) -> tuple[TradeArea | None, list[MetricValue]]:
-    area = session.get(TradeArea, trade_area_code)
-    store = session.get(StoreMetric, (quarter_code, trade_area_code, industry_code))
-    sales = session.get(SalesMetric, (quarter_code, trade_area_code, industry_code))
-    population = session.get(PopulationMetric, (quarter_code, trade_area_code))
-
     store_reason = "해당 분기·업종의 점포 원천 행이 없습니다."
     sales_reason = "해당 분기·업종의 매출 원천 행이 없습니다."
     population_reason = "해당 분기의 유동인구 원천 행이 없습니다."
@@ -158,4 +154,55 @@ def get_area_metrics(
             )
         )
     return area, metrics
+
+
+def get_area_metrics(
+    session: Session,
+    trade_area_code: str,
+    quarter_code: str,
+    industry_code: str = "CS100010",
+) -> tuple[TradeArea | None, list[MetricValue]]:
+    return build_area_metrics(
+        session.get(TradeArea, trade_area_code),
+        session.get(StoreMetric, (quarter_code, trade_area_code, industry_code)),
+        session.get(SalesMetric, (quarter_code, trade_area_code, industry_code)),
+        session.get(PopulationMetric, (quarter_code, trade_area_code)),
+    )
+
+
+def get_all_area_metrics(
+    session: Session,
+    quarter_code: str,
+    industry_code: str = "CS100010",
+) -> list[tuple[TradeArea, list[MetricValue]]]:
+    """Build every area metric set from four bulk queries instead of per-area lookups."""
+    areas = session.scalars(select(TradeArea)).all()
+    stores = {
+        row.trade_area_code: row
+        for row in session.scalars(
+            select(StoreMetric).where(
+                StoreMetric.quarter_code == quarter_code,
+                StoreMetric.industry_code == industry_code,
+            )
+        ).all()
+    }
+    sales = {
+        row.trade_area_code: row
+        for row in session.scalars(
+            select(SalesMetric).where(
+                SalesMetric.quarter_code == quarter_code,
+                SalesMetric.industry_code == industry_code,
+            )
+        ).all()
+    }
+    populations = {
+        row.trade_area_code: row
+        for row in session.scalars(
+            select(PopulationMetric).where(PopulationMetric.quarter_code == quarter_code)
+        ).all()
+    }
+    return [
+        (area, build_area_metrics(area, stores.get(area.code), sales.get(area.code), populations.get(area.code))[1])
+        for area in areas
+    ]
 

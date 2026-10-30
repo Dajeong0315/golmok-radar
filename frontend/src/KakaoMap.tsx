@@ -13,6 +13,7 @@ type Props = {
   areas: TradeArea[];
   favorites: Set<string>;
   onToggleFavorite: (code: string) => void;
+  showDistrictGuide?: boolean;
 };
 
 const KAKAO_KEY = import.meta.env.VITE_KAKAO_MAP_KEY;
@@ -44,7 +45,7 @@ function loadKakaoMap(): Promise<void> {
   });
 }
 
-export function KakaoMap({ areas, favorites, onToggleFavorite }: Props) {
+export function KakaoMap({ areas, favorites, onToggleFavorite, showDistrictGuide = false }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const [error, setError] = useState("");
 
@@ -59,8 +60,8 @@ export function KakaoMap({ areas, favorites, onToggleFavorite }: Props) {
         if (disposed || !container.current) return;
         const kakao = window.kakao;
         const map = new kakao.maps.Map(container.current, {
-          center: new kakao.maps.LatLng(37.558, 127.055),
-          level: 7,
+          center: new kakao.maps.LatLng(37.5665, 126.978),
+          level: 8,
         });
         const bounds = new kakao.maps.LatLngBounds();
         areas.forEach((area) => {
@@ -97,6 +98,6 @@ export function KakaoMap({ areas, favorites, onToggleFavorite }: Props) {
     );
   }
   if (error) return <div className="map-fallback map-fallback--error">{error}</div>;
-  return <div className="map-canvas" ref={container} aria-label="성동구와 광진구 상권 지도" />;
+  return <div className="map-wrap"><div className="map-canvas" ref={container} aria-label="서울 공식 상권 지도" />{showDistrictGuide ? <p className="map-guide">자치구를 고르면 공식 상권의 위치와 이름이 지도에 표시돼요.</p> : null}</div>;
 }
 

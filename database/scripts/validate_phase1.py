@@ -25,7 +25,13 @@ REPORT = ROOT / "database" / "processed" / "phase1_validation.json"
 
 QUARTER = "20254"
 INDUSTRY = "CS100010"
-DISTRICTS = {"성동구", "광진구"}
+DISTRICTS = {
+    "강남구", "강동구", "강북구", "강서구", "관악구",
+    "광진구", "구로구", "금천구", "노원구", "도봉구",
+    "동대문구", "동작구", "마포구", "서대문구", "서초구",
+    "성동구", "성북구", "송파구", "양천구", "영등포구",
+    "용산구", "은평구", "종로구", "중구", "중랑구",
+}
 
 
 def decode_text(value: bytes) -> str:
@@ -102,11 +108,10 @@ def main() -> None:
     population_meta = find_one("database/raw/population/*.meta.json")
 
     area_rows = read_dbf_from_zip(area_zip)
-    area_codes = {
-        row["TRDAR_CD"]
-        for row in area_rows
-        if row.get("SIGNGU_CD_") in DISTRICTS
-    }
+    area_rows_in_scope = [row for row in area_rows if row.get("SIGNGU_CD_") in DISTRICTS]
+    area_codes = {row["TRDAR_CD"] for row in area_rows_in_scope}
+    covered_districts = {row["SIGNGU_CD_"] for row in area_rows_in_scope}
+    area_count_by_district = Counter(row["SIGNGU_CD_"] for row in area_rows_in_scope)
 
     store_reader = csv_rows_from_zip(store_zip)
     try:
@@ -163,6 +168,9 @@ def main() -> None:
         "quarter": QUARTER,
         "industry": INDUSTRY,
         "districts": sorted(DISTRICTS),
+        "covered_districts": sorted(covered_districts),
+        "missing_districts": sorted(DISTRICTS - covered_districts),
+        "area_count_by_district": dict(sorted(area_count_by_district.items())),
         "population_api": {
             "service": meta.get("service"),
             "reported_rows": meta.get("total_count_reported"),
@@ -187,7 +195,7 @@ def main() -> None:
             "sales": sorted(area_codes - sales_set),
             "population": sorted(area_codes - population_set),
         },
-        "go": len(all_sources) >= 3,
+        "go": covered_districts == DISTRICTS and len(all_sources) >= 3,
     }
 
     REPORT.parent.mkdir(parents=True, exist_ok=True)
@@ -200,6 +208,8 @@ def main() -> None:
         sys.exit("인구 필수 컬럼이 없습니다.")
     if any(report["duplicates"].values()):
         sys.exit("상권·분기·업종 논리 키가 중복됩니다.")
+    if report["missing_districts"]:
+        sys.exit("영역 데이터에 서울 25개 자치구가 모두 존재하지 않습니다.")
     if not report["go"]:
         sys.exit("세 데이터 공통 상권이 3개 미만입니다.")
 

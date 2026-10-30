@@ -194,8 +194,10 @@ def load(database_url: str | None = None) -> dict[str, int]:
 
     trade_areas, stores, sales, populations, sources = collect_rows()
     with Session(engine) as session, session.begin():
-        for model in (PopulationMetric, SalesMetric, StoreMetric, DataSource, TradeArea):
+        for model in (PopulationMetric, SalesMetric, StoreMetric):
             session.execute(delete(model))
+        session.execute(delete(DataSource).where(DataSource.key.in_([source.key for source in sources])))
+        session.execute(delete(TradeArea))
         session.add_all(trade_areas)
         session.add_all(stores)
         session.add_all(sales)

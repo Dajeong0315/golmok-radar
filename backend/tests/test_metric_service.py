@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.db import Base, make_engine
-from app.metric_service import get_area_metrics
+from app.metric_service import get_all_area_metrics, get_area_metrics
 from app.models import PopulationMetric, TradeArea
 
 
@@ -45,4 +45,12 @@ def test_missing_sales_is_unavailable_not_zero() -> None:
     assert values["sales_amount"].value is None
     assert values["weekend_sales_ratio"].value is None
     assert values["population_17_21_ratio"].value == 30
+
+    with Session(engine) as session:
+        bulk = get_all_area_metrics(session, "20254")
+
+    assert len(bulk) == 1
+    bulk_values = {metric.metric_key: metric for metric in bulk[0][1]}
+    assert bulk_values["sales_amount"].status == "unavailable"
+    assert bulk_values["population_17_21_ratio"].value == 30
 

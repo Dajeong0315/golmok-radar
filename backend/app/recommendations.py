@@ -3,10 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .metric_service import get_area_metrics
+from .metric_service import get_all_area_metrics
 from .models import TradeArea
 
 
@@ -66,8 +65,7 @@ def combined_rules(demand: str, risk: str, competition: str) -> list[PreferenceR
 def recommend(session: Session, *, demand: str, risk: str, competition: str, quarter: str = "20254") -> list[CandidateScore]:
     rules = combined_rules(demand, risk, competition)
     records: list[tuple[TradeArea, dict[str, tuple[str, str, float]]]] = []
-    for area in session.scalars(select(TradeArea)).all():
-        _, metrics = get_area_metrics(session, area.code, quarter)
+    for area, metrics in get_all_area_metrics(session, quarter):
         available = {
             metric.metric_key: (metric.label, metric.unit, float(metric.value))
             for metric in metrics

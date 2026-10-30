@@ -56,7 +56,7 @@ def data_status(session: Session, code: str, quarter: str = "20254") -> dict[str
     }
 
 
-def area_out(session: Session, area: TradeArea) -> TradeAreaOut:
+def area_out(session: Session, area: TradeArea, status: dict[str, bool] | None = None) -> TradeAreaOut:
     return TradeAreaOut(
         code=area.code,
         name=area.name,
@@ -64,7 +64,7 @@ def area_out(session: Session, area: TradeArea) -> TradeAreaOut:
         area_type_name=area.area_type_name,
         latitude=area.latitude,
         longitude=area.longitude,
-        data_status=data_status(session, area.code),
+        data_status=status or data_status(session, area.code),
     )
 
 
@@ -153,7 +153,27 @@ def list_trade_areas(
     query = select(TradeArea).order_by(TradeArea.district_name, TradeArea.name)
     if district:
         query = query.where(TradeArea.district_name == district)
-    return [area_out(session, area) for area in session.scalars(query).all()]
+    areas = session.scalars(query).all()
+    codes = {area.code for area in areas}
+    store_codes = set(session.scalars(select(StoreMetric.trade_area_code).where(
+        StoreMetric.quarter_code == "20254",
+        StoreMetric.industry_code == INDUSTRY_CODE,
+        StoreMetric.trade_area_code.in_(codes),
+    )).all())
+    sales_codes = set(session.scalars(select(SalesMetric.trade_area_code).where(
+        SalesMetric.quarter_code == "20254",
+        SalesMetric.industry_code == INDUSTRY_CODE,
+        SalesMetric.trade_area_code.in_(codes),
+    )).all())
+    population_codes = set(session.scalars(select(PopulationMetric.trade_area_code).where(
+        PopulationMetric.quarter_code == "20254",
+        PopulationMetric.trade_area_code.in_(codes),
+    )).all())
+    return [area_out(session, area, {
+        "store": area.code in store_codes,
+        "sales": area.code in sales_codes,
+        "population": area.code in population_codes,
+    }) for area in areas]
 
 
 @app.get("/api/v1/trade-areas/{code}", response_model=TradeAreaOut)

@@ -392,15 +392,15 @@ def recommend_trade_areas(
         reasons = []
         for component in strongest:
             if component["direction"] == "higher":
-                explanation = f"{component['label']}이 비교 가능한 카페 상권 중 {component['percentile']} 백분위입니다."
+                explanation = f"{component['label']}: 비교 가능한 카페 상권 중 {component['percentile']} 백분위입니다."
             else:
-                explanation = f"{component['label']}이 비교군에서 낮을수록 선호 조건과 맞으며 현재 {component['percentile']} 백분위입니다."
+                explanation = f"{component['label']}: 비교군에서 낮을수록 선호 조건과 맞으며 현재 {component['percentile']} 백분위입니다."
             reasons.append(RecommendationReason(**component, explanation=explanation))
         cautions = [
             (
-                f"{item['label']}이 비교군에서 높아 낮은 값 선호와 거리가 있습니다."
+                f"{item['label']}: 비교 상권보다 높은 편이라 선택한 조건과 거리가 있어요."
                 if item["direction"] == "lower"
-                else f"{item['label']}이 선호 조건 기준으로 상대적으로 낮아 현장 확인이 필요합니다."
+                else f"{item['label']}: 선택한 조건과 비교하면 낮은 편이라 현장에서 확인해 보세요."
             )
             for item in weakest
         ]
@@ -414,7 +414,7 @@ def recommend_trade_areas(
         ))
     return RecommendationResponse(
         status="available",
-        message="성공 예측이 아닌, 응답 조건과 검증된 지표가 잘 맞는 탐색 후보입니다.",
+        message="성공을 예측한 결과가 아니에요. 내가 고른 답과 현재 확인할 수 있는 숫자를 바탕으로 먼저 살펴볼 순서를 정했어요.",
         quarter_code="20254",
         quarter_label=SUPPORTED_QUARTERS["20254"],
         weights_version="cafe-v1",

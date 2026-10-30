@@ -43,7 +43,7 @@ export function ComparisonPage({ codes }: Props) {
       <main>
         <section className="compare-hero">
           <p className="eyebrow">상권 비교 · {data.quarter_label}</p>
-          <h1>나란히 놓고 보면,<br /><em>차이가 선명해집니다.</em></h1>
+          <h1>나란히 놓고 보면 상권의 차이를 쉽게 찾을 수 있어요.</h1>
           <p>값의 크기는 성공 가능성이나 추천 점수가 아닙니다. 같은 출처와 기준으로 후보지의 특성을 확인하세요.</p>
         </section>
 
@@ -84,7 +84,7 @@ export function ComparisonPage({ codes }: Props) {
         </section>
 
         {checklist ? <section className="checklist-section" aria-labelledby="checklist-title">
-          <div className="checklist-intro"><p className="eyebrow">FIELD CHECK</p><h2 id="checklist-title">숫자 밖의 조건은<br />현장에서 확인하세요.</h2><p>{checklist.notice}</p></div>
+          <div className="checklist-intro"><p className="eyebrow">직접 방문할 때</p><h2 id="checklist-title">숫자로 알 수 없는 것은 현장에서 확인하세요.</h2><p>{checklist.notice}</p></div>
           <ol className="checklist-grid">
             {checklist.items.map((item, index) => <li key={item.question}><span>0{index + 1}</span><small>{item.category}</small><strong>{item.question}</strong></li>)}
           </ol>

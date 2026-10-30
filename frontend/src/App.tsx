@@ -82,23 +82,33 @@ export default function App() {
 
       <main id="top">
         <section className="hero">
-          <p className="eyebrow">창업 후보지 비교 도구</p>
-          <h1>감이 아니라,<br /><em>같은 기준</em>으로 봅니다.</h1>
-          <p className="hero-copy">성동구와 광진구 상권을 모아 두고 최대 네 곳의 점포·매출·유동인구를 한눈에 비교하세요.</p>
+          <p className="eyebrow">첫 가게 준비를 돕는 상권 도구</p>
+          <h1>어디에 열지 막막할 때, 같은 숫자로 하나씩 비교하세요.</h1>
+          <p className="hero-copy">서울의 공식 상권을 둘러보고 관심 지역을 저장해 보세요. 그중 2~4곳을 골라 카페 수, 매출, 유동인구를 같은 기준으로 확인할 수 있어요.</p>
           <div className="hero-proof">
-            <span><b>{areas.length || 117}</b> 공식 상권</span>
+            <span><b>{loading ? "—" : areas.length.toLocaleString("ko-KR")}</b> 공식 상권</span>
             <span><b>14</b> 비교 지표</span>
-            <span><b>100%</b> 근거 확인</span>
+            <span><b>모든 수치</b> 출처 확인</span>
           </div>
+        </section>
+
+        <section className="starter-pipeline" aria-labelledby="pipeline-title">
+          <div className="section-heading"><div><p className="eyebrow">처음이라면 이 순서로</p><h2 id="pipeline-title">첫 가게 준비의 전체 흐름</h2></div><p>지금 필요한 단계부터 시작해도 괜찮아요.</p></div>
+          <ol>
+            <li><span>01</span><strong>내 생각 정리</strong><p>어떤 가게와 손님을 원하는지 여섯 질문으로 정리해요.</p><a href="#quiz">성향 진단하기</a></li>
+            <li><span>02</span><strong>후보 찾기</strong><p>지도에서 관심 상권을 저장하고 조건과 맞는 후보를 살펴봐요.</p><a href="#explorer-title">지도 둘러보기</a></li>
+            <li><span>03</span><strong>숫자 비교</strong><p>2~4곳의 카페 수, 매출, 유동인구를 같은 분기로 비교해요.</p></li>
+            <li><span>04</span><strong>현장·비용 확인</strong><p>직접 방문해 보고 보증금, 월세, 지원 조건을 확인해요.</p></li>
+          </ol>
         </section>
 
         <section className="explorer" aria-labelledby="explorer-title">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">STEP 1</p>
-              <h2 id="explorer-title">관심 상권을 모아보세요</h2>
+              <p className="eyebrow">지도에서 후보 찾기</p>
+              <h2 id="explorer-title">궁금한 상권을 별표로 저장하세요</h2>
             </div>
-            <p>별표를 누르면 이 브라우저에 저장됩니다.</p>
+            <p>로그인 없이 지금 쓰는 브라우저에 저장돼요.</p>
           </div>
 
           <div className="filters">
@@ -130,7 +140,7 @@ export default function App() {
                       <h3>{area.name}</h3>
                       <div className="data-badges">
                         <span className={area.data_status.sales ? "ok" : "missing"}>매출 {area.data_status.sales ? "있음" : "없음"}</span>
-                        <span className="ok">인구 있음</span>
+                        <span className={area.data_status.population ? "ok" : "missing"}>인구 {area.data_status.population ? "있음" : "없음"}</span>
                       </div>
                     </div>
                   </article>
@@ -142,7 +152,7 @@ export default function App() {
 
         <section className="favorites-section" aria-labelledby="favorites-title">
           <div className="section-heading">
-            <div><p className="eyebrow">STEP 2</p><h2 id="favorites-title">저장한 상권에서 비교할 곳을 고르세요</h2></div>
+            <div><p className="eyebrow">같은 기준으로 비교하기</p><h2 id="favorites-title">저장한 곳 중 2~4곳을 골라 주세요</h2></div>
             <p>{selected.length}/4곳 선택</p>
           </div>
           {notice ? <p className="selection-notice" role="alert">{notice}</p> : null}

@@ -77,16 +77,16 @@ def build_area_report(session: Session, code: str, quarter: str = "20254") -> di
         key = insight["metric_key"]
         rank = insight["percentile"]
         if key in POSITIVE_METRICS and rank >= 70:
-            strengths.append({**insight, "summary": f"{insight['label']}이 비교 가능한 카페 상권 {len(records)}곳 중 상위 30%입니다."})
+            strengths.append({**insight, "summary": f"비교 가능한 카페 상권 {len(records)}곳 가운데 이 수치가 상위 30%에 들어요."})
         elif key in POSITIVE_METRICS and rank <= 30:
-            cautions.append({**insight, "summary": f"{insight['label']}이 비교군 하위 30%여서 원인과 현장 수요를 확인해야 합니다."})
+            cautions.append({**insight, "summary": "비교 상권 가운데 이 수치가 하위 30%예요. 이유와 실제 현장 수요를 확인해 보세요."})
         elif key == "closing_rate" and rank >= 70:
-            cautions.append({**insight, "summary": f"폐업률이 비교군 상위 30%입니다. 점포 교체와 공실 흐름을 현장에서 확인하세요."})
+            cautions.append({**insight, "summary": "폐업률이 비교 상권의 상위 30%예요. 가게 교체와 빈 점포 흐름을 현장에서 확인해 보세요."})
         elif key == "closing_rate" and rank <= 30:
-            strengths.append({**insight, "summary": f"폐업률이 비교군 하위 30%입니다. 다만 낮은 폐업률만으로 안정성을 단정할 수 없습니다."})
+            strengths.append({**insight, "summary": "폐업률이 비교 상권의 하위 30%예요. 다만 이 숫자만으로 안정적인 상권이라고 판단할 수는 없어요."})
         elif key in CONTEXT_METRICS and (rank >= 70 or rank <= 30):
             position = "높은" if rank >= 70 else "낮은"
-            characteristics.append({**insight, "summary": f"{insight['label']} 비중 또는 수준이 비교군에서 {position} 편입니다. 강점이 아니라 상권 특성으로 해석하세요."})
+            characteristics.append({**insight, "summary": f"비교 상권에서 이 수치는 {position} 편이에요. 좋고 나쁨보다 이 지역의 특징으로 봐 주세요."})
 
     return {
         "area": target,

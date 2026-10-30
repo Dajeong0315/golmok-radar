@@ -8,6 +8,8 @@ describe("founder profile", () => {
     FOUNDER_QUESTIONS.forEach((question) => {
       expect(question.options).toHaveLength(4);
       expect(new Set(question.options.map((option) => option.id)).size).toBe(4);
+      expect(question.why.length).toBeGreaterThan(10);
+      question.options.forEach((option) => expect(option.description.length).toBeGreaterThan(5));
     });
   });
 
@@ -16,6 +18,6 @@ describe("founder profile", () => {
   });
 
   it("builds a transparent result title from selected axes", () => {
-    expect(profileTitle({ demand: "neighborhood", operation: "solo" })).toBe("동네 단골을 만드는 소형 효율형");
+    expect(profileTitle({ demand: "neighborhood", operation: "solo" })).toBe("동네 단골을 차근차근 만드는 1인 운영형");
   });
 });

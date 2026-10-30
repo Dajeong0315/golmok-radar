@@ -17,6 +17,14 @@ type Props = {
 
 const KAKAO_KEY = import.meta.env.VITE_KAKAO_MAP_KEY;
 
+type MapLayer = {
+  setMap: (map: null) => void;
+};
+
+export function detachMapLayers(layers: MapLayer[]) {
+  layers.forEach((layer) => layer.setMap(null));
+}
+
 function loadKakaoMap(): Promise<void> {
   if (window.kakao?.maps) return Promise.resolve();
   const existing = document.querySelector<HTMLScriptElement>("script[data-kakao-map]");
@@ -43,6 +51,9 @@ export function KakaoMap({ areas, favorites, onToggleFavorite }: Props) {
   useEffect(() => {
     if (!KAKAO_KEY || !container.current) return;
     let disposed = false;
+    const mapContainer = container.current;
+    const markers: MapLayer[] = [];
+    const overlays: MapLayer[] = [];
     loadKakaoMap()
       .then(() => {
         if (disposed || !container.current) return;
@@ -56,11 +67,13 @@ export function KakaoMap({ areas, favorites, onToggleFavorite }: Props) {
           const position = new kakao.maps.LatLng(area.latitude, area.longitude);
           bounds.extend(position);
           const marker = new kakao.maps.Marker({ map, position, title: area.name });
+          markers.push(marker);
           const content = document.createElement("button");
           content.className = `map-label ${favorites.has(area.code) ? "is-favorite" : ""}`;
           content.textContent = `${favorites.has(area.code) ? "★" : "☆"} ${area.name}`;
           content.onclick = () => onToggleFavorite(area.code);
           const overlay = new kakao.maps.CustomOverlay({ map, position, content, yAnchor: 2.2 });
+          overlays.push(overlay);
           kakao.maps.event.addListener(marker, "click", () => overlay.setMap(map));
         });
         if (areas.length) map.setBounds(bounds);
@@ -68,6 +81,9 @@ export function KakaoMap({ areas, favorites, onToggleFavorite }: Props) {
       .catch((reason: Error) => setError(reason.message));
     return () => {
       disposed = true;
+      detachMapLayers(markers);
+      detachMapLayers(overlays);
+      mapContainer.replaceChildren();
     };
   }, [areas, favorites, onToggleFavorite]);
 

@@ -40,6 +40,7 @@ export default function App() {
   }, [favorites]);
 
   const areaByCode = useMemo(() => new Map(areas.map((area) => [area.code, area])), [areas]);
+  const favoriteCodes = useMemo(() => new Set(favorites), [favorites]);
   const filteredAreas = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return areas.filter((area) => {
@@ -115,7 +116,7 @@ export default function App() {
 
           {error ? <div className="error-banner">{error} 백엔드 서버가 실행 중인지 확인해 주세요.</div> : null}
           <div className="explorer-grid">
-            <KakaoMap areas={filteredAreas} favorites={new Set(favorites)} onToggleFavorite={handleFavorite} />
+            <KakaoMap areas={filteredAreas} favorites={favoriteCodes} onToggleFavorite={handleFavorite} />
             <div className="area-panel">
               <div className="area-panel__header"><strong>상권 목록</strong><span>{filteredAreas.length}곳</span></div>
               {loading ? <p className="panel-state">상권 데이터를 불러오는 중입니다.</p> : null}

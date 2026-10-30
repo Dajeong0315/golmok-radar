@@ -21,6 +21,12 @@ export function ReviewInsightsPage() {
   const [result, setResult] = useState<ReviewAnalysisResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const reportLead = result?.insights[0]?.observation || (result?.status === "insufficient_sample"
+    ? "아직 결론을 내리기에는 리뷰가 부족해요."
+    : "이번 표본에서는 내 가게와 주변의 큰 차이가 뚜렷하지 않아요.");
+  const reportAction = result?.insights[0]?.action_idea || (result?.status === "insufficient_sample"
+    ? "리뷰가 더 모이면 실행 아이디어를 보여드릴게요."
+    : "주제별 숫자와 리뷰 근거를 확인하며 작은 차이를 찾아보세요.");
 
   const importCsv = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -99,15 +105,23 @@ export function ReviewInsightsPage() {
       </form>
       {error ? <p className="error-banner">{error}</p> : null}
       {result ? <section className="review-results" aria-live="polite">
-        <div className="review-summary"><div><p className="eyebrow">USER-PROVIDED · RIGHTS CONFIRMED</p><h2>{result.own_shop_name} vs. 주변 비교군</h2><p>{result.comparison_scope} · {result.period_label}</p></div><div><strong>{result.own_sample_count}</strong><span>내 가게 표본</span></div><div><strong>{result.nearby_sample_count}</strong><span>주변 표본</span></div></div>
+        <div className="review-summary"><div><p className="eyebrow">리뷰 비교 리포트</p><h2>{result.own_shop_name}와<br />주변 가게의 차이</h2><p>{result.comparison_scope} · {result.period_label}</p></div><div><strong>{result.own_sample_count}</strong><span>내 가게 리뷰</span></div><div><strong>{result.nearby_sample_count}</strong><span>주변 가게 리뷰</span></div></div>
         {result.status === "insufficient_sample" ? <div className="sample-warning">표본 부족 · {result.notice}</div> : null}
-        <div className="topic-table"><div className="topic-row topic-head"><span>주제</span><span>{result.own_shop_name}</span><span>주변 비교군</span></div>
-          {result.topics.map((topic) => <div className="topic-row" id={`review-topic-${topic.topic_key}`} key={topic.topic_key}>
-            <strong>{topic.label}</strong><span><small className="topic-side-label">{result.own_shop_name}</small>{topic.own.mentions}회 · 긍정 {topic.own.positive} / 부정 {topic.own.negative}</span><span><small className="topic-side-label">주변 비교군</small>{topic.nearby.mentions}회 · 긍정 {topic.nearby.positive} / 부정 {topic.nearby.negative}</span>
-            <details className="review-evidence"><summary>비식별 근거 보기</summary><div><div><b>{result.own_shop_name}</b>{topic.own.evidence.length ? topic.own.evidence.map((item) => <p key={item.review_index}>#{item.review_index} · {sentimentLabel[item.sentiment]} · {item.snippet}</p>) : <p>해당 주제 근거 없음</p>}</div><div><b>주변 비교군</b>{topic.nearby.evidence.length ? topic.nearby.evidence.map((item) => <p key={item.review_index}>#{item.review_index} · {sentimentLabel[item.sentiment]} · {item.snippet}</p>) : <p>해당 주제 근거 없음</p>}</div></div></details>
-          </div>)}
+        <div className="review-report-guide">
+          <article><span>01</span><small>먼저 읽기</small><strong>{reportLead}</strong></article>
+          <article><span>02</span><small>다음 행동</small><strong>{reportAction}</strong></article>
+          <article><span>03</span><small>해석 범위</small><strong>내 가게 {result.own_sample_count}건과 주변 {result.nearby_sample_count}건만 비교했어요.</strong></article>
         </div>
-        <div className="insight-grid">{result.insights.map((insight) => <article className={insight.kind} key={`${insight.topic_key}-${insight.kind}`}><p className="eyebrow">{insight.kind === "strength" ? "관찰된 강점" : "확인할 주의점"}</p><h3>{insight.observation}</h3><p><b>실행 아이디어</b>{insight.action_idea}</p><a href={`#review-topic-${insight.topic_key}`}>집계·근거 보기 ↑</a></article>)}</div>
+        <div className="review-section-heading"><div><p className="eyebrow">1 · 먼저 읽기</p><h2>지금 눈여겨볼 점</h2></div><p>리뷰에서 반복해서 나타난 차이와 바로 해볼 일을 나눠서 보여드려요.</p></div>
+        {result.insights.length ? <div className="insight-grid">{result.insights.map((insight) => <article className={insight.kind} key={`${insight.topic_key}-${insight.kind}`}><span className="insight-badge">{insight.kind === "strength" ? "잘하고 있는 점" : "먼저 확인할 점"}</span><h3>{insight.observation}</h3><div className="insight-action"><small>이렇게 해보세요</small><p>{insight.action_idea}</p></div><a href={`#review-topic-${insight.topic_key}`}>리뷰 숫자와 근거 확인 ↓</a></article>)}</div> : <p className="review-empty-insight">{result.status === "insufficient_sample" ? "리뷰 표본이 더 모이면 잘하고 있는 점과 먼저 확인할 일을 보여드려요." : "이번 표본에서는 큰 차이가 뚜렷하지 않았어요. 아래 주제별 숫자와 리뷰 근거를 확인해 보세요."}</p>}
+        <div className="review-section-heading"><div><p className="eyebrow">2 · 숫자로 확인하기</p><h2>주제별 리뷰 비교</h2></div><p>메뉴·가격·응대처럼 손님이 언급한 주제만 모아 내 가게와 주변을 나란히 봅니다.</p></div>
+        <div className="topic-cards">
+          {result.topics.map((topic) => <article className="topic-card" id={`review-topic-${topic.topic_key}`} key={topic.topic_key}>
+            <header><div><span>주제</span><h3>{topic.label}</h3></div><small>내 가게 · 주변 비교</small></header>
+            <div className="topic-comparison"><div><small>내 가게</small><strong>{topic.own.mentions}회 언급</strong><p><span className="positive">긍정 {topic.own.positive}</span><span className="negative">부정 {topic.own.negative}</span><span>중립 {topic.own.neutral}</span></p></div><div><small>주변 가게</small><strong>{topic.nearby.mentions}회 언급</strong><p><span className="positive">긍정 {topic.nearby.positive}</span><span className="negative">부정 {topic.nearby.negative}</span><span>중립 {topic.nearby.neutral}</span></p></div></div>
+            <details className="review-evidence"><summary>어떤 리뷰에서 나온 숫자인지 보기</summary><div><div><b>{result.own_shop_name}</b>{topic.own.evidence.length ? topic.own.evidence.map((item) => <p key={item.review_index}>#{item.review_index} · {sentimentLabel[item.sentiment]} · {item.snippet}</p>) : <p>이 주제를 언급한 리뷰가 없어요.</p>}</div><div><b>주변 가게</b>{topic.nearby.evidence.length ? topic.nearby.evidence.map((item) => <p key={item.review_index}>#{item.review_index} · {sentimentLabel[item.sentiment]} · {item.snippet}</p>) : <p>이 주제를 언급한 리뷰가 없어요.</p>}</div></div></details>
+          </article>)}
+        </div>
         <p className="review-notice">{result.notice} 감정 분류는 공개된 단순 키워드 규칙이므로 문맥을 완전히 이해하지 못할 수 있습니다.</p>
       </section> : null}
     </main>

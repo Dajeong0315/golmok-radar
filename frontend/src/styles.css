@@ -1405,6 +1405,7 @@ button:active:not(:disabled), .favorite-card:active, .primary-action:active, .fi
 }
 .result-hero > p:not(.eyebrow) {
   max-width: 760px;
+  color: #64d2ff;
   font-size: 17px;
   line-height: 1.6;
 }
@@ -1484,15 +1485,15 @@ button:active:not(:disabled), .favorite-card:active, .primary-action:active, .fi
   grid-template-columns: minmax(240px, .7fr) minmax(0, 1.3fr);
   gap: 56px;
   padding: 56px max(20px, calc((100vw - 1112px) / 2));
-  color: white;
-  background: #1d1d1f;
+  color: var(--ink);
+  background: #eef5fb;
 }
 .result-route h2 {
   margin: 0;
   font-size: clamp(30px, 3.4vw, 44px);
 }
 .result-route > div > p:last-child {
-  color: #aeaeb2;
+  color: var(--secondary);
 }
 .result-route ol {
   display: grid;
@@ -1505,15 +1506,17 @@ button:active:not(:disabled), .favorite-card:active, .primary-action:active, .fi
 .result-route li {
   min-height: 174px;
   padding: 16px;
-  border: 1px solid rgba(255, 255, 255, .1);
+  border: 1px solid rgba(0, 113, 227, .1);
   border-radius: 14px;
+  background: rgba(255, 255, 255, .82);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .035);
 }
 .result-route li strong {
   display: block;
   margin-top: 24px;
 }
 .result-route li p {
-  color: #aeaeb2;
+  color: var(--secondary);
 }
 .result-evidence {
   padding-top: 72px;

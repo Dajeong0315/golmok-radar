@@ -84,8 +84,8 @@ export default function App() {
       <main id="top">
         <section className="hero">
           <p className="eyebrow">첫 가게 준비를 돕는 상권 도구</p>
-          <h1>어디에 열지 막막할 때, 같은 숫자로 하나씩 비교하세요.</h1>
-          <p className="hero-copy">서울의 공식 상권을 둘러보고 관심 지역을 저장해 보세요. 그중 2~4곳을 골라 카페 수, 매출, 유동인구를 같은 기준으로 확인할 수 있어요.</p>
+          <h1>어디에 열지 막막할 때,<br />같은 숫자로 하나씩 비교하세요.</h1>
+          <p className="hero-copy">서울의 공식 상권을 둘러보고 관심 지역을 저장해 보세요.<br />그중 2~4곳을 골라 카페 수, 매출, 유동인구를 같은 기준으로 확인할 수 있어요.</p>
           <div className="hero-proof">
             <span><b>{loading ? "—" : areas.length.toLocaleString("ko-KR")}</b> 공식 상권</span>
             <span><b>{loading ? "—" : Math.max(districts.length - 1, 0)}</b> 서울 자치구</span>

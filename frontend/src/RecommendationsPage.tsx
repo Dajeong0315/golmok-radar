@@ -44,7 +44,7 @@ export function RecommendationsPage() {
   return <main className="recommendation-page">
     <header className="site-header recommendation-header"><a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a><a className="back-link" href="#quiz">성향 결과 다시 보기</a></header>
     <section className="recommendation-hero">
-      <div><p className="eyebrow">첫 번째 후보 리포트</p><h1>내 답과 잘 맞는 상권 3곳을 먼저 살펴보세요.</h1><p>{data.message}</p></div>
+      <div><p className="eyebrow">첫 번째 후보 리포트</p><h1>내 답과 잘 맞는 상권 3곳을<br />먼저 살펴보세요.</h1><p>{data.message}</p></div>
       <aside><strong>{data.candidate_pool_size}</strong><span>같은 조건으로 비교한 상권</span><small>{data.quarter_label} · 계산 기준 {data.weights_version}</small></aside>
     </section>
     <section className="recommendation-summary" aria-label="후보 리포트 읽는 순서"><strong>이 페이지를 보는 순서</strong><ol><li><span>1</span>상권마다 먼저 나온 이유를 봐요.</li><li><span>2</span>강점과 주의 신호를 같이 봐요.</li><li><span>3</span>마음에 들면 비교표에 담아요.</li></ol></section>
@@ -59,8 +59,8 @@ export function RecommendationsPage() {
         <aside className="candidate-cautions"><h3>방문해서 꼭 볼 것</h3>{candidate.cautions.map((caution) => <p key={caution}>{caution}</p>)}</aside>
       </article>)}
     </section>
-    <section className="recommendation-method"><div><p className="eyebrow">계산 방법</p><h2>점수보다 나온 이유를 확인하세요.</h2></div><div><p>카페 수, 매출, 유동인구를 비교 가능한 상권 {data.candidate_pool_size}곳 안에서 같은 기준으로 줄 세웠어요. 그다음 진단에서 고른 답을 반영했어요.</p><p>{data.diversity_rule}</p><p>조건 적합도는 창업 성공 확률이 아니에요. 어디부터 더 자세히 볼지 정하는 탐색 순서입니다.</p></div></section>
-    <section className="recommendation-cta"><div><p className="eyebrow">다음 단계</p><h2>세 후보의 14개 숫자를 같은 표에서 확인하세요.</h2></div><button className="primary-action" onClick={saveAndExplore}>3곳을 저장하고 비교하기 <span>→</span></button></section>
+    <section className="recommendation-method"><div><p className="eyebrow">계산 방법</p><h2>점수보다 나온 이유를<br />확인하세요.</h2></div><div><p>카페 수, 매출, 유동인구를 비교 가능한 상권 {data.candidate_pool_size}곳 안에서 같은 기준으로 줄 세웠어요. 그다음 진단에서 고른 답을 반영했어요.</p><p>{data.diversity_rule}</p><p>조건 적합도는 창업 성공 확률이 아니에요. 어디부터 더 자세히 볼지 정하는 탐색 순서입니다.</p></div></section>
+    <section className="recommendation-cta"><div><p className="eyebrow">다음 단계</p><h2>세 후보의 14개 숫자를<br />같은 표에서 확인하세요.</h2></div><button className="primary-action" onClick={saveAndExplore}>3곳을 저장하고 비교하기 <span>→</span></button></section>
   </main>;
 }
 

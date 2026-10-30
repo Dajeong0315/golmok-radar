@@ -71,7 +71,7 @@ export function ReviewInsightsPage() {
   return <div className="reviews-page">
     <header className="site-header"><a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a><div className="header-context"><a href="#top">상권 탐색</a><strong>개업 후 운영</strong></div></header>
     <main>
-      <section className="reviews-hero"><p className="eyebrow">가게를 연 뒤 · 리뷰 보기</p><h1>손님 리뷰에서 다음에 고칠 일을 찾아보세요.</h1><p>내 가게와 직접 고른 주변 가게의 리뷰를 메뉴, 가격, 응대처럼 같은 기준으로 비교해요. 리뷰 작성자 정보는 받지 않고 입력 내용도 저장하지 않아요.</p></section>
+      <section className="reviews-hero"><p className="eyebrow">가게를 연 뒤 · 리뷰 보기</p><h1>손님 리뷰에서<br />다음에 고칠 일을 찾아보세요.</h1><p>내 가게와 직접 고른 주변 가게의 리뷰를 메뉴, 가격, 응대처럼 같은 기준으로 비교해요.<br />리뷰 작성자 정보는 받지 않고 입력 내용도 저장하지 않아요.</p></section>
       <form className="reviews-form" onSubmit={submit}>
         <div className="review-context">
           <label><span>내 가게 표시명</span><input value={shopName} onChange={(event) => setShopName(event.target.value)} /></label>

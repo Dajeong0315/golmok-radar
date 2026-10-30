@@ -33,7 +33,7 @@ export function FundingPage() {
       <main>
         <section className="funding-hero">
           <p className="eyebrow">STEP 5 · SUPPORT</p>
-          <h1>대출을 알아보기 전에 신청할 수 있는 공식 지원사업부터 확인하세요.</h1>
+          <h1>대출을 알아보기 전에<br />신청할 수 있는 공식 지원사업부터 확인하세요.</h1>
           <p>민감한 신용·부채 정보는 받지 않습니다. 현재 모집 중인 공식 공고만 확인하고, 조건 일치 여부와 사용자가 직접 확인할 항목을 분리합니다.</p>
         </section>
         <section className="funding-layout">

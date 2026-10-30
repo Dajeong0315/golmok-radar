@@ -173,14 +173,18 @@ class SupportProgramQuery(BaseModel):
 class SupportProgramCandidate(BaseModel):
     program_id: str
     title: str
+    application_start: str
     application_end: str
+    regions: list[str]
+    support_type: str
+    target: str
     source_url: str
     reasons: list[str]
     needs_confirmation: list[str]
 
 
 class SupportProgramResponse(BaseModel):
-    status: Literal["available", "configuration_required"]
+    status: Literal["available", "no_candidates", "configuration_required"]
     provider: str
     checked_at: str
     message: str

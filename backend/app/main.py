@@ -12,10 +12,11 @@ from sqlalchemy.orm import Session
 from .config import get_settings
 from .db import get_db
 from .metric_service import MetricValue, get_area_metrics
-from .models import DataSource, PopulationMetric, RentBenchmark, SalesMetric, StoreMetric, TradeArea
+from .models import DataSource, PopulationMetric, RentBenchmark, SalesMetric, StoreMetric, SupportProgram, TradeArea
 from .recommendations import recommend, select_diverse
 from .reports import build_area_report
 from .review_analysis import analyze_reviews, build_insights
+from .support_programs import NormalizedProgram, SupportProfile, select_candidates
 from .schemas import (
     AreaReportResponse,
     ChecklistResponse,
@@ -237,27 +238,78 @@ def get_rent_benchmark(code: str, session: Session = Depends(get_db)) -> RentBen
 
 
 @app.post("/api/v1/support-programs", response_model=SupportProgramResponse)
-def support_programs(profile: SupportProgramQuery) -> SupportProgramResponse:
+def support_programs(profile: SupportProgramQuery, db: Session = Depends(get_db)) -> SupportProgramResponse:
     # profile is deliberately limited to non-sensitive eligibility hints. Credit,
     # debt and approval predictions are outside the product scope.
-    if not settings.k_startup_api_key:
+    stored = list(db.scalars(select(SupportProgram)).all())
+    if not stored:
+        key_missing = not settings.k_startup_api_key
         return SupportProgramResponse(
             status="configuration_required",
             provider="창업진흥원 K-Startup",
             checked_at=date.today().isoformat(),
-            message="현재 모집 공고를 확인하려면 K-Startup Open API 인증키가 필요합니다. 키가 없으므로 오래된 공고나 가상 상품을 후보로 표시하지 않습니다.",
-            required_setting="K_STARTUP_API_KEY",
+            message=(
+                "현재 모집 공고를 확인하려면 공공데이터포털에서 K-Startup Open API 활용신청과 인증키 발급이 필요합니다. 키가 없으므로 오래된 공고나 가상 상품을 후보로 표시하지 않습니다."
+                if key_missing
+                else "인증키는 확인됐지만 수집·적재된 운영 공고가 없습니다. 수집 파이프라인을 실행하기 전에는 가상 상품을 표시하지 않습니다."
+            ),
+            required_setting="K_STARTUP_API_KEY" if key_missing else None,
             candidates=[],
             source_url="https://www.k-startup.go.kr/",
             disclaimer="지원 자격이나 선정 가능성을 보장하지 않습니다. 신청 전 공고 원문과 수행기관 안내를 확인하세요.",
         )
+
+    programs = [NormalizedProgram(
+        program_id=item.program_id,
+        title=item.title,
+        application_start=item.application_start,
+        application_end=item.application_end,
+        regions=tuple(item.regions),
+        stages=tuple(item.stages),
+        minimum_age=item.minimum_age,
+        maximum_age=item.maximum_age,
+        maximum_years_in_business=item.maximum_years_in_business,
+        source_url=item.source_url,
+        support_type=item.support_type,
+        target_text=item.target_text,
+        region_text=item.region_text,
+        business_age_text=item.business_age_text,
+        age_text=item.age_text,
+        unparsed_conditions=tuple(item.unparsed_conditions),
+    ) for item in stored]
+    candidates = select_candidates(
+        programs,
+        SupportProfile(
+            stage=profile.stage,
+            region=profile.region,
+            age=profile.age,
+            years_in_business=profile.years_in_business,
+        ),
+        today=date.today(),
+        limit=2,
+    )
     return SupportProgramResponse(
-        status="configuration_required",
+        status="available" if candidates else "no_candidates",
         provider="창업진흥원 K-Startup",
         checked_at=date.today().isoformat(),
-        message="인증키는 확인됐지만 운영 API 응답 계약 검증이 필요합니다. 검증 전에는 공고를 후보로 표시하지 않습니다.",
+        message=(
+            f"현재 모집 공고 중 입력 조건과 명백히 충돌하지 않는 후보 {len(candidates)}건입니다."
+            if candidates
+            else "현재 모집 공고 중 입력 조건과 명백히 충돌하지 않는 후보가 없습니다."
+        ),
         required_setting=None,
-        candidates=[],
+        candidates=[{
+            "program_id": program.program_id,
+            "title": program.title,
+            "application_start": program.application_start.isoformat(),
+            "application_end": program.application_end.isoformat(),
+            "regions": list(program.regions),
+            "support_type": program.support_type or "공고 원문 확인",
+            "target": program.target_text or "공고 원문 확인",
+            "source_url": program.source_url,
+            "reasons": [check.explanation for check in checks if check.state == "matched"],
+            "needs_confirmation": [check.explanation for check in checks if check.state == "needs_confirmation"],
+        } for program, checks in candidates],
         source_url="https://www.k-startup.go.kr/",
         disclaimer="지원 자격이나 선정 가능성을 보장하지 않습니다. 신청 전 공고 원문과 수행기관 안내를 확인하세요.",
     )

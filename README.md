@@ -112,7 +112,7 @@ npm run build
 Pop-Location
 ```
 
-현재 기준 백엔드 45개, 프런트엔드 14개 테스트가 통과합니다. 지표의 손계산 기대값은 [docs/지표_손계산_기준표.xlsx](docs/지표_손계산_기준표.xlsx)에 고정되어 있습니다.
+현재 기준 백엔드 50개, 프런트엔드 14개 테스트가 통과합니다. 지표의 손계산 기대값은 [docs/지표_손계산_기준표.xlsx](docs/지표_손계산_기준표.xlsx)에 고정되어 있습니다.
 
 ## Supabase 연결
 
@@ -129,11 +129,13 @@ Pop-Location
 .\.venv\Scripts\python.exe database\scripts\load_data.py
 .\.venv\Scripts\python.exe database\scripts\fetch_rone.py
 .\.venv\Scripts\python.exe database\scripts\load_rone.py
+.\.venv\Scripts\python.exe database\scripts\fetch_kstartup.py
+.\.venv\Scripts\python.exe database\scripts\load_kstartup.py
 ```
 
 운영 데이터에 적용하기 전에 별도 테스트 프로젝트에서 마이그레이션과 행 수를 확인하세요. 연결 문자열은 로그, 이슈, 커밋에 남기지 않습니다.
 
-2026-10-30 `golmok-radar` Supabase 프로젝트에 revision `20261030_0002`까지 적용했습니다. 상권 117건, 점포 110건, 매출 82건, 인구 117건에 더해 R-ONE 서울 소규모상가 참고지표 3건을 적재했으며 FastAPI 실조회까지 확인했습니다.
+2026-10-30 `golmok-radar` Supabase 프로젝트에 revision `20261030_0003`까지 적용했습니다. 상권 117건, 점포 110건, 매출 82건, 인구 117건, R-ONE 서울 소규모상가 참고지표 3건과 K-Startup 모집 공고 215건을 적재했으며 FastAPI 실조회까지 확인했습니다.
 
 ## 주요 문서
 

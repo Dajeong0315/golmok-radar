@@ -14,6 +14,7 @@ def test_schema_is_created_in_sqlite() -> None:
         "rent_benchmarks",
         "sales_metrics",
         "store_metrics",
+        "support_programs",
         "trade_areas",
     }
 

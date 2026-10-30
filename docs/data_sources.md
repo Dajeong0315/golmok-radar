@@ -67,8 +67,8 @@
 
 - 프로젝트 표시명: `golmok-radar`
 - 리전: Northeast Asia (Seoul), `ap-northeast-2`
-- Alembic revision: `20261030_0002`
-- 적재 결과: 상권 117건, 점포 110건, 매출 82건, 인구 117건, R-ONE 참고지표 3건, 출처 5건
+- Alembic revision: `20261030_0003`
+- 적재 결과: 상권 117건, 점포 110건, 매출 82건, 인구 117건, R-ONE 참고지표 3건, K-Startup 모집 공고 215건, 출처 6건
 - 서비스 조회: FastAPI `/api/v1/trade-areas` 200 응답, 117건
 - 연결 문자열과 비밀번호는 `backend/.env`에만 보관하며 Git 추적 대상에서 제외
 
@@ -101,13 +101,16 @@ API 원천값은 DB에 그대로 저장하고 화면에서만 소수 둘째 자�
 
 | 출처 | 확인 결과 | 적용 원칙 |
 | --- | --- | --- |
-| 창업진흥원 K-Startup 지원사업 공고 Open API | 공고 정보용 공식 Open API와 개발자용 명세 페이지 확인 | 인증키와 운영 응답 필드를 검증한 뒤 모집 기간·지역·업력·연령·대상을 정규화 |
+| 창업진흥원 K-Startup 지원사업 공고 Open API | 공공데이터포털 데이터셋 `15125364`, REST, JSON/XML, 개발·운영 자동승인, 실시간 갱신 확인 | `rcrt_prgs_yn=Y`로 수집하고 모집 기간·지역·업력·연령·대상·지원 유형을 정규화 |
 | K-Startup 창업지원포털 | 현재 공고의 공식 원문·신청 경로 | API 미연결 시 포털 링크만 제공하고 과거 공고를 현재 후보로 대체하지 않음 |
 | 소상공인시장진흥공단 정책자금 | 정책자금 공식 안내·신청 경로 | 대출 비교·중개가 아닌 공식 확인 링크로만 제공 |
 
-현재 로컬 환경에는 `K_STARTUP_API_KEY`가 없으므로 API 응답은 `configuration_required`와 빈 후보를 반환합니다. 테스트 fixture는 기간·지역·단계·연령·업력 판정 계약 검증에만 사용하며 화면에는 노출하지 않습니다. 은행상품 추천, 신용·부채 수집, 대출 승인 가능성 예측은 제휴·법률 검토 전까지 하지 않습니다.
+2026-10-30 공식 명세에서 게이트웨이 `https://apis.data.go.kr/B552735/kisedKstartupService01/getAnnouncementInformation01`, 필수 `serviceKey`, 모집 진행 필터 `cond[rcrt_prgs_yn::EQ]`, JSON 응답 필드를 확인했습니다. 수집기는 페이지별 응답 원문을 `database/raw/kstartup/`에 그대로 저장하고, 적재기는 공고 일련번호·공고명·접수 기간·지역·업력·연령·신청 대상·지원 유형·공식 URL을 `support_programs`에 정규화합니다. 자유 서술형 신청 대상과 파싱되지 않은 조건은 일치로 단정하지 않고 `사용자 확인 필요`로 반환합니다.
 
-- K-Startup 지원사업 공고 API: https://nidview.k-startup.go.kr/view/public/kisedKstartupService/announcementInformation
+2026-10-30 운영 API에서 모집 진행 공고 215건(4페이지)을 수집했습니다. 공고 일련번호는 215개 모두 고유했고, 공고명·접수 시작일·접수 종료일·지역·업력·연령 필드는 전부 존재했습니다. 서비스 기준일 `2026-10-30`에 접수 중인 공고는 209건, 시작 전 공고는 6건, 만료 공고는 0건이었으며 시작 전 공고는 현재 후보에서 제외합니다. Supabase revision `20261030_0003`에 215건을 적재했고, 예비창업·서울·만 31세 조건으로 API가 공식 후보 2건과 노출 이유·원문 확인 항목·공식 링크를 반환하는지 확인했습니다. 키가 없거나 검증된 적재 행이 없을 때는 `configuration_required`와 빈 후보를 반환합니다. 은행상품 추천, 신용·부채 수집, 대출 승인 가능성 예측은 제휴·법률 검토 전까지 하지 않습니다.
+
+- 공공데이터포털 공식 데이터셋·활용신청: https://www.data.go.kr/data/15125364/openapi.do
+- K-Startup 공식 응답 예시: https://nidview.k-startup.go.kr/view/public/kisedKstartupService/announcementInformation
 - K-Startup 창업지원포털: https://www.k-startup.go.kr/
 - 소상공인 정책자금: https://ols.semas.or.kr/
 

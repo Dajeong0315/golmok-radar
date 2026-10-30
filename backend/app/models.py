@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import BigInteger, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, BigInteger, Date, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -102,4 +102,26 @@ class RentBenchmark(Base):
     mapping_scope: Mapped[str] = mapped_column(String(40), nullable=False)
     fetched_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     source_url: Mapped[str] = mapped_column(String(500), nullable=False)
+
+
+class SupportProgram(Base):
+    __tablename__ = "support_programs"
+
+    program_id: Mapped[str] = mapped_column(String(50), primary_key=True)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    application_start: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    application_end: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    regions: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    stages: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    minimum_age: Mapped[int | None] = mapped_column(Integer)
+    maximum_age: Mapped[int | None] = mapped_column(Integer)
+    maximum_years_in_business: Mapped[int | None] = mapped_column(Integer)
+    source_url: Mapped[str] = mapped_column(String(500), nullable=False)
+    support_type: Mapped[str] = mapped_column(String(255), nullable=False)
+    target_text: Mapped[str] = mapped_column(Text, nullable=False)
+    region_text: Mapped[str] = mapped_column(Text, nullable=False)
+    business_age_text: Mapped[str] = mapped_column(Text, nullable=False)
+    age_text: Mapped[str] = mapped_column(Text, nullable=False)
+    unparsed_conditions: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 

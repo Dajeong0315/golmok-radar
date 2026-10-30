@@ -1,5 +1,5 @@
 from collections.abc import Generator
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 import pytest
@@ -8,8 +8,8 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from app.db import Base, get_db, make_engine
-from app.main import app
-from app.models import DataSource, PopulationMetric, RentBenchmark, SalesMetric, StoreMetric, TradeArea
+from app.main import app, settings
+from app.models import DataSource, PopulationMetric, RentBenchmark, SalesMetric, StoreMetric, SupportProgram, TradeArea
 
 
 @pytest.fixture
@@ -243,7 +243,8 @@ def test_rent_benchmark_returns_reason_instead_of_zero_when_source_is_missing(cl
     assert "0으로 대체하지 않습니다" in body["message"]
 
 
-def test_support_programs_require_official_api_configuration(client: TestClient) -> None:
+def test_support_programs_require_official_api_configuration(client: TestClient, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "k_startup_api_key", None)
     response = client.post("/api/v1/support-programs", json={
         "stage": "pre_startup",
         "region": "서울",
@@ -255,6 +256,48 @@ def test_support_programs_require_official_api_configuration(client: TestClient)
     assert body["required_setting"] == "K_STARTUP_API_KEY"
     assert body["candidates"] == []
     assert "가상 상품" in body["message"]
+
+
+def test_support_programs_return_two_explainable_current_candidates(client: TestClient) -> None:
+    override_db = app.dependency_overrides[get_db]
+    database = override_db()
+    session = next(database)
+    try:
+        session.add_all([
+            SupportProgram(
+                program_id=f"program-{index}",
+                title=f"공식 공고 {index}",
+                application_start=date(2020, 1, 1),
+                application_end=date(2099, 12, 31),
+                regions=["전국"],
+                stages=["pre_startup"],
+                minimum_age=20,
+                maximum_age=39,
+                maximum_years_in_business=None,
+                source_url=f"https://www.k-startup.go.kr/program-{index}",
+                support_type="사업화",
+                target_text="예비창업자 중 세부 조건 충족자",
+                region_text="전국",
+                business_age_text="예비창업자",
+                age_text="만 20세 이상 ~ 만 39세 이하",
+                unparsed_conditions=[],
+                fetched_at=datetime(2026, 10, 30, 10, 0, 0),
+            ) for index in range(3)
+        ])
+        session.commit()
+    finally:
+        database.close()
+
+    response = client.post("/api/v1/support-programs", json={
+        "stage": "pre_startup", "region": "서울", "age": 31,
+    })
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "available"
+    assert len(body["candidates"]) == 2
+    assert body["candidates"][0]["support_type"] == "사업화"
+    assert body["candidates"][0]["reasons"]
+    assert body["candidates"][0]["needs_confirmation"]
 
 
 def test_review_analysis_exposes_samples_topics_and_evidence(client: TestClient) -> None:

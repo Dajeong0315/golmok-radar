@@ -53,10 +53,18 @@ export function FundingPage() {
             {!result && !error ? <><h2>조건을 입력해 확인하세요</h2><p>공식 K-Startup 공고 연동 상태를 먼저 검사합니다.</p></> : null}
             {error ? <div className="error-banner">{error}</div> : null}
             {result ? <>
-              <span className={`source-status ${result.status === "available" ? "" : "source-status--muted"}`}>{result.status === "available" ? "공식 공고 확인 완료" : "공식 API 설정 필요"}</span>
+              <span className={`source-status ${result.status === "available" ? "" : "source-status--muted"}`}>{result.status === "available" ? "공식 공고 확인 완료" : result.status === "no_candidates" ? "현재 조건의 후보 없음" : "공식 API 설정 필요"}</span>
               <h2>{result.candidates.length ? `${result.candidates.length}건을 찾았습니다` : "가짜 후보를 보여주지 않습니다"}</h2>
               <p>{result.message}</p>{result.required_setting ? <code>{result.required_setting}</code> : null}
-              {result.candidates.map((candidate) => <article key={candidate.program_id}><h3>{candidate.title}</h3><p>{candidate.reasons.join(" · ")}</p><a href={candidate.source_url} target="_blank" rel="noreferrer">공고 원문 확인</a></article>)}
+              {result.candidates.map((candidate) => <article key={candidate.program_id}>
+                <p className="eyebrow">{candidate.support_type || "지원 유형 원문 확인"}</p>
+                <h3>{candidate.title}</h3>
+                <p>접수 {candidate.application_start} ~ {candidate.application_end} · 지역 {candidate.regions.join(", ") || "원문 확인"}</p>
+                <p><strong>노출 이유</strong> {candidate.reasons.join(" · ")}</p>
+                <p><strong>직접 확인</strong> {candidate.needs_confirmation.join(" · ") || "추가 확인 항목 없음"}</p>
+                <details><summary>공고의 신청 대상 보기</summary><p>{candidate.target}</p></details>
+                <a href={candidate.source_url} target="_blank" rel="noreferrer">공고 원문 확인 →</a>
+              </article>)}
               <small>{result.disclaimer}</small>
             </> : null}
           </div>

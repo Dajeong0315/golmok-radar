@@ -147,14 +147,18 @@ export type RentBenchmarkResponse = {
 export type SupportProgramCandidate = {
   program_id: string;
   title: string;
+  application_start: string;
   application_end: string;
+  regions: string[];
+  support_type: string;
+  target: string;
   source_url: string;
   reasons: string[];
   needs_confirmation: string[];
 };
 
 export type SupportProgramResponse = {
-  status: "available" | "configuration_required";
+  status: "available" | "no_candidates" | "configuration_required";
   provider: string;
   checked_at: string;
   message: string;

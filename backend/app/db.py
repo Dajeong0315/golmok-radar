@@ -19,6 +19,11 @@ def normalize_database_url(url: str) -> str:
     return url
 
 
+def escape_configparser_value(value: str) -> str:
+    """Escape percent signs before storing a secret-bearing URL in ConfigParser."""
+    return value.replace("%", "%%")
+
+
 def make_engine(database_url: str | None = None):
     url = normalize_database_url(database_url or get_settings().database_url)
     connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}

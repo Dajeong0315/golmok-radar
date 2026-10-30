@@ -1,4 +1,4 @@
-from app.db import normalize_database_url
+from app.db import escape_configparser_value, normalize_database_url
 
 
 def test_normalize_supabase_postgres_url_for_psycopg3() -> None:
@@ -15,3 +15,10 @@ def test_normalize_keeps_explicit_driver_and_sqlite_urls() -> None:
         "postgresql+psycopg://user:secret@example.com/db"
     )
     assert normalize_database_url("sqlite:///data/test.db") == "sqlite:///data/test.db"
+
+
+def test_escape_configparser_value_preserves_percent_encoded_password() -> None:
+    url = "postgresql+psycopg://user:p%25word@example.com/db?sslmode=require"
+    assert escape_configparser_value(url) == (
+        "postgresql+psycopg://user:p%%25word@example.com/db?sslmode=require"
+    )

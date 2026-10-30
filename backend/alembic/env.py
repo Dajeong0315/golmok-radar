@@ -6,7 +6,7 @@ from sqlalchemy import engine_from_config, pool
 from sqlalchemy.engine import make_url
 
 from app.config import get_settings
-from app.db import Base, normalize_database_url
+from app.db import Base, escape_configparser_value, normalize_database_url
 from app import models  # noqa: F401
 
 
@@ -15,7 +15,10 @@ if config.config_file_name:
     fileConfig(config.config_file_name)
 
 database_url = normalize_database_url(get_settings().database_url)
-config.set_main_option("sqlalchemy.url", database_url)
+# Alembic stores runtime options in ConfigParser, where a literal percent sign
+# starts interpolation. Database passwords may legitimately contain percent-
+# encoded characters, so escape them before handing the URL to ConfigParser.
+config.set_main_option("sqlalchemy.url", escape_configparser_value(database_url))
 parsed_url = make_url(database_url)
 if parsed_url.get_backend_name() == "sqlite" and parsed_url.database not in (None, ":memory:"):
     Path(parsed_url.database).parent.mkdir(parents=True, exist_ok=True)

@@ -1,15 +1,29 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
-import { fetchSupportPrograms } from "./api";
-import type { SupportProgramResponse } from "./types";
+import { fetchSupportPrograms, fetchTradeAreas } from "./api";
+import { loadProfile } from "./founderProfile";
+import { selectBankFundingGuides, type FundingStage } from "./fundingGuides";
+import type { SupportProgramResponse, TradeArea } from "./types";
 
-export function FundingPage() {
-  const [stage, setStage] = useState<"pre_startup" | "existing">("pre_startup");
+export function FundingPage({ code }: { code: string }) {
+  const profile = loadProfile(localStorage);
+  const [stage, setStage] = useState<FundingStage>("pre_startup");
   const [age, setAge] = useState(30);
   const [years, setYears] = useState(1);
+  const [area, setArea] = useState<TradeArea | null>(null);
   const [result, setResult] = useState<SupportProgramResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const bankGuides = useMemo(() => selectBankFundingGuides(profile?.answers || null, stage), [profile, stage]);
+
+  useEffect(() => {
+    if (!code) return;
+    const controller = new AbortController();
+    fetchTradeAreas(controller.signal)
+      .then((areas) => setArea(areas.find((item) => item.code === code) || null))
+      .catch(() => setArea(null));
+    return () => controller.abort();
+  }, [code]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -33,8 +47,8 @@ export function FundingPage() {
       <main>
         <section className="funding-hero">
           <p className="eyebrow">STEP 5 · SUPPORT</p>
-          <h1>대출을 알아보기 전에<br />신청할 수 있는 공식 지원사업부터 확인하세요.</h1>
-          <p>민감한 신용·부채 정보는 받지 않습니다. 현재 모집 중인 공식 공고만 확인하고, 조건 일치 여부와 사용자가 직접 확인할 항목을 분리합니다.</p>
+          <h1>지원사업과 자금 후보를<br />공식 조건부터 확인하세요.</h1>
+          <p>{area ? `${area.district_name} ${area.name}에서 준비하는 조건을 서울 지역 기준으로 살펴봅니다. ` : "서울에서 준비하는 조건을 기준으로 살펴봅니다. "}민감한 신용·부채 정보는 받지 않고 승인 가능성도 예측하지 않습니다.</p>
         </section>
         <section className="funding-layout">
           <form className="funding-form" onSubmit={submit}>
@@ -68,6 +82,20 @@ export function FundingPage() {
               <small>{result.disclaimer}</small>
             </> : null}
           </div>
+        </section>
+        <section className="bank-funding" aria-labelledby="bank-funding-title">
+          <div className="result-section-heading"><div><p className="eyebrow">IBK · KDB 공식 확인 후보</p><h2 id="bank-funding-title">성향과 사업 단계에 맞춰<br />먼저 볼 두 가지</h2></div><p>성향은 자금의 쓰임을 설명하는 데만 사용해요. 실제 대상 여부·금리·한도는 공식 페이지와 은행 심사에서 결정됩니다.</p></div>
+          {area ? <div className="funding-area-context"><span>선택 상권</span><strong>{area.district_name} · {area.name}</strong><p>상권의 임대비와 예상 운영비는 상담용 사업계획을 정리하는 데 활용하세요. 상권 점수로 대출 승인 가능성을 계산하지 않습니다.</p></div> : null}
+          <div className="bank-guide-grid">
+            {bankGuides.map((guide) => <article className="bank-guide-card" key={guide.id}>
+              <div className="bank-guide-card__meta"><span>{guide.institution}</span><small>{guide.category}</small></div>
+              <h3>{guide.title}</h3>
+              <p className="bank-guide-reason"><strong>이 조건에서 보는 이유</strong>{guide.reason}</p>
+              <dl><div><dt>공식 대상</dt><dd>{guide.eligibility}</dd></div><div><dt>직접 확인</dt><dd>{guide.confirmation}</dd></div></dl>
+              <footer><span>{guide.checkedAt} 확인</span><a href={guide.sourceUrl} target="_blank" rel="noreferrer">공식 안내 보기 ↗</a></footer>
+            </article>)}
+          </div>
+          <div className="funding-safety-note"><strong>지역 필터를 이렇게 적용했어요</strong><p>현재 후보가 서울이므로 KDB의 지방소재 지역경제활성화 자금은 제외했습니다. 은행 상품을 서로 금리순으로 비교하거나 신청을 대신하지 않으며, 대출 전에는 상환 계획과 상품설명서를 반드시 확인해야 합니다.</p></div>
         </section>
         <section className="official-links">
           <div><p className="eyebrow">OFFICIAL 01</p><h2>K-Startup</h2><p>창업지원포털에서 모집 중인 지원사업 공고를 직접 검색합니다.</p><a href="https://www.k-startup.go.kr/" target="_blank" rel="noreferrer">공식 포털 열기 →</a></div>

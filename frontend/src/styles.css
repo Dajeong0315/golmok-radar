@@ -1501,7 +1501,7 @@ button:active:not(:disabled), .favorite-card:active, .primary-action:active, .fi
 .result-notice strong {
   color: white;
 }
-.result-overview, .result-evidence {
+.result-overview, .result-evidence, .result-funding {
   max-width: 1240px;
   margin: 0 auto;
   padding: 64px clamp(20px, 5vw, 64px);
@@ -1615,6 +1615,61 @@ button:active:not(:disabled), .favorite-card:active, .primary-action:active, .fi
   margin: 7px 0;
   font-size: 18px;
 }
+.result-funding {
+  padding-top: 72px;
+  border-top: 1px solid rgba(0, 0, 0, .07);
+}
+.bank-funding {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 72px clamp(20px, 5vw, 64px);
+}
+.bank-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.bank-guide-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 420px;
+  padding: 28px;
+  border: 1px solid rgba(0, 0, 0, .1);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 32px rgba(22, 32, 38, .055);
+}
+.bank-guide-card__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+}
+.bank-guide-card__meta small { color: var(--secondary); }
+.bank-guide-card h3 { margin: 24px 0 10px; font-size: clamp(25px, 3vw, 34px); }
+.bank-guide-reason { min-height: 92px; margin: 0; color: var(--secondary); line-height: 1.65; }
+.bank-guide-reason strong { display: block; margin-bottom: 4px; color: var(--ink); font-size: 12px; }
+.bank-guide-card dl { display: grid; gap: 14px; margin: 24px 0; }
+.bank-guide-card dl div { padding-top: 14px; border-top: 1px solid rgba(0, 0, 0, .08); }
+.bank-guide-card dt { margin-bottom: 6px; color: var(--secondary); font-size: 11px; font-weight: 800; }
+.bank-guide-card dd { margin: 0; font-size: 13px; line-height: 1.6; }
+.bank-guide-card footer { display: flex; justify-content: space-between; gap: 14px; align-items: center; margin-top: auto; padding-top: 16px; }
+.bank-guide-card footer span { color: var(--secondary); font-size: 11px; }
+.bank-guide-card footer a { color: var(--accent); font-size: 13px; font-weight: 800; }
+.funding-safety-note, .funding-area-context {
+  margin-top: 16px;
+  padding: 22px 24px;
+  border-radius: 16px;
+  background: #eef5fb;
+}
+.funding-safety-note strong, .funding-area-context span { display: block; margin-bottom: 7px; color: var(--accent); font-size: 12px; font-weight: 800; }
+.funding-safety-note p, .funding-area-context p { margin: 0; color: var(--secondary); font-size: 13px; line-height: 1.65; }
+.funding-safety-note a { display: inline-flex; margin-top: 14px; color: var(--accent); font-weight: 800; }
+.funding-area-context { display: grid; grid-template-columns: 100px 220px 1fr; gap: 18px; align-items: center; margin: 0 0 18px; }
+.funding-area-context span { margin: 0; }
+.funding-area-context strong { font-size: 16px; }
 .result-next {
   padding-top: 64px;
   padding-bottom: 76px;
@@ -1727,6 +1782,8 @@ button:active:not(:disabled), .favorite-card:active, .primary-action:active, .fi
   .result-section-heading { align-items: flex-start; flex-direction: column; }
   .result-route { padding: 52px 20px; }
   .result-axes { grid-template-columns: 1fr; }
+  .bank-guide-grid, .funding-area-context { grid-template-columns: 1fr; }
+  .bank-guide-card { min-height: auto; }
   .recommendation-summary { align-items: flex-start; flex-direction: column; }
   .recommendation-summary ol { grid-template-columns: 1fr; }
 }

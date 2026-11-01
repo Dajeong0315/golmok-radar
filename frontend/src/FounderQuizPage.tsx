@@ -13,6 +13,7 @@ import {
   SKIPPED_KEY,
   type FounderProfile,
 } from "./founderProfile";
+import { selectBankFundingGuides } from "./fundingGuides";
 
 type Mode = "intro" | "question" | "result";
 
@@ -30,6 +31,7 @@ export function FounderQuizPage() {
     completedAt: existingProfile?.completedAt || new Date().toISOString(),
     answers,
   } : null, [mode, answers]);
+  const fundingGuides = useMemo(() => profile ? selectBankFundingGuides(profile.answers) : [], [profile]);
 
   const choose = (answerId: string) => {
     const next = { ...answers, [current.id]: answerId };
@@ -105,6 +107,19 @@ export function FounderQuizPage() {
             <span>0{index + 1}</span><small>{question.eyebrow.split(" · ")[1]}</small><h3>{answerLabel(question.id, profile.answers[question.id])}</h3><p>{answerDescription(question.id, profile.answers[question.id])}</p>
           </article>)}
         </div>
+      </section>
+      <section className="result-funding" aria-labelledby="result-funding-title">
+        <div className="result-section-heading"><div><p className="eyebrow">공식 자금 후보</p><h2 id="result-funding-title">내 답을 바탕으로<br />먼저 확인할 두 가지</h2></div><p>대출 승인을 예측하지 않고, 기업은행·산업은행의 공식 안내에서 확인할 경로만 보여드려요.</p></div>
+        <div className="bank-guide-grid">
+          {fundingGuides.map((guide) => <article className="bank-guide-card" key={guide.id}>
+            <div className="bank-guide-card__meta"><span>{guide.institution}</span><small>{guide.category}</small></div>
+            <h3>{guide.title}</h3>
+            <p className="bank-guide-reason"><strong>왜 먼저 보여드리나요?</strong>{guide.reason}</p>
+            <dl><div><dt>공식 대상</dt><dd>{guide.eligibility}</dd></div><div><dt>직접 확인</dt><dd>{guide.confirmation}</dd></div></dl>
+            <footer><span>{guide.checkedAt} 확인</span><a href={guide.sourceUrl} target="_blank" rel="noreferrer">공식 안내 보기 ↗</a></footer>
+          </article>)}
+        </div>
+        <div className="funding-safety-note"><strong>서울 상권 기준 안내</strong><p>서울의 특정 상권 이름만으로 금리나 승인 가능성이 달라진다고 판단하지 않아요. KDB의 지방소재 지역경제활성화 자금은 서울 후보에서 제외했고, 신용점수·소득·부채 정보도 받지 않습니다.</p><a href="#funding">사업 단계와 현재 모집 지원사업까지 확인 →</a></div>
       </section>
       <section className="result-next"><div><p className="eyebrow">다음 단계</p><h2>내 조건과 맞는 상권<br />후보를 확인해 보세요.</h2><p>현재는 검증이 끝난 카페 데이터로 후보를 좁혀요. 다른 업종을 골랐다면 결과는 저장하고, 상권은 직접 둘러볼 수 있어요.</p></div><div className="quiz-actions"><button className="primary-action" onClick={openRecommendations}>상권 후보 3곳 보기 <span>→</span></button><button className="text-action" onClick={() => { setStep(0); setMode("question"); }}>답변 수정하기</button></div></section>
     </main>;

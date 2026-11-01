@@ -152,3 +152,21 @@ API 원천값은 DB에 그대로 저장하고 화면에서만 소수 둘째 자�
 - 한계: 문맥·반어·복합 감정을 완전히 이해하지 못하며 대표성이나 인과관계를 보장하지 않음
 
 NAVER Place나 카카오 장소의 리뷰를 비공개 API 또는 화면 크롤링으로 수집하지 않습니다. 정식 제공자 API는 저자 표시·원문 링크·저장 제한과 이용약관을 충족하는 adapter가 준비된 뒤 연결합니다. 2026년 11월 1일 다이닝코드와 Tripadvisor Terra 문의는 접수됐고, 식신 MetaDex 문의는 HTTP 500으로 접수되지 않았습니다. 상세 현황은 `docs/review_provider_outreach.md`에 기록합니다.
+
+## 9. IBK·KDB 자금 후보 안내
+
+2026년 11월 1일 공식 페이지에서 다음 경로와 제도를 확인했습니다.
+
+| 기관 | 공식 안내 | 화면 적용 |
+| --- | --- | --- |
+| IBK기업은행 | IBK 대출통로BOX | 사업자등록을 마친 사용자의 실제 기업대출 확인 경로 |
+| IBK기업은행 | IBK 성공창업대출 | 창업 후 7년 이내 중소기업이 시설·운영자금 조건을 확인할 후보 |
+| IBK기업은행 | IBK 일자리PLUS대출 | 창업 3년 이내 또는 별도 고용 조건을 확인할 후보 |
+| KDB산업은행 | 특별온렌딩 창업·벤처기업 | 중개금융기관 심사를 거치는 시설·운영 정책금융 후보 |
+
+- IBK 대출통로BOX: https://82.ibkbox.net/limit
+- IBK 성공창업대출: https://mybank.ibk.co.kr/uib/jsp/guest/ntr/ntr70/ntr7015/PNTR701500_i2.jsp?MENU_DIV=GNB&grcd=11&lncd=02&pdcd=0354&tmcd=201
+- IBK 일자리PLUS대출: https://mybank.ibk.co.kr/uib/jsp/guest/ntr/ntr70/ntr7015/PNTR701500_i2.jsp?grcd=11&lncd=02&pdcd=0451&tmcd=201
+- KDB 온렌딩대출: https://www.kdb.co.kr/BZCOWS00N00.act?_mnuId=IHIHCC0100&wcmsPath=/hmp/ch/ef/in/CHEFIN1100.html
+
+진단의 운영 방식·비용 성향은 어떤 자금 용도를 먼저 읽을지 설명하는 데만 사용합니다. 사용자의 신용점수·소득·부채를 수집하지 않고 금리·한도·승인 가능성을 계산하지 않습니다. 서울 상권에는 KDB의 지방소재 지역경제활성화 자금을 노출하지 않습니다. 상품 조건과 판매 여부는 바뀔 수 있으므로 화면에 확인일을 표시하고 공식 페이지 또는 영업점에서 다시 확인하도록 합니다.

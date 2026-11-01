@@ -1658,6 +1658,30 @@ button:active:not(:disabled), .favorite-card:active, .primary-action:active, .fi
 .bank-guide-card footer { display: flex; justify-content: space-between; gap: 14px; align-items: center; margin-top: auto; padding-top: 16px; }
 .bank-guide-card footer span { color: var(--secondary); font-size: 11px; }
 .bank-guide-card footer a { color: var(--accent); font-size: 13px; font-weight: 800; }
+.additional-funding-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 24px;
+  margin: 48px 0 18px;
+}
+.additional-funding-heading h3 { margin: 0; font-size: clamp(25px, 3vw, 36px); }
+.additional-funding-heading > p { max-width: 410px; margin: 0; color: var(--secondary); font-size: 13px; line-height: 1.65; }
+.additional-funding-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.additional-funding-grid > article { display: flex; flex-direction: column; min-height: 280px; padding: 22px; border: 1px solid rgba(0, 0, 0, .09); border-radius: 16px; background: rgba(255, 255, 255, .76); }
+.additional-funding-grid > article > div { display: flex; justify-content: space-between; gap: 14px; color: var(--accent); font-size: 11px; font-weight: 800; }
+.additional-funding-grid > article > div small { color: var(--secondary); text-align: right; }
+.additional-funding-grid h4 { margin: 20px 0 8px; font-size: 20px; }
+.additional-funding-grid article > p, .additional-funding-grid details p { color: var(--secondary); font-size: 13px; line-height: 1.6; }
+.additional-funding-grid details { margin-top: 10px; }
+.additional-funding-grid summary { color: var(--ink); font-size: 12px; font-weight: 800; cursor: pointer; }
+.additional-funding-grid footer { display: flex; justify-content: space-between; gap: 14px; margin-top: auto; padding-top: 15px; }
+.additional-funding-grid footer span { color: var(--secondary); font-size: 11px; }
+.additional-funding-grid footer a { color: var(--accent); font-size: 12px; font-weight: 800; }
 .funding-safety-note, .funding-area-context {
   margin-top: 16px;
   padding: 22px 24px;
@@ -1782,8 +1806,9 @@ button:active:not(:disabled), .favorite-card:active, .primary-action:active, .fi
   .result-section-heading { align-items: flex-start; flex-direction: column; }
   .result-route { padding: 52px 20px; }
   .result-axes { grid-template-columns: 1fr; }
-  .bank-guide-grid, .funding-area-context { grid-template-columns: 1fr; }
+  .bank-guide-grid, .additional-funding-grid, .funding-area-context { grid-template-columns: 1fr; }
   .bank-guide-card { min-height: auto; }
+  .additional-funding-heading { align-items: flex-start; flex-direction: column; }
   .recommendation-summary { align-items: flex-start; flex-direction: column; }
   .recommendation-summary ol { grid-template-columns: 1fr; }
 }

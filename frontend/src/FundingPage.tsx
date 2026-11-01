@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { fetchSupportPrograms, fetchTradeAreas } from "./api";
 import { loadProfile } from "./founderProfile";
-import { selectBankFundingGuides, type FundingStage } from "./fundingGuides";
+import { selectAdditionalFundingGuides, selectBankFundingGuides, type FundingStage } from "./fundingGuides";
 import type { SupportProgramResponse, TradeArea } from "./types";
 
 export function FundingPage({ code }: { code: string }) {
@@ -15,6 +15,7 @@ export function FundingPage({ code }: { code: string }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const bankGuides = useMemo(() => selectBankFundingGuides(profile?.answers || null, stage), [profile, stage]);
+  const additionalGuides = useMemo(() => selectAdditionalFundingGuides(stage, years), [stage, years]);
 
   useEffect(() => {
     if (!code) return;
@@ -93,6 +94,15 @@ export function FundingPage({ code }: { code: string }) {
               <p className="bank-guide-reason"><strong>이 조건에서 보는 이유</strong>{guide.reason}</p>
               <dl><div><dt>공식 대상</dt><dd>{guide.eligibility}</dd></div><div><dt>직접 확인</dt><dd>{guide.confirmation}</dd></div></dl>
               <footer><span>{guide.checkedAt} 확인</span><a href={guide.sourceUrl} target="_blank" rel="noreferrer">공식 안내 보기 ↗</a></footer>
+            </article>)}
+          </div>
+          <div className="additional-funding-heading"><div><p className="eyebrow">추가 확인 경로</p><h3>정부·서울시 지원과<br />다른 은행 상품</h3></div><p>{stage === "existing" && years >= 1 ? "사업 1년 이상 조건을 반영해 일반 개인사업자 상품까지 보여드려요." : "현재 단계에서 바로 확인하거나 사업자등록 후 살펴볼 공식 경로예요."}</p></div>
+          <div className="additional-funding-grid">
+            {additionalGuides.map((guide) => <article key={guide.id}>
+              <div><span>{guide.category}</span><small>{guide.institution}</small></div>
+              <h4>{guide.title}</h4><p>{guide.summary}</p>
+              <details><summary>대상 조건 확인</summary><p>{guide.confirmation}</p></details>
+              <footer><span>{guide.checkedAt} 확인</span><a href={guide.sourceUrl} target="_blank" rel="noreferrer">공식 안내 ↗</a></footer>
             </article>)}
           </div>
           <div className="funding-safety-note"><strong>지역 필터를 이렇게 적용했어요</strong><p>현재 후보가 서울이므로 KDB의 지방소재 지역경제활성화 자금은 제외했습니다. 은행 상품을 서로 금리순으로 비교하거나 신청을 대신하지 않으며, 대출 전에는 상환 계획과 상품설명서를 반드시 확인해야 합니다.</p></div>

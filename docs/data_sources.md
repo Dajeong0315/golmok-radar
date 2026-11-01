@@ -163,10 +163,28 @@ NAVER Place나 카카오 장소의 리뷰를 비공개 API 또는 화면 크롤�
 | IBK기업은행 | IBK 성공창업대출 | 창업 후 7년 이내 중소기업이 시설·운영자금 조건을 확인할 후보 |
 | IBK기업은행 | IBK 일자리PLUS대출 | 창업 3년 이내 또는 별도 고용 조건을 확인할 후보 |
 | KDB산업은행 | 특별온렌딩 창업·벤처기업 | 중개금융기관 심사를 거치는 시설·운영 정책금융 후보 |
+| 중소벤처기업부·소상공인시장진흥공단 | 2026 소상공인 지원사업·정책자금 통합공고 | 예비창업자·소상공인이 개별 공고를 찾는 추가 경로 |
+| 서울특별시·서울신용보증재단 | 서울시 소상공인 종합지원 | 서울 예비창업자·초기 소상공인의 교육·컨설팅·보증 안내 |
+| 서민금융진흥원 | 미소금융 창업·운영자금 | 저신용·저소득 등 공식 요건을 사용자가 직접 확인할 조건부 후보 |
+| KB국민은행 | 소상공인 정책자금대출 | 정책자금 확인서와 지역신보 보증 승인을 받은 개인사업자 후보 |
+| 우리은행 | 우리 Oh!클릭 대출 | 업력 12개월 이상 개인사업자가 확인할 추가 은행 후보 |
 
 - IBK 대출통로BOX: https://82.ibkbox.net/limit
 - IBK 성공창업대출: https://mybank.ibk.co.kr/uib/jsp/guest/ntr/ntr70/ntr7015/PNTR701500_i2.jsp?MENU_DIV=GNB&grcd=11&lncd=02&pdcd=0354&tmcd=201
 - IBK 일자리PLUS대출: https://mybank.ibk.co.kr/uib/jsp/guest/ntr/ntr70/ntr7015/PNTR701500_i2.jsp?grcd=11&lncd=02&pdcd=0451&tmcd=201
 - KDB 온렌딩대출: https://www.kdb.co.kr/BZCOWS00N00.act?_mnuId=IHIHCC0100&wcmsPath=/hmp/ch/ef/in/CHEFIN1100.html
+- 2026 중기부 통합공고: https://www.mss.go.kr/site/smba/ex/bbs/View.do?bcIdx=1064370&cbIdx=86
+- 서울시 소상공인 종합지원: https://news.seoul.go.kr/economy/small-business-supports
+- 미소금융 창업·운영자금: https://mmc.kinfa.or.kr/view/pdt/KFA_PDT_04010000
+- KB 소상공인 정책자금대출: https://obiz.kbstar.com/quics?page=C112610
+- 우리은행 개인사업자 지원상품: https://sbiz.wooribank.com/biz/Dream%3Fwithyou%3DCSSUS0035
 
 진단의 운영 방식·비용 성향은 어떤 자금 용도를 먼저 읽을지 설명하는 데만 사용합니다. 사용자의 신용점수·소득·부채를 수집하지 않고 금리·한도·승인 가능성을 계산하지 않습니다. 서울 상권에는 KDB의 지방소재 지역경제활성화 자금을 노출하지 않습니다. 상품 조건과 판매 여부는 바뀔 수 있으므로 화면에 확인일을 표시하고 공식 페이지 또는 영업점에서 다시 확인하도록 합니다.
+
+### 조사 방법
+
+1. 정부 지원사업은 K-Startup Open API 원문과 정부·지자체 공식 공고를 우선합니다.
+2. 은행 상품은 은행 자체 상품공시·기업뱅킹 페이지에서 가입 대상, 사업 단계, 자금 용도와 신청 경로를 확인합니다.
+3. 비교 플랫폼, 언론 기사, 개인 블로그의 금리·한도는 사용하지 않습니다.
+4. 판매 중지 또는 현재 여부가 불명확한 상품은 후보에서 제외하고, 변동 가능한 금리·한도는 화면에 고정 저장하지 않습니다.
+5. 화면에는 확인일, 공식 원문, 사용자가 직접 확인할 조건을 함께 표시합니다.

@@ -13,7 +13,7 @@ import {
   SKIPPED_KEY,
   type FounderProfile,
 } from "./founderProfile";
-import { selectBankFundingGuides } from "./fundingGuides";
+import { selectAdditionalFundingGuides, selectBankFundingGuides } from "./fundingGuides";
 
 type Mode = "intro" | "question" | "result";
 
@@ -32,6 +32,7 @@ export function FounderQuizPage() {
     answers,
   } : null, [mode, answers]);
   const fundingGuides = useMemo(() => profile ? selectBankFundingGuides(profile.answers) : [], [profile]);
+  const additionalFundingGuides = useMemo(() => profile ? selectAdditionalFundingGuides() : [], [profile]);
 
   const choose = (answerId: string) => {
     const next = { ...answers, [current.id]: answerId };
@@ -117,6 +118,15 @@ export function FounderQuizPage() {
             <p className="bank-guide-reason"><strong>왜 먼저 보여드리나요?</strong>{guide.reason}</p>
             <dl><div><dt>공식 대상</dt><dd>{guide.eligibility}</dd></div><div><dt>직접 확인</dt><dd>{guide.confirmation}</dd></div></dl>
             <footer><span>{guide.checkedAt} 확인</span><a href={guide.sourceUrl} target="_blank" rel="noreferrer">공식 안내 보기 ↗</a></footer>
+          </article>)}
+        </div>
+        <div className="additional-funding-heading"><div><p className="eyebrow">추가 확인 경로</p><h3>정부·서울시 지원과<br />다른 은행 상품도 함께 보세요.</h3></div><p>IBK·KDB를 대표 후보로 두고, 조건에 따라 확인할 공식 제도와 은행 경로를 분리했어요.</p></div>
+        <div className="additional-funding-grid">
+          {additionalFundingGuides.map((guide) => <article key={guide.id}>
+            <div><span>{guide.category}</span><small>{guide.institution}</small></div>
+            <h4>{guide.title}</h4><p>{guide.summary}</p>
+            <details><summary>대상 조건 확인</summary><p>{guide.confirmation}</p></details>
+            <footer><span>{guide.checkedAt} 확인</span><a href={guide.sourceUrl} target="_blank" rel="noreferrer">공식 안내 ↗</a></footer>
           </article>)}
         </div>
         <div className="funding-safety-note"><strong>서울 상권 기준 안내</strong><p>서울의 특정 상권 이름만으로 금리나 승인 가능성이 달라진다고 판단하지 않아요. KDB의 지방소재 지역경제활성화 자금은 서울 후보에서 제외했고, 신용점수·소득·부채 정보도 받지 않습니다.</p><a href="#funding">사업 단계와 현재 모집 지원사업까지 확인 →</a></div>

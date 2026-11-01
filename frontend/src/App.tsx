@@ -75,7 +75,7 @@ export default function App() {
         </a>
         <div className="header-context">
           <a href="#quiz">창업 성향 진단</a>
-          <a href="#reviews">개업 후 리뷰 분석</a>
+          <a href="#reviews">리뷰 분석 · 준비 중</a>
           <span>서울 · 카페</span>
           <strong>2025년 4분기</strong>
         </div>

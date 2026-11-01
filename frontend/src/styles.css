@@ -348,6 +348,21 @@ h1 em { color: var(--teal); font-style: normal; }
 .reviews-hero h1 { font-size: clamp(48px, 7vw, 92px); }
 .reviews-hero h1 em { color: #f4a47e; }
 .reviews-hero > p:last-child { max-width: 750px; color: #c8d3d5; line-height: 1.7; }
+.reviews-coming-hero { position: relative; }
+.coming-soon-badge { display: inline-flex; margin: 22px 0 10px; padding: 7px 11px; border: 1px solid rgba(255, 255, 255, .3); border-radius: 999px; color: #dce9eb; font-size: 11px; font-weight: 850; letter-spacing: .12em; }
+.review-coming { max-width: 1200px; margin: 0 auto; padding: 72px clamp(18px, 5vw, 72px) 96px; }
+.review-coming .review-section-heading { margin-top: 0; }
+.review-coming-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 42px 0 0; padding: 0; list-style: none; }
+.review-coming-steps li { min-height: 180px; padding: 26px; border: 1px solid rgba(14, 43, 52, .12); border-radius: 18px; background: #fff; }
+.review-coming-steps span { display: block; margin-bottom: 34px; color: var(--accent); font-size: 12px; font-weight: 850; }
+.review-coming-steps strong { display: block; font-size: 20px; }
+.review-coming-steps p { margin: 10px 0 0; color: #657072; line-height: 1.65; }
+.review-coming-notice { display: grid; grid-template-columns: minmax(220px, .75fr) 1.25fr; gap: 34px; align-items: center; margin-top: 18px; padding: 26px; border-radius: 18px; color: #dce6e8; background: var(--navy); }
+.review-coming-notice span, .review-coming-notice strong { display: block; }
+.review-coming-notice span { margin-bottom: 8px; color: #93abad; font-size: 11px; font-weight: 800; }
+.review-coming-notice strong { font-size: 18px; line-height: 1.5; }
+.review-coming-notice p { margin: 0; color: #bac9cb; line-height: 1.7; }
+.review-back-link { display: inline-flex; margin-top: 30px; color: var(--teal); font-weight: 850; }
 .shop-finder { max-width: 1400px; margin: 0 auto; padding: 70px clamp(18px, 5vw, 72px) 0; }
 .shop-finder .review-section-heading { margin-top: 0; }
 .shop-search { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 28px; }
@@ -536,6 +551,7 @@ h1 em { color: var(--teal); font-style: normal; }
   .funding-result { margin: 0 -18px; }
   .review-import { align-items: stretch; flex-direction: column; }
   .review-context, .review-inputs, .insight-grid, .review-report-guide, .topic-cards { grid-template-columns: 1fr; }
+  .review-coming-steps, .review-coming-notice { grid-template-columns: 1fr; }
   .shop-search-results, .selected-shop-panel { grid-template-columns: 1fr; }
   .shop-search { grid-template-columns: 1fr; }
   .shop-search button { min-height: 50px; }

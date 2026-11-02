@@ -43,7 +43,7 @@ export function FundingPage({ code }: { code: string }) {
     <div className="funding-page">
       <header className="site-header site-header--dark">
         <a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a>
-        <div className="header-context"><a href="#top">상권으로 돌아가기</a><strong>공식 출처만</strong></div>
+        <div className="header-context"><a href="#workflow">사용 흐름</a><a href="#top">상권 탐색</a><strong>공식 출처만</strong></div>
       </header>
       <main>
         <section className="funding-hero">
@@ -111,6 +111,7 @@ export function FundingPage({ code }: { code: string }) {
           <div><p className="eyebrow">OFFICIAL 01</p><h2>K-Startup</h2><p>창업지원포털에서 모집 중인 지원사업 공고를 직접 검색합니다.</p><a href="https://www.k-startup.go.kr/" target="_blank" rel="noreferrer">공식 포털 열기 →</a></div>
           <div><p className="eyebrow">OFFICIAL 02</p><h2>소상공인 정책자금</h2><p>대출상품 추천이 아니라 소상공인시장진흥공단의 공식 신청·안내 경로입니다.</p><a href="https://ols.semas.or.kr/" target="_blank" rel="noreferrer">공식 사이트 열기 →</a></div>
         </section>
+        <section className="funding-next"><div><p className="eyebrow">다음 단계</p><h2>개업 전 흐름은 여기까지입니다.</h2><p>계약 여부는 직접 결정하고, 개업 후 리뷰 기능은 별도의 운영 개선 단계에서만 이용합니다.</p></div><a href="#reviews">운영 개선 단계 보기 →</a></section>
       </main>
     </div>
   );

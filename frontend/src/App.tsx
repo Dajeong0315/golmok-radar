@@ -74,6 +74,7 @@ export default function App() {
           <span>골목 레이더</span>
         </a>
         <div className="header-context">
+          <a href="#workflow">사용 흐름</a>
           <a href="#quiz">창업 성향 진단</a>
           <a href="#worksheet">매물 검증</a>
           <a href="#reviews">리뷰 분석 · 준비 중</a>
@@ -84,9 +85,10 @@ export default function App() {
 
       <main id="top">
         <section className="hero">
-          <p className="eyebrow">첫 가게 준비를 돕는 상권 도구</p>
-          <h1>어디에 열지 막막할 때,<br />같은 숫자로 하나씩 비교하세요.</h1>
-          <p className="hero-copy">서울의 공식 상권을 둘러보고 관심 지역을 저장해 보세요.<br />그중 2~4곳을 골라 카페 수, 매출, 유동인구를 같은 기준으로 확인할 수 있어요.</p>
+          <p className="eyebrow">상권 통계 → 매물 검증</p>
+          <h1>첫 계약 전,<br />확인할 일을 순서대로.</h1>
+          <p className="hero-copy">상권 후보를 같은 기준으로 비교하고, 직접 찾은 매물과 현장을 기록하세요.<br />골목 레이더는 추천이나 계약 판정 대신 확인해야 할 근거와 다음 행동을 연결합니다.</p>
+          <div className="hero-actions"><a className="primary-action" href="#workflow">사용 흐름 먼저 보기 <span>→</span></a><a className="hero-text-link" href="#explorer-title">바로 상권 탐색하기</a></div>
           <div className="hero-proof">
             <span><b>{loading ? "—" : areas.length.toLocaleString("ko-KR")}</b> 공식 상권</span>
             <span><b>{loading ? "—" : Math.max(districts.length - 1, 0)}</b> 서울 자치구</span>
@@ -96,12 +98,12 @@ export default function App() {
         </section>
 
         <section className="starter-pipeline" aria-labelledby="pipeline-title">
-          <div className="section-heading"><div><p className="eyebrow">처음이라면 이 순서로</p><h2 id="pipeline-title">첫 가게 준비의 전체 흐름</h2></div><p>지금 필요한 단계부터 시작해도 괜찮아요.</p></div>
+          <div className="section-heading"><div><p className="eyebrow">이용 순서</p><h2 id="pipeline-title">지금 어디까지 준비했나요?</h2></div><p><a className="workflow-inline-link" href="#workflow">전체 사용 흐름 보기 →</a></p></div>
           <ol>
-            <li><span>01</span><strong>내 생각 정리</strong><p>어떤 가게와 손님을 원하는지 여섯 질문으로 정리해요.</p><a href="#quiz">성향 진단하기</a></li>
-            <li><span>02</span><strong>후보 찾기</strong><p>지도에서 관심 상권을 저장하고 조건과 맞는 후보를 살펴봐요.</p><a href="#explorer-title">지도 둘러보기</a></li>
-            <li><span>03</span><strong>숫자 비교</strong><p>2~4곳의 카페 수, 매출, 유동인구를 같은 분기로 비교해요.</p></li>
-            <li><span>04</span><strong>매물 검증</strong><p>직접 방문한 매물의 비용과 확인 상태를 워크시트에 남겨요.</p><a href="#worksheet">매물 검증하기</a></li>
+            <li><span>01</span><strong>탐색</strong><p>조건을 정리하고 서울 공식 상권을 저장해요.</p><a href="#quiz">조건 정리하기</a></li>
+            <li><span>02</span><strong>비교</strong><p>관심 상권 2~4곳의 같은 기준분기 지표를 봐요.</p><a href="#explorer-title">상권 찾기</a></li>
+            <li><span>03</span><strong>검증</strong><p>직접 본 매물 비용과 현장 확인 상태를 남겨요.</p><a href="#worksheet">매물 기록하기</a></li>
+            <li><span>04</span><strong>의사결정 준비</strong><p>공식 지원 정보와 전문가 확인이 남은 항목을 점검해요.</p><a href="#funding">공식 정보 보기</a></li>
           </ol>
         </section>
 

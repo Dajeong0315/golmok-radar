@@ -4,6 +4,7 @@ import { fetchSupportPrograms, fetchTradeAreas } from "./api";
 import { loadProfile } from "./founderProfile";
 import { selectAdditionalFundingGuides, selectBankFundingGuides, type FundingStage } from "./fundingGuides";
 import type { SupportProgramResponse, TradeArea } from "./types";
+import { TopNavigation } from "./TopNavigation";
 
 export function FundingPage({ code }: { code: string }) {
   const profile = loadProfile(localStorage);
@@ -43,7 +44,8 @@ export function FundingPage({ code }: { code: string }) {
     <div className="funding-page">
       <header className="site-header site-header--dark">
         <a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a>
-        <div className="header-context"><a href="#workflow">사용 흐름</a><a href="#top">상권 탐색</a><strong>공식 출처만</strong></div>
+        <TopNavigation active="funding" />
+        <div className="header-context"><strong>공식 출처만</strong></div>
       </header>
       <main>
         <section className="funding-hero">

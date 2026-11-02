@@ -1,8 +1,11 @@
+import { TopNavigation } from "./TopNavigation";
+
 export function ReviewInsightsPage() {
   return <div className="reviews-page">
     <header className="site-header">
       <a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a>
-      <div className="header-context"><a href="#workflow">사용 흐름</a><a href="#top">상권 탐색</a><strong>개업 후 운영</strong></div>
+      <TopNavigation active="reviews" />
+      <div className="header-context"><strong>개업 후 운영</strong></div>
     </header>
     <main>
       <section className="reviews-hero reviews-coming-hero">

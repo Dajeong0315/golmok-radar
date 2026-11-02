@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchTradeAreas } from "./api";
 import { FAVORITES_KEY, loadFavorites, sanitizeFavorites, toggleComparison, toggleFavorite } from "./favorites";
 import { KakaoMap } from "./KakaoMap";
+import { TopNavigation } from "./TopNavigation";
 import type { TradeArea } from "./types";
 import "./styles.css";
 
@@ -73,14 +74,8 @@ export default function App() {
           <span className="brand-mark">G</span>
           <span>골목 레이더</span>
         </a>
-        <div className="header-context">
-          <a href="#workflow">사용 흐름</a>
-          <a href="#quiz">창업 성향 진단</a>
-          <a href="#worksheet">매물 검증</a>
-          <a href="#reviews">리뷰 분석 · 준비 중</a>
-          <span>서울 · 카페</span>
-          <strong>2025년 4분기</strong>
-        </div>
+        <TopNavigation active="explore" />
+        <div className="header-context"><span>서울 · 카페</span><strong>2025년 4분기</strong></div>
       </header>
 
       <main id="top">

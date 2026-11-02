@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { calculatePropertyWorksheet, CHECK_ITEMS, createWorksheet, loadPropertyWorksheets, savePropertyWorksheets, type AreaUnit, type CheckStatus, type PropertyWorksheet, type VatStatus } from "./propertyWorksheet";
+import { TopNavigation } from "./TopNavigation";
 
 const statusLabels: Record<CheckStatus, string> = { confirmed: "확인 완료", needs_follow_up: "추가 확인", not_applicable: "해당 없음", not_recorded: "기록 없음" };
 const vatLabels: Record<VatStatus, string> = { included: "포함", separate: "별도", needs_confirmation: "확인 필요" };
@@ -36,7 +37,7 @@ export function PropertyWorksheetPage() {
   };
 
   return <main className="worksheet-page">
-    <header className="site-header recommendation-header"><a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a><div className="header-context"><a href="#workflow">사용 흐름</a><a className="back-link" href="#top">상권 탐색</a></div></header>
+    <header className="site-header recommendation-header"><a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a><TopNavigation active="worksheet" /><a className="back-link" href="#top">상권 탐색</a></header>
     <section className="worksheet-hero"><p className="eyebrow">PROPERTY CHECK WORKSHEET</p><h1>통계 다음은,<br />직접 본 <em>매물</em>을 확인하세요.</h1><p>이 워크시트는 사용자가 직접 입력하고 확인한 내용을 현재 브라우저에만 저장합니다. 계약 여부나 영업 가능성을 판단하지 않습니다.</p></section>
 
     <section className="worksheet-boundary" aria-label="데이터 구분"><article><strong>서울시 상권 통계</strong><span>상권 코드·기준분기·업종 기준</span></article><article><strong>R-ONE 임대 벤치마크</strong><span>공식 조사상권의 분기 표본 통계</span></article><article><strong>사용자 입력 매물</strong><span>입력일·확인 상태가 있는 개별 후보 기록</span></article></section>

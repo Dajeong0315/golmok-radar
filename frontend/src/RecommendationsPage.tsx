@@ -4,6 +4,7 @@ import { fetchAreaReport, fetchRecommendations } from "./api";
 import { FAVORITES_KEY, loadFavorites } from "./favorites";
 import { loadProfile } from "./founderProfile";
 import type { AreaReportResponse, RecommendationResponse } from "./types";
+import { TopNavigation } from "./TopNavigation";
 
 export function RecommendationsPage() {
   const profile = loadProfile(localStorage);
@@ -42,7 +43,7 @@ export function RecommendationsPage() {
   };
 
   return <main className="recommendation-page">
-    <header className="site-header recommendation-header"><a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a><a className="back-link" href="#quiz">성향 결과 다시 보기</a></header>
+    <header className="site-header recommendation-header"><a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a><TopNavigation active="explore" /><a className="back-link" href="#quiz">조건 다시 보기</a></header>
     <section className="recommendation-hero">
       <div><p className="eyebrow">첫 번째 후보 리포트</p><h1>내 답과 잘 맞는 상권 3곳을<br />먼저 살펴보세요.</h1><p>{data.message}</p></div>
       <aside><strong>{data.candidate_pool_size}</strong><span>같은 조건으로 비교한 상권</span><small>{data.quarter_label} · 계산 기준 {data.weights_version}</small></aside>

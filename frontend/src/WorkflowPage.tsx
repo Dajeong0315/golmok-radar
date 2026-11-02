@@ -1,3 +1,5 @@
+import { TopNavigation } from "./TopNavigation";
+
 const steps = [
   {
     number: "01",
@@ -41,7 +43,7 @@ const steps = [
 
 export function WorkflowPage() {
   return <main className="workflow-page">
-    <header className="site-header workflow-header"><a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a><a className="back-link" href="#top">상권 탐색으로</a></header>
+    <header className="site-header workflow-header"><a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a><TopNavigation active="workflow" /><a className="back-link" href="#top">상권 탐색</a></header>
     <section className="workflow-hero"><p className="eyebrow">HOW TO USE GOLMOK RADAR</p><h1>상권을 본 뒤,<br /><em>실제 매물</em>까지 확인하는 순서</h1><p>골목 레이더는 계약이나 창업 결과를 판정하지 않습니다. 같은 기준의 통계, 직접 확인한 매물, 공식 정보의 경계를 나눠 확인 누락을 줄입니다.</p><a className="primary-action" href="#top">상권 탐색부터 시작하기 <span>→</span></a></section>
     <section className="workflow-overview" aria-labelledby="workflow-title"><div><p className="eyebrow">4단계 사용 흐름</p><h2 id="workflow-title">지금 필요한 단계부터 시작하세요.</h2></div><p>각 단계는 완료해야만 다음으로 갈 필요가 없습니다. 다만 수치 비교 뒤에는 현장과 매물을 직접 검증해야 합니다.</p></section>
     <section className="workflow-steps">{steps.map((step) => <article className="workflow-step" key={step.number}><div className="workflow-step__number"><span>{step.number}</span><strong>{step.stage}</strong></div><div className="workflow-step__main"><h2>{step.title}</h2><p>{step.description}</p><div className="workflow-actions">{step.actions.map((action) => <a href={action.href} key={action.href}><span>{action.note}</span>{action.label} <b>→</b></a>)}</div></div><aside><small>데이터·판단 경계</small><p>{step.data}</p></aside></article>)}</section>

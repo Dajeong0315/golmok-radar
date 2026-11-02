@@ -4,6 +4,7 @@ import { fetchChecklist, fetchComparison } from "./api";
 import { formatMetricValue, METRIC_GROUPS } from "./comparison";
 import { EvidenceDrawer } from "./EvidenceDrawer";
 import type { ChecklistResponse, ComparisonResponse } from "./types";
+import { TopNavigation } from "./TopNavigation";
 
 type Props = { codes: string[] };
 
@@ -38,7 +39,8 @@ export function ComparisonPage({ codes }: Props) {
     <div className="compare-page">
       <header className="site-header compare-header">
         <a className="brand" href="#top" aria-label="상권 탐색으로 돌아가기"><span className="brand-mark">G</span><span>골목 레이더</span></a>
-        <div className="header-context"><a href="#workflow">사용 흐름</a><a className="back-link" href="#top">관심 목록</a></div>
+        <TopNavigation active="explore" />
+        <a className="back-link" href="#top">관심 목록</a>
       </header>
       <main>
         <section className="compare-hero">

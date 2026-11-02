@@ -14,7 +14,7 @@ flowchart LR
     V --> D
 ```
 
-관심 상권 코드는 브라우저 `localStorage`의 `golmok-radar:favorites:v1`에만 저장됩니다. FastAPI는 읽기 API를 제공하며 추천 점수나 사용자 프로필은 만들지 않습니다.
+관심 상권 코드는 브라우저 `localStorage`의 `golmok-radar:favorites:v1`에만 저장됩니다. FastAPI는 읽기 API를 제공하며 성공 예측이나 사용자 프로필은 만들지 않습니다. Phase 19의 매물 검증 워크시트는 `golmok-radar:property-worksheets:v1`에만 저장하며 서버로 전송하지 않습니다.
 
 ## 데이터 모델
 
@@ -71,9 +71,45 @@ erDiagram
         int population_17_21
         int population_21_24
     }
+    PROPERTY_WORKSHEET {
+        string id PK
+        string alias
+        string location_description
+        string floor
+        decimal exclusive_area
+        string area_unit
+        integer deposit_won
+        integer monthly_rent_won
+        integer maintenance_fee_won
+        string vat_status
+        integer premium_won
+        integer brokerage_fee_won
+        integer initial_cost_won
+        integer expected_monthly_sales_won_nullable
+        datetime input_updated_at
+    }
+    PROPERTY_CHECK_ITEM {
+        string worksheet_id FK
+        string category
+        string item_key
+        string status
+        string observed_at_nullable
+    }
 ```
 
 점포·매출은 `기준분기 + 상권코드 + 업종코드`, 인구는 `기준분기 + 상권코드`가 논리 키입니다. 원천 행이 없으면 계산 계층은 0으로 대체하지 않고 `unavailable`과 사유를 반환합니다.
+
+### Phase 19 워크시트 로컬 모델과 계산 계약
+
+`PROPERTY_WORKSHEET`와 `PROPERTY_CHECK_ITEM`은 서버 DB 테이블이 아니라 localStorage JSON 스키마를 설명하는 논리 모델입니다. `id`는 브라우저에서 생성한 식별자이며, 매물 별칭·위치 설명·층수·면적·비용·입력일과 현장 확인 상태를 묶습니다. 주소 기반 자동 조회, 서버 저장, 계정 동기화, 매물 API 연결은 범위 밖입니다.
+
+- `area_unit`은 `sqm` 또는 `pyeong`만 허용하고, `exclusive_area`는 0보다 커야 합니다. 면적당 월 공간비 계산 시 `pyeong × 3.305785`로 ㎡ 환산합니다.
+- 금액 필드는 원 단위 0 이상 정수이며, `expected_monthly_sales_won`만 선택 입력입니다. 빈 값은 0이 아닙니다.
+- `vat_status`는 포함, 별도, 확인 필요 중 하나이며, 확인 필요는 월세·관리비를 자동 보정하지 않습니다.
+- `status`는 `confirmed`, `needs_follow_up`, `not_applicable`, `not_recorded` 중 하나입니다. 건축물 용도·영업 가능 여부·특약·원상복구는 공식 기관 또는 전문가 확인 필요를 함께 표시합니다.
+- 계산값은 저장하지 않고 입력값에서 재계산합니다. 초기 투입비는 보증금+권리금+중개수수료+초기 비용, 월 공간비는 월세+관리비입니다. 해당 구성값 누락 시 `input_required`; 면적·예상 월매출의 0 또는 누락 분모는 `unavailable`과 사유를 반환합니다.
+
+워크시트 값은 서울시 상권 통계나 R-ONE 벤치마크와 결합·추정·자동 비교하지 않습니다. 화면에서는 각각의 출처, 기준분기 또는 입력일, 공간 단위를 구분합니다.
 
 ## HTTP API
 
@@ -92,6 +128,15 @@ erDiagram
 | GET | `/api/v1/comparisons?codes=A,B&quarter=20254` | 서로 다른 상권 2~4곳, 지표 14개 비교 |
 | GET | `/api/v1/comparisons/{comparison_id}/evidence/{metric_key}` | 지표 출처·필터·수식·원천값 확인 |
 | GET | `/api/v1/field-checklist` | 현장 확인 질문 5개 |
+
+Phase 19는 워크시트용 FastAPI 엔드포인트를 추가하지 않습니다. 프런트엔드의 순수 계산 모듈은 아래의 내부 계약으로만 구현합니다.
+
+| 함수 또는 경계 | 목적 |
+| --- | --- |
+| `parsePropertyWorksheet` | localStorage JSON을 검증하고 손상·구버전 값은 안전하게 제외 |
+| `calculatePropertyWorksheet` | 입력값에서 초기 투입비·월 공간비·면적당 월 공간비·선택 입력 매출 대비 비율과 상태·사유 계산 |
+| `savePropertyWorksheets` | 유효한 사용자 입력만 `golmok-radar:property-worksheets:v1`에 저장 |
+| `loadPropertyWorksheets` | 브라우저 저장값 복구; 서버 요청·주소 조회를 수행하지 않음 |
 
 비교 API는 코드 1개·5개 이상·중복·없는 코드·미지원 분기를 거부합니다. 프런트엔드는 금액, 비율, 점포 수 단위를 구분하며 결측 사유를 각 셀에 표시합니다.
 

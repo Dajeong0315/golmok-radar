@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { fetchTradeAreas } from "./api";
+import { fetchAreaMapInsight, fetchTradeAreas } from "./api";
+import { AreaMapInsight } from "./AreaMapInsight";
 import { FAVORITES_KEY, loadFavorites, sanitizeFavorites, toggleComparison, toggleFavorite } from "./favorites";
 import { KakaoMap } from "./KakaoMap";
 import { TopNavigation } from "./TopNavigation";
-import type { TradeArea } from "./types";
+import type { AreaMapInsightResponse, TradeArea } from "./types";
 import "./styles.css";
 
 
@@ -18,6 +19,9 @@ export default function App() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [focusedMapCode, setFocusedMapCode] = useState("");
+  const [mapInsight, setMapInsight] = useState<AreaMapInsightResponse | null>(null);
+  const [mapInsightLoading, setMapInsightLoading] = useState(false);
+  const [mapInsightError, setMapInsightError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -38,6 +42,23 @@ export default function App() {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
     setSelected((current) => current.filter((code) => favorites.includes(code)));
   }, [favorites]);
+
+  useEffect(() => {
+    if (!focusedMapCode) {
+      setMapInsight(null);
+      setMapInsightError("");
+      return;
+    }
+    const controller = new AbortController();
+    setMapInsight(null);
+    setMapInsightLoading(true);
+    setMapInsightError("");
+    fetchAreaMapInsight(focusedMapCode, controller.signal)
+      .then(setMapInsight)
+      .catch((reason: Error) => { if (reason.name !== "AbortError") setMapInsightError(reason.message); })
+      .finally(() => setMapInsightLoading(false));
+    return () => controller.abort();
+  }, [focusedMapCode]);
 
   const areaByCode = useMemo(() => new Map(areas.map((area) => [area.code, area])), [areas]);
   const districts = useMemo(() => ["전체", ...new Set(areas.map((area) => area.district_name))].sort((a, b) => a === "전체" ? -1 : b === "전체" ? 1 : a.localeCompare(b, "ko")), [areas]);
@@ -147,6 +168,7 @@ export default function App() {
               </div>
             </div>
           </div>
+          <AreaMapInsight data={mapInsight} loading={mapInsightLoading} error={mapInsightError} />
         </section>
 
         <section className="favorites-section" aria-labelledby="favorites-title">

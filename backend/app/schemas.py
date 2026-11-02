@@ -135,6 +135,33 @@ class AreaReportResponse(BaseModel):
     notice: str
 
 
+class AreaInsightMetric(BaseModel):
+    metric_key: str
+    label: str
+    unit: str
+    status: Literal["available", "unavailable"]
+    value: float | None
+    reason: str | None = None
+
+
+class AreaInsightTimeSlot(AreaInsightMetric):
+    ratio: float | None = None
+
+
+class AreaMapInsightResponse(BaseModel):
+    quarter_code: str
+    quarter_label: str
+    trade_area: TradeAreaOut
+    total_population: AreaInsightMetric
+    sales_amount: AreaInsightMetric
+    weekday_sales_ratio: AreaInsightMetric
+    weekend_sales_ratio: AreaInsightMetric
+    time_slots: list[AreaInsightTimeSlot]
+    population_source: str
+    sales_source: str
+    notice: str
+
+
 class RentBenchmarkMetric(BaseModel):
     metric_key: str
     label: str

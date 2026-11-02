@@ -1,4 +1,4 @@
-import type { AreaReportResponse, ChecklistResponse, ComparisonResponse, EvidenceResponse, RecommendationResponse, RentBenchmarkResponse, RentMarketListResponse, ReviewAnalysisResponse, SupportProgramResponse, TradeArea } from "./types";
+import type { AreaMapInsightResponse, AreaReportResponse, ChecklistResponse, ComparisonResponse, EvidenceResponse, RecommendationResponse, RentBenchmarkResponse, RentMarketListResponse, ReviewAnalysisResponse, SupportProgramResponse, TradeArea } from "./types";
 
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -48,6 +48,12 @@ export async function fetchAreaReport(code: string, signal?: AbortSignal): Promi
   const response = await fetch(`${API_BASE_URL}/api/v1/trade-areas/${code}/report?quarter=20254`, { signal });
   if (!response.ok) throw new Error("상권 리포트를 불러오지 못했습니다.");
   return response.json() as Promise<AreaReportResponse>;
+}
+
+export async function fetchAreaMapInsight(code: string, signal?: AbortSignal): Promise<AreaMapInsightResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/trade-areas/${code}/map-insight?quarter=20254`, { signal });
+  if (!response.ok) throw new Error("상권 지도 근거를 불러오지 못했습니다.");
+  return response.json() as Promise<AreaMapInsightResponse>;
 }
 
 export async function fetchRentMarkets(signal?: AbortSignal): Promise<RentMarketListResponse> {

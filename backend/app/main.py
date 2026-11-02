@@ -19,6 +19,9 @@ from .review_analysis import analyze_reviews, build_insights, sanitize_review_te
 from .support_programs import NormalizedProgram, SupportProfile, select_candidates
 from .schemas import (
     AreaReportResponse,
+    AreaInsightMetric,
+    AreaInsightTimeSlot,
+    AreaMapInsightResponse,
     ChecklistResponse,
     ComparisonMetric,
     ComparisonResponse,
@@ -183,6 +186,70 @@ def get_trade_area(code: str, session: Session = Depends(get_db)) -> TradeAreaOu
     if not area:
         raise HTTPException(404, "상권을 찾을 수 없습니다.")
     return area_out(session, area)
+
+
+@app.get("/api/v1/trade-areas/{code}/map-insight", response_model=AreaMapInsightResponse)
+def get_trade_area_map_insight(
+    code: str,
+    quarter: str = Query(default="20254"),
+    session: Session = Depends(get_db),
+) -> AreaMapInsightResponse:
+    """Return only the official, trade-area-level metrics usable beside the map."""
+    if quarter not in SUPPORTED_QUARTERS:
+        raise HTTPException(400, "지원하지 않는 기준분기입니다.")
+    area, metrics = get_area_metrics(session, code, quarter, INDUSTRY_CODE)
+    if not area:
+        raise HTTPException(404, "상권을 찾을 수 없습니다.")
+
+    metric_by_key = {metric.metric_key: metric for metric in metrics}
+
+    def metric_out(key: str) -> AreaInsightMetric:
+        metric = metric_by_key[key]
+        return AreaInsightMetric(
+            metric_key=key,
+            label=metric.label,
+            unit=metric.unit,
+            status=metric.status,
+            value=number(metric.value),
+            reason=metric.reason,
+        )
+
+    population = session.get(PopulationMetric, (quarter, code))
+    slot_labels = {
+        "00_06": "00~06시",
+        "06_11": "06~11시",
+        "11_14": "11~14시",
+        "14_17": "14~17시",
+        "17_21": "17~21시",
+        "21_24": "21~24시",
+    }
+    time_slots = []
+    for key, label in slot_labels.items():
+        value = getattr(population, f"population_{key}") if population else None
+        ratio_metric = metric_by_key[f"population_{key}_ratio"]
+        time_slots.append(AreaInsightTimeSlot(
+            metric_key=f"population_{key}",
+            label=label,
+            unit="명",
+            status="available" if value is not None else "unavailable",
+            value=float(value) if value is not None else None,
+            reason=None if value is not None else "해당 분기의 유동인구 원천 행이 없습니다.",
+            ratio=number(ratio_metric.value),
+        ))
+
+    return AreaMapInsightResponse(
+        quarter_code=quarter,
+        quarter_label=SUPPORTED_QUARTERS[quarter],
+        trade_area=area_out(session, area),
+        total_population=metric_out("total_population"),
+        sales_amount=metric_out("sales_amount"),
+        weekday_sales_ratio=metric_out("weekday_sales_ratio"),
+        weekend_sales_ratio=metric_out("weekend_sales_ratio"),
+        time_slots=time_slots,
+        population_source="서울시 우리마을가게 상권분석서비스 유동인구",
+        sales_source="서울시 우리마을가게 상권분석서비스 카페 매출",
+        notice="표시는 상권 단위 공식 통계입니다. 거리별 유동량·연령대별 유동인구·개별 매물 정보는 이 데이터에 포함되지 않습니다.",
+    )
 
 
 @app.get("/api/v1/trade-areas/{code}/report", response_model=AreaReportResponse)

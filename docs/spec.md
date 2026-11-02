@@ -171,6 +171,8 @@ quarter_code + trade_area_code + industry_code
 
 `STDR_YYQU_CD=20254`인 원천 행의 `TOT_FLPOP_CO`와 시간대별 인구 값을 그대로 사용합니다. 같은 상권·분기에 행이 없으면 인구 관련 지표를 `비교 불가`로 표시합니다.
 
+지도 선택 근거는 상권 단위 통계만 사용합니다. 원천에는 거리·도로 단위 좌표 유동량이나 연령대별 유동인구가 없으므로, 지도 열지도·거리별 색상·연령대 분포로 표시하거나 추정하지 않습니다.
+
 ## 7. API 명세
 
 모든 응답은 JSON을 사용합니다. API는 계산 실패를 0으로 바꾸지 않습니다.
@@ -179,6 +181,7 @@ quarter_code + trade_area_code + industry_code
 | --- | --- | --- |
 | `GET /api/v1/trade-areas` | 탐색 가능한 상권 목록 조회 | `trade_area_code`, `name`, `district`, `area_type`, `latitude`, `longitude`, `data_status` |
 | `GET /api/v1/trade-areas/{code}` | 상권 기본 정보 조회 | 상권 코드, 이름, 구, 구분, 지도 정보 |
+| `GET /api/v1/trade-areas/{code}/map-insight` | 지도 선택 근거 조회 | 같은 기준분기의 상권 단위 유동·카페 매출·시간대 비중과 결측 사유 |
 | `GET /api/v1/comparisons?codes={code1},{code2}[,{code3},{code4}]&quarter=20254` | 2~4개 상권 비교 | 기준분기, 선택 상권 배열, 지표 배열 |
 | `GET /api/v1/comparisons/{comparison_id}/evidence/{metric_key}` | 지표 근거 조회 | 출처, 원천값, 필터, 계산식, 상태 |
 | `GET /api/v1/field-checklist` | 현장 확인 질문 조회 | 질문 배열, 분류, 안내 문구 |

@@ -118,6 +118,31 @@ export type AreaReportResponse = {
   notice: string;
 };
 
+export type AreaInsightMetric = {
+  metric_key: string;
+  label: string;
+  unit: string;
+  status: "available" | "unavailable";
+  value: number | null;
+  reason: string | null;
+};
+
+export type AreaInsightTimeSlot = AreaInsightMetric & { ratio: number | null };
+
+export type AreaMapInsightResponse = {
+  quarter_code: string;
+  quarter_label: string;
+  trade_area: TradeArea;
+  total_population: AreaInsightMetric;
+  sales_amount: AreaInsightMetric;
+  weekday_sales_ratio: AreaInsightMetric;
+  weekend_sales_ratio: AreaInsightMetric;
+  time_slots: AreaInsightTimeSlot[];
+  population_source: string;
+  sales_source: string;
+  notice: string;
+};
+
 export type RentBenchmarkResponse = {
   status: "available" | "mapping_required";
   trade_area: TradeArea;

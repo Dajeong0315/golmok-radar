@@ -152,6 +152,20 @@ def test_trade_area_list_and_detail(client: TestClient) -> None:
     assert detail.json()["name"] == "상권 1"
 
 
+def test_trade_area_map_insight_exposes_trade_area_metrics_without_street_claims(client: TestClient) -> None:
+    response = client.get("/api/v1/trade-areas/1/map-insight")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_population"]["value"] == 1000
+    assert body["sales_amount"]["value"] == 1000
+    assert body["weekend_sales_ratio"]["value"] == 30.0
+    assert body["time_slots"][2] == {
+        "metric_key": "population_11_14", "label": "11~14시", "unit": "명",
+        "status": "available", "value": 100.0, "reason": None, "ratio": 10.0,
+    }
+    assert "거리별" in body["notice"]
+
+
 @pytest.mark.parametrize("codes", ["1,2", "1,2,3", "1,2,3,4"])
 def test_comparison_accepts_two_to_four_codes(client: TestClient, codes: str) -> None:
     response = client.get("/api/v1/comparisons", params={"codes": codes, "quarter": "20254"})

@@ -118,6 +118,7 @@ erDiagram
 | GET | `/health` | 앱·DB 상태 확인 |
 | GET | `/api/v1/trade-areas` | 서울 25개 자치구 상권 목록과 데이터 보유 상태 |
 | GET | `/api/v1/trade-areas/{code}` | 상권 상세와 지표 |
+| GET | `/api/v1/trade-areas/{code}/map-insight` | 지도 선택용 상권 단위 유동·카페 매출·시간대 비중; 계산 불가 사유와 데이터 경계 포함 |
 | POST | `/api/v1/recommendations` | 창업 성향 답변 기반 설명 가능한 카페 후보 2~3곳 |
 | GET | `/api/v1/trade-areas/{code}/report` | 완전 데이터 상권 1,068곳 비교군 기준 강점·주의·수요 특성 리포트 |
 | GET | `/api/v1/trade-areas/{code}/rent-benchmark` | R-ONE 서울 전체 소규모상가 참고지표와 공간 범위·공식 출처 확인 |
@@ -139,6 +140,8 @@ Phase 19는 워크시트용 FastAPI 엔드포인트를 추가하지 않습니다
 | `loadPropertyWorksheets` | 브라우저 저장값 복구; 서버 요청·주소 조회를 수행하지 않음 |
 
 비교 API는 코드 1개·5개 이상·중복·없는 코드·미지원 분기를 거부합니다. 프런트엔드는 금액, 비율, 점포 수 단위를 구분하며 결측 사유를 각 셀에 표시합니다.
+
+`map-insight`는 `PopulationMetric`과 카페(`CS100010`) `SalesMetric`의 같은 기준분기 행만 읽습니다. 시간대 막대의 비율은 백엔드에서 `시간대 유동인구 ÷ 총 유동인구 × 100`으로 계산하고, 프런트엔드는 반환된 비율만 표시합니다. 위치는 `TradeArea` 중심점이며, 거리별 좌표·연령대 유동인구·개별 매물 데이터는 응답과 화면에 포함하지 않습니다.
 
 ## 검증 기준
 

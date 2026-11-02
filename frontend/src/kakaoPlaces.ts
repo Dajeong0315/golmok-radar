@@ -21,15 +21,15 @@ export type KakaoPlace = {
 let sdkPromise: Promise<void> | null = null;
 
 export function loadKakaoSdk(): Promise<void> {
-  if (window.kakao?.maps?.services) return Promise.resolve();
+  if (window.kakao?.maps?.services && window.kakao?.maps?.MarkerClusterer) return Promise.resolve();
   if (!KAKAO_KEY) return Promise.reject(new Error("카카오 JavaScript 키가 설정되지 않았습니다."));
   if (sdkPromise) return sdkPromise;
 
   sdkPromise = new Promise((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>("script[data-kakao-sdk], script[data-kakao-map]");
     const finish = () => window.kakao.maps.load(() => {
-      if (window.kakao?.maps?.services) resolve();
-      else reject(new Error("카카오 장소 검색 모듈을 불러오지 못했습니다. 화면을 새로고침해 주세요."));
+      if (window.kakao?.maps?.services && window.kakao?.maps?.MarkerClusterer) resolve();
+      else reject(new Error("카카오 지도 모듈을 불러오지 못했습니다. 화면을 새로고침해 주세요."));
     });
     if (existing) {
       if (window.kakao?.maps) finish();
@@ -41,7 +41,7 @@ export function loadKakaoSdk(): Promise<void> {
     }
     const script = document.createElement("script");
     script.dataset.kakaoSdk = "true";
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_KEY}&autoload=false&libraries=services`;
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_KEY}&autoload=false&libraries=services,clusterer`;
     script.onload = finish;
     script.onerror = () => reject(new Error("카카오 서비스를 불러오지 못했습니다."));
     document.head.appendChild(script);

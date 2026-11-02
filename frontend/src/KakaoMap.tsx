@@ -31,6 +31,7 @@ export function KakaoMap({ areas, favorites, onSelectArea, selectedCode, showDis
     const mapContainer = container.current;
     const markers: MapLayer[] = [];
     const overlays: MapLayer[] = [];
+    let clusterer: { clear: () => void; setMap: (map: null) => void } | undefined;
     loadKakaoSdk()
       .then(() => {
         if (disposed || !container.current) return;
@@ -40,12 +41,26 @@ export function KakaoMap({ areas, favorites, onSelectArea, selectedCode, showDis
           level: 8,
         });
         const bounds = new kakao.maps.LatLngBounds();
+        const markerClusterer = new kakao.maps.MarkerClusterer({
+          map,
+          averageCenter: true,
+          minLevel: 5,
+          gridSize: 80,
+          minClusterSize: 2,
+          styles: [{
+            width: '48px', height: '48px', lineHeight: '48px',
+            borderRadius: '50%', background: '#1769d2', color: '#fff',
+            textAlign: 'center', fontWeight: '700', fontSize: '14px',
+            border: '3px solid #fff', boxShadow: '0 2px 8px #0003',
+          }],
+        });
+        clusterer = markerClusterer;
         areas.forEach((area) => {
           const position = new kakao.maps.LatLng(area.latitude, area.longitude);
           bounds.extend(position);
-          const marker = new kakao.maps.Marker({ map, position, title: area.name });
+          const marker = new kakao.maps.Marker({ position, title: area.name });
           markers.push(marker);
-          if (favorites.has(area.code) || selectedCode === area.code) {
+          if (selectedCode === area.code) {
             const content = document.createElement("button");
             content.className = `map-label ${favorites.has(area.code) ? "is-favorite" : ""} ${selectedCode === area.code ? "is-selected" : ""}`;
             content.textContent = `${favorites.has(area.code) ? "★ " : ""}${area.name}`;
@@ -55,6 +70,7 @@ export function KakaoMap({ areas, favorites, onSelectArea, selectedCode, showDis
           }
           kakao.maps.event.addListener(marker, "click", () => onSelectArea(area.code));
         });
+        markerClusterer.addMarkers(markers);
         if (areas.length === 1) {
           map.setCenter(new kakao.maps.LatLng(areas[0].latitude, areas[0].longitude));
           map.setLevel(4);
@@ -65,6 +81,8 @@ export function KakaoMap({ areas, favorites, onSelectArea, selectedCode, showDis
       .catch((reason: Error) => setError(reason.message));
     return () => {
       disposed = true;
+      clusterer?.clear();
+      clusterer?.setMap(null);
       detachMapLayers(markers);
       detachMapLayers(overlays);
       mapContainer.replaceChildren();
@@ -81,6 +99,6 @@ export function KakaoMap({ areas, favorites, onSelectArea, selectedCode, showDis
     );
   }
   if (error) return <div className="map-fallback map-fallback--error">{error}</div>;
-  return <div className="map-wrap"><div className="map-canvas" ref={container} aria-label="서울 공식 상권 지도" />{showDistrictGuide ? <p className="map-guide">목록의 상권을 누르거나 자치구를 고르면 공식 상권의 위치와 이름이 지도에 표시돼요.</p> : null}</div>;
+  return <div className="map-wrap"><div className="map-canvas" ref={container} aria-label="서울 공식 상권 지도" />{showDistrictGuide ? <p className="map-guide">숫자는 묶인 상권 수예요. 숫자를 누르거나 지도를 확대하면 개별 핀이 보여요.</p> : null}</div>;
 }
 

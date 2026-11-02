@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { calculateRent, parseRentAreaCode, roundBenchmarkValue } from "./rentCalculator";
+import { calculateRent, compareWithSeoul, estimateRentFromOfficialRate, parseRentAreaCode, roundBenchmarkValue } from "./rentCalculator";
 
 describe("rent calculator", () => {
   it("separates deposit from recurring occupancy cost", () => {
@@ -24,5 +24,15 @@ describe("rent calculator", () => {
   it("rounds official benchmark values to two decimal places for display", () => {
     expect(roundBenchmarkValue(53.081)).toBe(53.08);
     expect(roundBenchmarkValue(100.465)).toBe(100.47);
+  });
+
+  it("converts the official thousand-won per square-meter rate into an area reference amount", () => {
+    expect(estimateRentFromOfficialRate(67.38, 33)).toBe(2_223_540);
+    expect(estimateRentFromOfficialRate(67.38, 0)).toBeNull();
+  });
+
+  it("compares a selected official market with the Seoul benchmark", () => {
+    expect(compareWithSeoul(67.38, 53.08)).toBe(26.9);
+    expect(compareWithSeoul(10, 0)).toBeNull();
   });
 });

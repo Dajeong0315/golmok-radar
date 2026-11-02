@@ -30,3 +30,13 @@ export function parseRentAreaCode(hash: string): string {
 export function roundBenchmarkValue(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
+
+export function estimateRentFromOfficialRate(rateThousandPerM2: number | null, areaM2: number): number | null {
+  if (rateThousandPerM2 === null || rateThousandPerM2 < 0 || areaM2 <= 0) return null;
+  return Math.round(rateThousandPerM2 * 1_000 * areaM2);
+}
+
+export function compareWithSeoul(value: number | null, seoulValue: number | null): number | null {
+  if (value === null || seoulValue === null || seoulValue === 0) return null;
+  return Math.round(((value - seoulValue) / seoulValue) * 1_000) / 10;
+}

@@ -53,6 +53,31 @@ def client(tmp_path: Path) -> Generator[TestClient, None, None]:
                 )
             ]
         )
+        session.add_all(
+            [
+                RentBenchmark(
+                    period_code="202603",
+                    period_label="2026년 3분기",
+                    region_code="520037",
+                    region_name="서울>기타>뚝섬",
+                    building_type="small_retail",
+                    metric_key=metric_key,
+                    metric_label=label,
+                    value=value,
+                    unit=unit,
+                    table_id=table_id,
+                    item_id="100001",
+                    mapping_scope="official_market_statistic",
+                    fetched_at=datetime(2026, 10, 30, 9, 0, 0),
+                    source_url="https://www.reb.or.kr/r-one/",
+                )
+                for metric_key, label, value, unit, table_id in (
+                    ("rent_per_sqm", "소규모상가 임대료", 67.38, "천원/㎡", "rent-table"),
+                    ("vacancy_rate", "소규모상가 공실률", 6.88, "%", "vacancy-table"),
+                    ("rent_price_index", "소규모상가 임대가격지수", 103.69, "지수", "index-table"),
+                )
+            ]
+        )
         for index in range(1, 6):
             code = str(index)
             session.add(
@@ -222,7 +247,28 @@ def test_rent_benchmark_exposes_seoul_context_without_presenting_it_as_live_list
     assert body["mapping_scope"] == "administrative_context"
     assert body["confidence"] == "contextual"
     assert len(body["metrics"]) == 3
-    assert "정확한 임대료가 아니라" in body["message"]
+    assert len(body["seoul_metrics"]) == 3
+    assert "서울 전체" in body["message"]
+
+
+def test_rent_markets_and_selected_official_market_are_exposed_separately(client: TestClient) -> None:
+    markets = client.get("/api/v1/rent-markets")
+    assert markets.status_code == 200
+    assert markets.json()["markets"] == [{
+        "region_code": "520037",
+        "name": "뚝섬",
+        "group": "기타",
+        "source_period": "2026년 3분기",
+    }]
+
+    response = client.get("/api/v1/trade-areas/1/rent-benchmark", params={"market_code": "520037"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["source_region"] == "서울 · 기타 · 뚝섬"
+    assert body["mapping_scope"] == "official_market_statistic"
+    assert body["selected_market_code"] == "520037"
+    assert next(metric for metric in body["metrics"] if metric["metric_key"] == "rent_per_sqm")["value"] == 67.38
+    assert next(metric for metric in body["seoul_metrics"] if metric["metric_key"] == "rent_per_sqm")["value"] == 53.08
 
 
 def test_rent_benchmark_returns_reason_instead_of_zero_when_source_is_missing(client: TestClient) -> None:

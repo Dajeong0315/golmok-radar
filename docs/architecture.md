@@ -85,6 +85,8 @@ erDiagram
 | POST | `/api/v1/recommendations` | 창업 성향 답변 기반 설명 가능한 카페 후보 2~3곳 |
 | GET | `/api/v1/trade-areas/{code}/report` | 완전 데이터 상권 1,068곳 비교군 기준 강점·주의·수요 특성 리포트 |
 | GET | `/api/v1/trade-areas/{code}/rent-benchmark` | R-ONE 서울 전체 소규모상가 참고지표와 공간 범위·공식 출처 확인 |
+| GET | `/api/v1/rent-markets` | R-ONE 서울 세부 조사상권 59곳의 코드·이름·권역·기준기간 조회 |
+| GET | `/api/v1/trade-areas/{code}/rent-benchmark?market_code={R-ONE코드}` | 선택한 R-ONE 조사상권과 서울 전체의 임대료·공실률·임대가격지수 비교 |
 | POST | `/api/v1/support-programs` | 최소 조건 기반 공식 창업지원 연동 상태와 후보 확인 |
 | POST | `/api/v1/review-analysis` | 사용자 제공 리뷰의 주제별 내 가게·주변 비교군 분석 |
 | GET | `/api/v1/comparisons?codes=A,B&quarter=20254` | 서로 다른 상권 2~4곳, 지표 14개 비교 |

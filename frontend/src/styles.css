@@ -1776,12 +1776,122 @@ button:active:not(:disabled), .favorite-card:active, .primary-action:active, .fi
   line-height: 1.12;
 }
 
+.rent-market-section {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 72px 24px 28px;
+}
+.rent-market-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, .75fr);
+  gap: 48px;
+  align-items: end;
+}
+.rent-market-heading h2 {
+  margin: 0 0 10px;
+  font-size: clamp(32px, 4vw, 50px);
+  letter-spacing: -.04em;
+}
+.rent-market-heading p:not(.eyebrow) {
+  margin: 0;
+  color: var(--secondary);
+  line-height: 1.65;
+}
+.rent-market-select span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--secondary);
+  font-size: 12px;
+  font-weight: 750;
+}
+.rent-market-select select {
+  width: 100%;
+  min-height: 50px;
+  padding: 0 42px 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--navy);
+  background: white;
+  font-size: 15px;
+  font-weight: 700;
+}
+.rent-market-select small {
+  display: block;
+  margin-top: 8px;
+  color: var(--secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.rent-market-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 34px;
+}
+.rent-market-summary article {
+  min-height: 132px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: white;
+}
+.rent-market-summary span, .rent-market-summary small {
+  display: block;
+  color: var(--secondary);
+  font-size: 11px;
+}
+.rent-market-summary strong {
+  display: block;
+  margin: 14px 0 7px;
+  font-size: clamp(20px, 2.2vw, 30px);
+  letter-spacing: -.035em;
+}
+.rent-market-compare {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+.rent-market-compare > div {
+  padding: 22px;
+  border-radius: 16px;
+  background: #f5f5f7;
+}
+.rent-market-compare h3 {
+  margin: 0 0 16px;
+  font-size: 15px;
+}
+.rent-market-compare dl { margin: 0; }
+.rent-market-compare dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(118, 118, 128, .18);
+}
+.rent-market-compare dt { color: var(--secondary); font-size: 11px; }
+.rent-market-compare dd { margin: 0; font-size: 12px; font-weight: 750; text-align: right; }
+.rent-market-limit { color: white; background: var(--navy) !important; }
+.rent-market-limit p { margin: 0; color: #c8d3d5; font-size: 12px; line-height: 1.7; }
+.rent-market-notice {
+  margin: 16px 0 0;
+  padding: 16px 18px;
+  border-left: 3px solid var(--accent);
+  color: var(--secondary);
+  background: #f5f5f7;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
 @media (max-width: 900px) {
   .starter-pipeline ol, .result-map { grid-template-columns: 1fr 1fr; }
   .map-wrap { min-height: 420px; }
   .result-route { grid-template-columns: 1fr; }
   .result-route ol { grid-template-columns: 1fr 1fr; }
   .recommendation-summary { margin-right: 18px; margin-left: 18px; }
+  .rent-market-heading { grid-template-columns: 1fr; gap: 24px; }
+  .rent-market-summary { grid-template-columns: 1fr 1fr; }
+  .rent-market-compare { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 620px) {
@@ -1811,5 +1921,8 @@ button:active:not(:disabled), .favorite-card:active, .primary-action:active, .fi
   .additional-funding-heading { align-items: flex-start; flex-direction: column; }
   .recommendation-summary { align-items: flex-start; flex-direction: column; }
   .recommendation-summary ol { grid-template-columns: 1fr; }
+  .rent-market-section { padding: 50px 18px 20px; }
+  .rent-market-summary { grid-template-columns: 1fr; }
+  .rent-market-summary article { min-height: auto; }
 }
 

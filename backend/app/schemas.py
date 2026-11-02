@@ -144,6 +144,20 @@ class RentBenchmarkMetric(BaseModel):
     item_id: str
 
 
+class RentMarketOption(BaseModel):
+    region_code: str
+    name: str
+    group: str
+    source_period: str
+
+
+class RentMarketListResponse(BaseModel):
+    provider: str
+    dataset_name: str
+    markets: list[RentMarketOption]
+    notice: str
+
+
 class RentBenchmarkResponse(BaseModel):
     status: Literal["available", "mapping_required"]
     trade_area: TradeAreaOut
@@ -154,9 +168,11 @@ class RentBenchmarkResponse(BaseModel):
     source_period: str | None = None
     source_region: str | None = None
     building_type: str | None = None
-    mapping_scope: Literal["administrative_context"] | None = None
+    mapping_scope: Literal["administrative_context", "official_market_statistic"] | None = None
     confidence: Literal["contextual"] | None = None
+    selected_market_code: str | None = None
     metrics: list[RentBenchmarkMetric] = Field(default_factory=list)
+    seoul_metrics: list[RentBenchmarkMetric] = Field(default_factory=list)
     message: str
     disclaimer: str
     source_url: str

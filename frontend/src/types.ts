@@ -128,9 +128,18 @@ export type RentBenchmarkResponse = {
   source_period: string | null;
   source_region: string | null;
   building_type: string | null;
-  mapping_scope: "administrative_context" | null;
+  mapping_scope: "administrative_context" | "official_market_statistic" | null;
   confidence: "contextual" | null;
+  selected_market_code: string | null;
   metrics: Array<{
+    metric_key: string;
+    label: string;
+    value: number;
+    unit: string;
+    table_id: string;
+    item_id: string;
+  }>;
+  seoul_metrics: Array<{
     metric_key: string;
     label: string;
     value: number;
@@ -142,6 +151,18 @@ export type RentBenchmarkResponse = {
   disclaimer: string;
   source_url: string;
   api_docs_url: string;
+};
+
+export type RentMarketListResponse = {
+  provider: string;
+  dataset_name: string;
+  markets: Array<{
+    region_code: string;
+    name: string;
+    group: string;
+    source_period: string;
+  }>;
+  notice: string;
 };
 
 export type SupportProgramCandidate = {

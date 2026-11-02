@@ -30,6 +30,7 @@ from .schemas import (
     RecommendationRequest,
     RecommendationResponse,
     RentBenchmarkResponse,
+    RentMarketListResponse,
     ReviewAnalysisRequest,
     ReviewAnalysisResponse,
     SupportProgramQuery,
@@ -207,14 +208,51 @@ def get_trade_area_report(
     )
 
 
+@app.get("/api/v1/rent-markets", response_model=RentMarketListResponse)
+def get_rent_markets(session: Session = Depends(get_db)) -> RentMarketListResponse:
+    rows = session.scalars(
+        select(RentBenchmark)
+        .where(
+            RentBenchmark.metric_key == "rent_per_sqm",
+            RentBenchmark.region_code.like("52%"),
+            RentBenchmark.region_name.like("서울>%"),
+        )
+        .order_by(RentBenchmark.region_name)
+    ).all()
+    return RentMarketListResponse(
+        provider="한국부동산원",
+        dataset_name="상업용부동산 임대동향조사",
+        markets=[
+            {
+                "region_code": row.region_code,
+                "name": row.region_name.split(">")[-1],
+                "group": row.region_name.split(">")[1] if row.region_name.count(">") >= 2 else "서울",
+                "source_period": row.period_label,
+            }
+            for row in rows
+        ],
+        notice="R-ONE 조사상권과 서울시 골목상권은 경계가 다르므로 가까운 조사상권을 사용자가 직접 확인해 선택합니다.",
+    )
+
+
 @app.get("/api/v1/trade-areas/{code}/rent-benchmark", response_model=RentBenchmarkResponse)
-def get_rent_benchmark(code: str, session: Session = Depends(get_db)) -> RentBenchmarkResponse:
+def get_rent_benchmark(
+    code: str,
+    market_code: str | None = Query(default=None),
+    session: Session = Depends(get_db),
+) -> RentBenchmarkResponse:
     area = session.get(TradeArea, code)
     if not area:
         raise HTTPException(404, "상권을 찾을 수 없습니다.")
-    benchmarks = session.scalars(
+    seoul_benchmarks = session.scalars(
         select(RentBenchmark)
         .where(RentBenchmark.region_code == "500002")
+        .order_by(RentBenchmark.metric_key)
+    ).all()
+    selected_code = market_code or "500002"
+    benchmarks = session.scalars(
+        select(RentBenchmark)
+        .where(RentBenchmark.region_code == selected_code)
         .order_by(RentBenchmark.metric_key)
     ).all()
     common = {
@@ -227,32 +265,55 @@ def get_rent_benchmark(code: str, session: Session = Depends(get_db)) -> RentBen
         "api_docs_url": "https://www.reb.or.kr/r-one/portal/openapi/openApiDevPage.do",
         "disclaimer": "표본조사 기반 시장 참고값이며 개별 매물의 호가·계약조건이나 선택한 서울시 상권의 고유값이 아닙니다.",
     }
-    if not benchmarks:
+    if not seoul_benchmarks:
         return RentBenchmarkResponse(
             status="mapping_required",
             message="R-ONE 원천 통계가 아직 적재되지 않았습니다. 서울시 상권 값으로 추정하거나 0으로 대체하지 않습니다.",
             **common,
         )
+    if market_code and (not market_code.startswith("52") or not benchmarks):
+        raise HTTPException(404, "선택한 R-ONE 조사상권 통계를 찾을 수 없습니다.")
+
     periods = sorted({item.period_label for item in benchmarks})
+    is_detailed_market = bool(market_code)
+    selected_region = benchmarks[0].region_name if is_detailed_market and benchmarks else "서울 전체"
+    metric_dicts = [
+        {
+            "metric_key": item.metric_key,
+            "label": item.metric_label,
+            "value": item.value,
+            "unit": item.unit,
+            "table_id": item.table_id,
+            "item_id": item.item_id,
+        }
+        for item in benchmarks
+    ]
+    seoul_metric_dicts = [
+        {
+            "metric_key": item.metric_key,
+            "label": item.metric_label,
+            "value": item.value,
+            "unit": item.unit,
+            "table_id": item.table_id,
+            "item_id": item.item_id,
+        }
+        for item in seoul_benchmarks
+    ]
     return RentBenchmarkResponse(
         status="available",
         source_period=", ".join(periods),
-        source_region="서울 전체",
+        source_region=selected_region.replace(">", " · "),
         building_type="소규모상가",
-        mapping_scope="administrative_context",
+        mapping_scope="official_market_statistic" if is_detailed_market else "administrative_context",
         confidence="contextual",
-        metrics=[
-            {
-                "metric_key": item.metric_key,
-                "label": item.metric_label,
-                "value": item.value,
-                "unit": item.unit,
-                "table_id": item.table_id,
-                "item_id": item.item_id,
-            }
-            for item in benchmarks
-        ],
-        message="선택한 상권의 정확한 임대료가 아니라 서울 전체 소규모상가의 공식 분기 참고값입니다. R-ONE 조사상권과 서울시 상권 경계는 서로 다릅니다.",
+        selected_market_code=selected_code,
+        metrics=metric_dicts,
+        seoul_metrics=seoul_metric_dicts,
+        message=(
+            "선택한 R-ONE 조사상권의 공식 표본통계입니다. 서울시 골목상권과 경계가 다르므로 같은 지역인지 지도와 현장에서 다시 확인해야 합니다."
+            if is_detailed_market
+            else "서울 전체 소규모상가의 공식 분기 평균입니다. 아래에서 가까운 R-ONE 조사상권을 선택하면 더 세부적인 참고값을 볼 수 있습니다."
+        ),
         **common,
     )
 

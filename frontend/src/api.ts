@@ -1,4 +1,4 @@
-import type { AreaReportResponse, ChecklistResponse, ComparisonResponse, EvidenceResponse, RecommendationResponse, RentBenchmarkResponse, ReviewAnalysisResponse, SupportProgramResponse, TradeArea } from "./types";
+import type { AreaReportResponse, ChecklistResponse, ComparisonResponse, EvidenceResponse, RecommendationResponse, RentBenchmarkResponse, RentMarketListResponse, ReviewAnalysisResponse, SupportProgramResponse, TradeArea } from "./types";
 
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -50,8 +50,15 @@ export async function fetchAreaReport(code: string, signal?: AbortSignal): Promi
   return response.json() as Promise<AreaReportResponse>;
 }
 
-export async function fetchRentBenchmark(code: string, signal?: AbortSignal): Promise<RentBenchmarkResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/trade-areas/${code}/rent-benchmark`, { signal });
+export async function fetchRentMarkets(signal?: AbortSignal): Promise<RentMarketListResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/rent-markets`, { signal });
+  if (!response.ok) throw new Error("공식 임대 조사상권 목록을 불러오지 못했습니다.");
+  return response.json() as Promise<RentMarketListResponse>;
+}
+
+export async function fetchRentBenchmark(code: string, marketCode?: string, signal?: AbortSignal): Promise<RentBenchmarkResponse> {
+  const query = marketCode ? `?${new URLSearchParams({ market_code: marketCode })}` : "";
+  const response = await fetch(`${API_BASE_URL}/api/v1/trade-areas/${code}/rent-benchmark${query}`, { signal });
   if (!response.ok) throw new Error("임대 벤치마크 상태를 불러오지 못했습니다.");
   return response.json() as Promise<RentBenchmarkResponse>;
 }

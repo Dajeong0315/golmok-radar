@@ -62,3 +62,50 @@ def latest_region_benchmark(
         "mapping_scope": "administrative_context",
         "source_url": RONE_SOURCE_URL,
     }
+
+
+def latest_seoul_benchmarks(
+    payload: dict[str, Any],
+    spec: RoneTableSpec,
+) -> list[dict[str, Any]]:
+    """Return the latest row for every official R-ONE Seoul region/market."""
+    rows = [
+        row
+        for row in response_rows(payload)
+        if str(row.get("CLS_FULLNM") or row.get("CLS_NM") or "") == "서울"
+        or str(row.get("CLS_FULLNM") or "").startswith("서울>")
+    ]
+    if not rows:
+        raise ValueError(f"R-ONE {spec.table_id} 응답에 서울 지역 행이 없습니다.")
+
+    latest_by_region: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        region_code = str(row.get("CLS_ID") or "")
+        if not region_code:
+            continue
+        current = latest_by_region.get(region_code)
+        if current is None or str(row.get("WRTTIME_IDTFR_ID") or "") > str(current.get("WRTTIME_IDTFR_ID") or ""):
+            latest_by_region[region_code] = row
+
+    parsed: list[dict[str, Any]] = []
+    for region_code, row in sorted(latest_by_region.items()):
+        value = row.get("DTA_VAL")
+        if value in (None, ""):
+            continue
+        region_path = str(row.get("CLS_FULLNM") or row.get("CLS_NM") or region_code)
+        parsed.append({
+            "period_code": str(row["WRTTIME_IDTFR_ID"]),
+            "period_label": str(row["WRTTIME_DESC"]),
+            "region_code": region_code,
+            "region_name": region_path,
+            "building_type": spec.building_type,
+            "metric_key": spec.metric_key,
+            "metric_label": spec.metric_label,
+            "value": float(value),
+            "unit": str(row["UI_NM"]),
+            "table_id": spec.table_id,
+            "item_id": str(row["ITM_ID"]),
+            "mapping_scope": "official_market_statistic" if region_code.startswith("52") else "administrative_context",
+            "source_url": RONE_SOURCE_URL,
+        })
+    return parsed

@@ -19,7 +19,7 @@ for path in (ROOT, BACKEND):
 
 from app.db import make_engine  # noqa: E402
 from app.models import DataSource, RentBenchmark  # noqa: E402
-from app.rone import RONE_TABLES, latest_region_benchmark  # noqa: E402
+from app.rone import RONE_TABLES, latest_seoul_benchmarks  # noqa: E402
 
 
 RAW_DIR = ROOT / "database" / "raw" / "rone"
@@ -41,8 +41,8 @@ def collect_rows(meta_path: Path | None = None) -> tuple[list[RentBenchmark], Da
     for item in meta["files"]:
         spec = specs[item["metric_key"]]
         payload = json.loads((RAW_DIR / item["file"]).read_text(encoding="utf-8"))
-        parsed = latest_region_benchmark(payload, spec)
-        benchmarks.append(RentBenchmark(**parsed, fetched_at=fetched_at))
+        parsed_rows = latest_seoul_benchmarks(payload, spec)
+        benchmarks.extend(RentBenchmark(**parsed, fetched_at=fetched_at) for parsed in parsed_rows)
 
     periods = sorted({row.period_label for row in benchmarks})
     source = DataSource(
@@ -51,7 +51,10 @@ def collect_rows(meta_path: Path | None = None) -> tuple[list[RentBenchmark], Da
         provider=meta["provider"],
         source_file=meta_path.name,
         fetched_at=fetched_at,
-        notes=f"소규모상가 서울 전체 참고 벤치마크; periods={','.join(periods)}; 정확 상권 조인 아님",
+        notes=(
+            "소규모상가 서울 전체·R-ONE 조사상권 참고 벤치마크; "
+            f"periods={','.join(periods)}; 서울시 골목상권과 정확한 경계 조인 아님"
+        ),
     )
     return benchmarks, source
 

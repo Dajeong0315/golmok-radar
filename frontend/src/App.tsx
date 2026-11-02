@@ -75,6 +75,7 @@ export default function App() {
         </a>
         <div className="header-context">
           <a href="#quiz">창업 성향 진단</a>
+          <a href="#worksheet">매물 검증</a>
           <a href="#reviews">리뷰 분석 · 준비 중</a>
           <span>서울 · 카페</span>
           <strong>2025년 4분기</strong>
@@ -100,7 +101,7 @@ export default function App() {
             <li><span>01</span><strong>내 생각 정리</strong><p>어떤 가게와 손님을 원하는지 여섯 질문으로 정리해요.</p><a href="#quiz">성향 진단하기</a></li>
             <li><span>02</span><strong>후보 찾기</strong><p>지도에서 관심 상권을 저장하고 조건과 맞는 후보를 살펴봐요.</p><a href="#explorer-title">지도 둘러보기</a></li>
             <li><span>03</span><strong>숫자 비교</strong><p>2~4곳의 카페 수, 매출, 유동인구를 같은 분기로 비교해요.</p></li>
-            <li><span>04</span><strong>현장·비용 확인</strong><p>직접 방문해 보고 보증금, 월세, 지원 조건을 확인해요.</p></li>
+            <li><span>04</span><strong>매물 검증</strong><p>직접 방문한 매물의 비용과 확인 상태를 워크시트에 남겨요.</p><a href="#worksheet">매물 검증하기</a></li>
           </ol>
         </section>
 

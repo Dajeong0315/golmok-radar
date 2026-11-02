@@ -1883,6 +1883,94 @@ button:active:not(:disabled), .favorite-card:active, .primary-action:active, .fi
   line-height: 1.65;
 }
 
+.worksheet-page { min-height: 100vh; background: var(--paper); }
+.worksheet-hero { padding: 84px clamp(20px, 8vw, 120px) 74px; color: white; background: linear-gradient(145deg, #1d1d1f 0%, #101114 55%, #0b253d 130%); }
+.worksheet-hero .eyebrow { color: #64d2ff; }
+.worksheet-hero h1 { max-width: 860px; font-size: clamp(45px, 6.5vw, 82px); }
+.worksheet-hero h1 em { color: #64d2ff; font-style: normal; }
+.worksheet-hero > p:last-child { max-width: 660px; color: #c7c7cc; line-height: 1.75; }
+.worksheet-boundary { display: grid; grid-template-columns: repeat(3, 1fr); max-width: 1240px; gap: 12px; margin: -30px auto 0; padding: 0 24px; position: relative; z-index: 1; }
+.worksheet-boundary article { min-height: 110px; padding: 21px; border: 1px solid rgba(0,0,0,.08); border-radius: 16px; background: white; box-shadow: var(--shadow-soft); }
+.worksheet-boundary strong, .worksheet-boundary span { display: block; }
+.worksheet-boundary strong { margin-bottom: 9px; font-size: 15px; }
+.worksheet-boundary span { color: var(--secondary); font-size: 12px; line-height: 1.5; }
+.worksheet-shell { display: grid; grid-template-columns: 260px minmax(0, 1fr); max-width: 1240px; min-height: 680px; margin: 48px auto 100px; border: 1px solid rgba(0,0,0,.08); border-radius: 24px; overflow: hidden; background: white; box-shadow: var(--shadow-soft); }
+.worksheet-list { padding: 24px 16px; background: #f7f7f9; border-right: 1px solid rgba(0,0,0,.08); }
+.worksheet-list .eyebrow { margin-bottom: 10px; }
+.worksheet-add { width: 100%; min-height: 42px; border: 0; border-radius: 10px; color: white; background: var(--accent); font-weight: 750; }
+.worksheet-tabs { display: grid; gap: 8px; margin-top: 20px; }
+.worksheet-tabs button { min-height: 70px; padding: 12px; border: 1px solid transparent; border-radius: 12px; background: transparent; text-align: left; }
+.worksheet-tabs button.active { border-color: rgba(0,113,227,.22); background: white; box-shadow: 0 3px 12px rgba(0,0,0,.04); }
+.worksheet-tabs small, .worksheet-tabs strong { display: block; }
+.worksheet-tabs small { margin-bottom: 4px; color: var(--secondary); font-size: 11px; }
+.worksheet-tabs strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.worksheet-empty, .worksheet-empty-main { color: var(--secondary); line-height: 1.65; }
+.worksheet-empty-main { display: grid; place-content: center; justify-items: start; padding: 44px; }
+.worksheet-empty-main h2 { margin: 0; color: var(--ink); font-size: 32px; }
+.worksheet-empty-main .primary-action { margin-top: 18px; }
+.worksheet-editor { padding: clamp(24px, 4vw, 54px); }
+.worksheet-heading, .worksheet-section-heading { display: flex; justify-content: space-between; gap: 20px; align-items: start; }
+.worksheet-heading h2, .worksheet-section-heading h2, .worksheet-calculations h2, .worksheet-checks h2 { margin: 0; font-size: clamp(28px, 3.4vw, 42px); letter-spacing: -.045em; }
+.worksheet-heading p:not(.eyebrow), .worksheet-section-heading p:not(.eyebrow), .worksheet-checks > div > p:not(.eyebrow) { color: var(--secondary); font-size: 12px; }
+.worksheet-delete { min-height: 38px; padding: 0 12px; border: 1px solid rgba(215,0,21,.24); border-radius: 9px; color: #b42318; background: #fff7f6; font-size: 12px; font-weight: 750; }
+.worksheet-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 34px; }
+.worksheet-field { display: grid; gap: 7px; }
+.worksheet-field > span { font-size: 12px; font-weight: 750; }
+.worksheet-field > small { color: var(--secondary); font-size: 10px; line-height: 1.45; }
+.worksheet-field input, .worksheet-field select, .observation-list input, .observation-list select, .check-list select { width: 100%; min-height: 46px; padding: 0 12px; border: 1px solid rgba(0,0,0,.1); border-radius: 10px; outline: none; background: white; }
+.worksheet-field input:focus, .worksheet-field select:focus, .observation-list input:focus, .observation-list select:focus, .check-list select:focus { border-color: rgba(0,113,227,.5); box-shadow: 0 0 0 3px rgba(0,113,227,.08); }
+.input-pair { display: grid; grid-template-columns: 1fr 82px; gap: 8px; }
+.money-input { position: relative; }
+.money-input input { padding-right: 38px; }
+.money-input b { position: absolute; top: 13px; right: 13px; color: var(--secondary); font-size: 12px; }
+.worksheet-input-note { margin: 20px 0 0; padding: 14px; border-radius: 10px; color: var(--secondary); background: #f5f5f7; font-size: 11px; line-height: 1.6; }
+.worksheet-calculations { margin-top: 48px; padding: 30px; border-radius: 20px; background: #f5f5f7; }
+.worksheet-metric-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 22px; }
+.worksheet-metric-grid article { min-height: 132px; padding: 18px; border-radius: 14px; background: white; }
+.worksheet-metric-grid article.available { border-top: 3px solid var(--accent); }
+.worksheet-metric-grid article.input_required, .worksheet-metric-grid article.unavailable { border: 1px solid rgba(255,159,10,.34); background: #fffaf3; }
+.worksheet-metric-grid span, .worksheet-metric-grid strong, .worksheet-metric-grid small { display: block; }
+.worksheet-metric-grid span { color: var(--secondary); font-size: 11px; }
+.worksheet-metric-grid strong { margin: 12px 0 8px; font-size: 23px; letter-spacing: -.04em; }
+.worksheet-metric-grid small { color: var(--secondary); font-size: 10px; line-height: 1.45; }
+.worksheet-observations, .worksheet-checks { margin-top: 52px; }
+.worksheet-section-heading button { min-height: 40px; padding: 0 13px; border: 0; border-radius: 9px; color: var(--accent); background: rgba(0,113,227,.08); font-size: 12px; font-weight: 750; }
+.observation-list { display: grid; gap: 8px; margin-top: 20px; }
+.observation-list > div { display: grid; grid-template-columns: 140px 90px 90px 1fr auto; gap: 8px; align-items: center; padding: 10px; border: 1px solid rgba(0,0,0,.08); border-radius: 12px; }
+.observation-list span { color: var(--secondary); font-size: 12px; }
+.observation-list button { min-height: 34px; border: 0; border-radius: 8px; color: #b42318; background: #fff1f0; font-size: 11px; font-weight: 750; }
+.worksheet-checks { display: grid; grid-template-columns: minmax(240px, .7fr) 1.3fr; gap: 40px; padding-top: 46px; border-top: 1px solid rgba(0,0,0,.08); }
+.check-list { display: grid; gap: 8px; }
+.check-list label { display: flex; justify-content: space-between; gap: 15px; align-items: center; min-height: 72px; padding: 12px 14px; border: 1px solid rgba(0,0,0,.08); border-radius: 12px; }
+.check-list label > span { display: grid; gap: 3px; }
+.check-list small { color: var(--accent); font-size: 10px; font-weight: 750; }
+.check-list strong { font-size: 12px; }
+.check-list em { color: #a15c00; font-size: 10px; font-style: normal; }
+.check-list select { width: 126px; min-height: 38px; font-size: 11px; }
+
+@media (max-width: 800px) {
+  .worksheet-boundary { grid-template-columns: 1fr; margin-top: -20px; }
+  .worksheet-boundary article { min-height: auto; }
+  .worksheet-shell { grid-template-columns: 1fr; margin: 32px 16px 70px; border-radius: 18px; }
+  .worksheet-list { border-right: 0; border-bottom: 1px solid rgba(0,0,0,.08); }
+  .worksheet-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .worksheet-checks { grid-template-columns: 1fr; gap: 24px; }
+}
+
+@media (max-width: 620px) {
+  .worksheet-hero { padding: 58px 20px 64px; }
+  .worksheet-form-grid, .worksheet-metric-grid { grid-template-columns: 1fr; }
+  .worksheet-heading, .worksheet-section-heading { align-items: stretch; flex-direction: column; }
+  .worksheet-delete, .worksheet-section-heading button { width: 100%; }
+  .worksheet-editor { padding: 24px 18px; }
+  .worksheet-calculations { padding: 20px; }
+  .observation-list > div { grid-template-columns: 1fr 1fr; }
+  .observation-list span { grid-column: 1 / -1; }
+  .observation-list button { grid-column: 1 / -1; }
+  .check-list label { align-items: stretch; flex-direction: column; }
+  .check-list select { width: 100%; }
+}
+
 @media (max-width: 900px) {
   .starter-pipeline ol, .result-map { grid-template-columns: 1fr 1fr; }
   .map-wrap { min-height: 420px; }

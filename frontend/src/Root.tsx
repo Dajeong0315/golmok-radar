@@ -11,6 +11,7 @@ import { RecommendationsPage } from "./RecommendationsPage";
 import { RentPage } from "./RentPage";
 import { ReviewInsightsPage } from "./ReviewInsightsPage";
 import { parseRentAreaCode } from "./rentCalculator";
+import { PropertyWorksheetPage } from "./PropertyWorksheetPage";
 
 export default function Root() {
   const [hash, setHash] = useState(window.location.hash);
@@ -24,6 +25,7 @@ export default function Root() {
   if (hash.startsWith("#compare")) return <ComparisonPage codes={parseComparisonCodes(hash)} />;
   if (hash.startsWith("#recommendations")) return <RecommendationsPage />;
   if (hash.startsWith("#rent")) return <RentPage code={parseRentAreaCode(hash)} />;
+  if (hash.startsWith("#worksheet")) return <PropertyWorksheetPage />;
   if (hash.startsWith("#funding")) return <FundingPage code={parseFundingAreaCode(hash)} />;
   if (hash.startsWith("#reviews")) return <ReviewInsightsPage />;
   const shouldShowQuiz = hash.startsWith("#quiz") || (!loadProfile(localStorage) && localStorage.getItem(SKIPPED_KEY) !== "true");

@@ -87,11 +87,15 @@ h1 em { color: var(--teal); font-style: normal; }
 .map-fallback--error { color: #9c2f20; }
 .map-label { border: 1px solid var(--navy); background: white; color: var(--navy); padding: 6px 9px; border-radius: 6px; font-weight: 700; box-shadow: 0 3px 10px rgba(0,0,0,.12); }
 .map-label.is-favorite { color: white; background: var(--teal); border-color: var(--teal); }
+.map-label.is-selected { color: white; background: var(--accent); border-color: var(--accent); box-shadow: 0 5px 15px rgba(0, 113, 227, .28); }
 .area-panel { min-height: 0; display: flex; flex-direction: column; background: #fff; border-left: 1px solid var(--line); }
 .area-panel__header { padding: 18px 20px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--line); }
 .area-panel__header span { color: #80878b; }
 .area-list { overflow: auto; max-height: 550px; }
 .area-card { padding: 18px 18px 18px 58px; position: relative; border-bottom: 1px solid #eceae4; }
+.area-card { cursor: pointer; }
+.area-card:focus-visible { z-index: 1; outline: 3px solid rgba(0, 113, 227, .32); outline-offset: -3px; }
+.area-card.is-map-focused { background: rgba(0, 113, 227, .07); box-shadow: inset 3px 0 0 var(--accent); }
 .area-card h3 { margin: 4px 0 10px; font-size: 18px; }
 .area-meta { color: #717a80; font-size: 12px; }
 .favorite-button { position: absolute; left: 17px; top: 21px; border: 1px solid var(--line); width: 29px; height: 29px; border-radius: 50%; background: white; color: #8b9396; font-size: 16px; }

@@ -17,6 +17,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [focusedMapCode, setFocusedMapCode] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -49,7 +50,8 @@ export default function App() {
       return districtMatch && queryMatch;
     });
   }, [areas, district, query]);
-  const mapAreas = district === "전체" && !query.trim() ? [] : filteredAreas;
+  const focusedMapArea = filteredAreas.find((area) => area.code === focusedMapCode);
+  const mapAreas = focusedMapArea ? [focusedMapArea] : district === "전체" && !query.trim() ? [] : filteredAreas;
   const displayedAreas = district === "전체" && !query.trim() ? filteredAreas.slice(0, 80) : filteredAreas;
 
   const handleFavorite = useCallback((code: string) => {
@@ -122,7 +124,7 @@ export default function App() {
 
           {error ? <div className="error-banner">{error} 백엔드 서버가 실행 중인지 확인해 주세요.</div> : null}
           <div className="explorer-grid">
-            <KakaoMap areas={mapAreas} favorites={favoriteCodes} onToggleFavorite={handleFavorite} showDistrictGuide={district === "전체" && !query.trim()} />
+            <KakaoMap areas={mapAreas} favorites={favoriteCodes} onToggleFavorite={handleFavorite} selectedCode={focusedMapArea?.code} showDistrictGuide={!focusedMapArea && district === "전체" && !query.trim()} />
             <div className="area-panel">
               <div className="area-panel__header"><strong>상권 목록</strong><span>{filteredAreas.length}곳</span></div>
               {loading ? <p className="panel-state">상권 데이터를 불러오는 중입니다.</p> : null}
@@ -130,8 +132,8 @@ export default function App() {
               {!loading && displayedAreas.length < filteredAreas.length ? <p className="panel-state panel-hint">먼저 80곳만 보여드려요. 자치구를 고르거나 이름을 검색하면 원하는 상권을 빠르게 찾을 수 있어요.</p> : null}
               <div className="area-list">
                 {displayedAreas.map((area) => (
-                  <article className="area-card" key={area.code}>
-                    <button className={`favorite-button ${favorites.includes(area.code) ? "active" : ""}`} onClick={() => handleFavorite(area.code)} aria-label={`${area.name} 관심 상권 ${favorites.includes(area.code) ? "해제" : "추가"}`}>{favorites.includes(area.code) ? "★" : "☆"}</button>
+                  <article className={`area-card ${focusedMapArea?.code === area.code ? "is-map-focused" : ""}`} key={area.code} tabIndex={0} role="button" aria-label={`${area.name} 지도에서 보기`} onClick={() => setFocusedMapCode(area.code)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setFocusedMapCode(area.code); } }}>
+                    <button className={`favorite-button ${favorites.includes(area.code) ? "active" : ""}`} onClick={(event) => { event.stopPropagation(); handleFavorite(area.code); }} aria-label={`${area.name} 관심 상권 ${favorites.includes(area.code) ? "해제" : "추가"}`}>{favorites.includes(area.code) ? "★" : "☆"}</button>
                     <div>
                       <span className="area-meta">{area.district_name} · {area.area_type_name}</span>
                       <h3>{area.name}</h3>

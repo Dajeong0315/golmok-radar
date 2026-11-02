@@ -7,6 +7,7 @@ type Props = {
   areas: TradeArea[];
   favorites: Set<string>;
   onToggleFavorite: (code: string) => void;
+  selectedCode?: string;
   showDistrictGuide?: boolean;
 };
 
@@ -20,7 +21,7 @@ export function detachMapLayers(layers: MapLayer[]) {
   layers.forEach((layer) => layer.setMap(null));
 }
 
-export function KakaoMap({ areas, favorites, onToggleFavorite, showDistrictGuide = false }: Props) {
+export function KakaoMap({ areas, favorites, onToggleFavorite, selectedCode, showDistrictGuide = false }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const [error, setError] = useState("");
 
@@ -45,14 +46,19 @@ export function KakaoMap({ areas, favorites, onToggleFavorite, showDistrictGuide
           const marker = new kakao.maps.Marker({ map, position, title: area.name });
           markers.push(marker);
           const content = document.createElement("button");
-          content.className = `map-label ${favorites.has(area.code) ? "is-favorite" : ""}`;
+          content.className = `map-label ${favorites.has(area.code) ? "is-favorite" : ""} ${selectedCode === area.code ? "is-selected" : ""}`;
           content.textContent = `${favorites.has(area.code) ? "★" : "☆"} ${area.name}`;
           content.onclick = () => onToggleFavorite(area.code);
           const overlay = new kakao.maps.CustomOverlay({ map, position, content, yAnchor: 2.2 });
           overlays.push(overlay);
           kakao.maps.event.addListener(marker, "click", () => overlay.setMap(map));
         });
-        if (areas.length) map.setBounds(bounds);
+        if (areas.length === 1) {
+          map.setCenter(new kakao.maps.LatLng(areas[0].latitude, areas[0].longitude));
+          map.setLevel(4);
+        } else if (areas.length) {
+          map.setBounds(bounds);
+        }
       })
       .catch((reason: Error) => setError(reason.message));
     return () => {
@@ -61,7 +67,7 @@ export function KakaoMap({ areas, favorites, onToggleFavorite, showDistrictGuide
       detachMapLayers(overlays);
       mapContainer.replaceChildren();
     };
-  }, [areas, favorites, onToggleFavorite]);
+  }, [areas, favorites, onToggleFavorite, selectedCode]);
 
   if (!KAKAO_KEY) {
     return (
@@ -73,6 +79,6 @@ export function KakaoMap({ areas, favorites, onToggleFavorite, showDistrictGuide
     );
   }
   if (error) return <div className="map-fallback map-fallback--error">{error}</div>;
-  return <div className="map-wrap"><div className="map-canvas" ref={container} aria-label="서울 공식 상권 지도" />{showDistrictGuide ? <p className="map-guide">자치구를 고르면 공식 상권의 위치와 이름이 지도에 표시돼요.</p> : null}</div>;
+  return <div className="map-wrap"><div className="map-canvas" ref={container} aria-label="서울 공식 상권 지도" />{showDistrictGuide ? <p className="map-guide">목록의 상권을 누르거나 자치구를 고르면 공식 상권의 위치와 이름이 지도에 표시돼요.</p> : null}</div>;
 }
 

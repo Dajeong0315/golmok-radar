@@ -14,6 +14,8 @@ export type TradeArea = {
   data_status: DataStatus;
 };
 
+export type IndustryOption = { code: string; name: string };
+
 export type MetricAreaValue = {
   trade_area_code: string;
   status: "available" | "unavailable";
@@ -125,6 +127,7 @@ export type AreaInsightMetric = {
   status: "available" | "unavailable";
   value: number | null;
   reason: string | null;
+  percentile: number | null;
 };
 
 export type AreaInsightTimeSlot = AreaInsightMetric & { ratio: number | null };
@@ -140,6 +143,8 @@ export type AreaMapInsightResponse = {
   time_slots: AreaInsightTimeSlot[];
   population_source: string;
   sales_source: string;
+  comparison_group_label: string;
+  comparison_group_count: number;
   notice: string;
 };
 

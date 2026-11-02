@@ -152,6 +152,12 @@ def test_trade_area_list_and_detail(client: TestClient) -> None:
     assert detail.json()["name"] == "상권 1"
 
 
+def test_industries_expose_only_loaded_official_industries(client: TestClient) -> None:
+    response = client.get("/api/v1/industries")
+    assert response.status_code == 200
+    assert response.json() == [{"code": "CS100010", "name": "커피-음료"}]
+
+
 def test_trade_area_map_insight_exposes_trade_area_metrics_without_street_claims(client: TestClient) -> None:
     response = client.get("/api/v1/trade-areas/1/map-insight")
     assert response.status_code == 200
@@ -161,8 +167,10 @@ def test_trade_area_map_insight_exposes_trade_area_metrics_without_street_claims
     assert body["weekend_sales_ratio"]["value"] == 30.0
     assert body["time_slots"][2] == {
         "metric_key": "population_11_14", "label": "11~14시", "unit": "명",
-        "status": "available", "value": 100.0, "reason": None, "ratio": 10.0,
+        "status": "available", "value": 100.0, "reason": None, "percentile": None, "ratio": 10.0,
     }
+    assert body["sales_amount"]["percentile"] == 0.0
+    assert body["comparison_group_label"] == "같은 자치구의 커피-음료 통계 보유 공식 상권"
     assert "거리별" in body["notice"]
 
 

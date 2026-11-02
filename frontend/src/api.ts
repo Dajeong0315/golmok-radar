@@ -1,14 +1,20 @@
-import type { AreaMapInsightResponse, AreaReportResponse, ChecklistResponse, ComparisonResponse, EvidenceResponse, RecommendationResponse, RentBenchmarkResponse, RentMarketListResponse, ReviewAnalysisResponse, SupportProgramResponse, TradeArea } from "./types";
+import type { AreaMapInsightResponse, AreaReportResponse, ChecklistResponse, ComparisonResponse, EvidenceResponse, IndustryOption, RecommendationResponse, RentBenchmarkResponse, RentMarketListResponse, ReviewAnalysisResponse, SupportProgramResponse, TradeArea } from "./types";
 
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
-export async function fetchTradeAreas(signal?: AbortSignal): Promise<TradeArea[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/trade-areas`, { signal });
+export async function fetchTradeAreas(industry = "CS100010", signal?: AbortSignal): Promise<TradeArea[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/trade-areas?${new URLSearchParams({ industry })}`, { signal });
   if (!response.ok) {
     throw new Error("상권 정보를 불러오지 못했습니다.");
   }
   return response.json() as Promise<TradeArea[]>;
+}
+
+export async function fetchIndustries(signal?: AbortSignal): Promise<IndustryOption[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/industries?quarter=20254`, { signal });
+  if (!response.ok) throw new Error("업종 정보를 불러오지 못했습니다.");
+  return response.json() as Promise<IndustryOption[]>;
 }
 
 export async function fetchComparison(codes: string[], signal?: AbortSignal): Promise<ComparisonResponse> {
@@ -50,8 +56,9 @@ export async function fetchAreaReport(code: string, signal?: AbortSignal): Promi
   return response.json() as Promise<AreaReportResponse>;
 }
 
-export async function fetchAreaMapInsight(code: string, signal?: AbortSignal): Promise<AreaMapInsightResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/trade-areas/${code}/map-insight?quarter=20254`, { signal });
+export async function fetchAreaMapInsight(code: string, industry = "CS100010", signal?: AbortSignal): Promise<AreaMapInsightResponse> {
+  const query = new URLSearchParams({ quarter: "20254", industry });
+  const response = await fetch(`${API_BASE_URL}/api/v1/trade-areas/${code}/map-insight?${query}`, { signal });
   if (!response.ok) throw new Error("상권 지도 근거를 불러오지 못했습니다.");
   return response.json() as Promise<AreaMapInsightResponse>;
 }

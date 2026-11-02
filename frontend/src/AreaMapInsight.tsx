@@ -6,6 +6,11 @@ function formatMetric(metric: AreaInsightMetric) {
   return `${metric.value.toLocaleString("ko-KR")} ${metric.unit}`;
 }
 
+function relativePosition(metric: AreaInsightMetric) {
+  if (metric.status !== "available" || metric.percentile === null) return "상대 위치 비교 불가";
+  return `비교군 상위 ${Math.max(0, 100 - metric.percentile + 1).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}%`;
+}
+
 export function AreaMapInsight({ data, loading, error }: {
   data: AreaMapInsightResponse | null;
   loading: boolean;
@@ -19,14 +24,15 @@ export function AreaMapInsight({ data, loading, error }: {
   return <section className="map-insight" aria-labelledby="map-insight-title">
     <header>
       <div><p className="eyebrow">선택 상권의 공식 통계 근거</p><h3 id="map-insight-title">{data.trade_area.name}</h3></div>
-      <span>{data.quarter_label} · 카페</span>
+      <span>{data.quarter_label} · 상권 단위 공식 통계</span>
     </header>
     <div className="map-insight__metrics">
-      <article><span>총 유동인구</span><strong>{formatMetric(data.total_population)}</strong><small>{data.population_source}</small></article>
-      <article><span>카페 추정매출</span><strong>{formatMetric(data.sales_amount)}</strong><small>{data.sales_source}</small></article>
-      <article><span>주중 매출 비중</span><strong>{formatMetric(data.weekday_sales_ratio)}</strong><small>카페 매출 금액 ÷ 전체 매출 금액</small></article>
-      <article><span>주말 매출 비중</span><strong>{formatMetric(data.weekend_sales_ratio)}</strong><small>카페 매출 금액 ÷ 전체 매출 금액</small></article>
+      <article><span>총 유동인구</span><strong>{formatMetric(data.total_population)}</strong><small>{data.population_source}<br />{relativePosition(data.total_population)}</small></article>
+      <article><span>업종 추정매출</span><strong>{formatMetric(data.sales_amount)}</strong><small>{data.sales_source}<br />{relativePosition(data.sales_amount)}</small></article>
+      <article><span>주중 매출 비중</span><strong>{formatMetric(data.weekday_sales_ratio)}</strong><small>선택 업종 주중 매출 금액 ÷ 전체 매출 금액</small></article>
+      <article><span>주말 매출 비중</span><strong>{formatMetric(data.weekend_sales_ratio)}</strong><small>선택 업종 주말 매출 금액 ÷ 전체 매출 금액</small></article>
     </div>
+    <p className="map-insight__comparison">상대 위치 기준: {data.comparison_group_label} {data.comparison_group_count}곳. 수치의 높고 낮음은 상권의 좋고 나쁨이나 성공을 뜻하지 않습니다.</p>
     <div className="map-insight__distribution">
       <div><h4>시간대별 유동인구 분포</h4><p>막대 길이는 이 상권의 총 유동인구 대비 시간대 비중입니다.</p></div>
       <div className="time-slot-chart">

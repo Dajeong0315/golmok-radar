@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { fetchAreaMapInsight, fetchTradeAreas } from "./api";
+import { fetchAreaMapInsight, fetchIndustries, fetchTradeAreas } from "./api";
 import { AreaMapInsight } from "./AreaMapInsight";
 import { FAVORITES_KEY, loadFavorites, sanitizeFavorites, toggleComparison, toggleFavorite } from "./favorites";
 import { KakaoMap } from "./KakaoMap";
 import { TopNavigation } from "./TopNavigation";
-import type { AreaMapInsightResponse, TradeArea } from "./types";
+import type { AreaMapInsightResponse, IndustryOption, TradeArea } from "./types";
 import "./styles.css";
 
 
 export default function App() {
   const [areas, setAreas] = useState<TradeArea[]>([]);
+  const [industries, setIndustries] = useState<IndustryOption[]>([]);
+  const [industry, setIndustry] = useState("CS100010");
   const [favorites, setFavorites] = useState<string[]>(() => loadFavorites(localStorage));
   const [selected, setSelected] = useState<string[]>([]);
   const [district, setDistrict] = useState("전체");
@@ -25,7 +27,7 @@ export default function App() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchTradeAreas(controller.signal)
+    fetchTradeAreas(industry, controller.signal)
       .then((data) => {
         setAreas(data);
         const cleaned = sanitizeFavorites(favorites, new Set(data.map((area) => area.code)));
@@ -35,6 +37,14 @@ export default function App() {
         if (reason.name !== "AbortError") setError(reason.message);
       })
       .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, [industry]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchIndustries(controller.signal)
+      .then((data) => setIndustries(data))
+      .catch((reason: Error) => { if (reason.name !== "AbortError") setError(reason.message); });
     return () => controller.abort();
   }, []);
 
@@ -53,12 +63,12 @@ export default function App() {
     setMapInsight(null);
     setMapInsightLoading(true);
     setMapInsightError("");
-    fetchAreaMapInsight(focusedMapCode, controller.signal)
+    fetchAreaMapInsight(focusedMapCode, industry, controller.signal)
       .then(setMapInsight)
       .catch((reason: Error) => { if (reason.name !== "AbortError") setMapInsightError(reason.message); })
       .finally(() => setMapInsightLoading(false));
     return () => controller.abort();
-  }, [focusedMapCode]);
+  }, [focusedMapCode, industry]);
 
   const areaByCode = useMemo(() => new Map(areas.map((area) => [area.code, area])), [areas]);
   const districts = useMemo(() => ["전체", ...new Set(areas.map((area) => area.district_name))].sort((a, b) => a === "전체" ? -1 : b === "전체" ? 1 : a.localeCompare(b, "ko")), [areas]);
@@ -71,9 +81,10 @@ export default function App() {
       return districtMatch && queryMatch;
     });
   }, [areas, district, query]);
-  const focusedMapArea = filteredAreas.find((area) => area.code === focusedMapCode);
-  const mapAreas = focusedMapArea ? [focusedMapArea] : district === "전체" && !query.trim() ? [] : filteredAreas;
+  const focusedMapArea = areas.find((area) => area.code === focusedMapCode);
+  const mapAreas = focusedMapArea ? [focusedMapArea] : filteredAreas;
   const displayedAreas = district === "전체" && !query.trim() ? filteredAreas.slice(0, 80) : filteredAreas;
+  const selectedIndustry = industries.find((item) => item.code === industry);
 
   const handleFavorite = useCallback((code: string) => {
     setFavorites((current) => toggleFavorite(current, code));
@@ -98,7 +109,7 @@ export default function App() {
           <span>골목 레이더</span>
         </a>
         <TopNavigation active="explore" />
-        <div className="header-context"><span>서울 · 카페</span><strong>2025년 4분기</strong></div>
+        <div className="header-context"><span>서울 · {selectedIndustry?.name || "카페"}</span><strong>2025년 4분기</strong></div>
       </header>
 
       <main id="top">
@@ -135,6 +146,9 @@ export default function App() {
           </div>
 
           <div className="filters">
+            <label className="district-select"><span>업종</span><select aria-label="업종 필터" value={industry} onChange={(event) => { setIndustry(event.target.value); setFocusedMapCode(""); }}>
+              {industries.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}
+            </select></label>
             <label className="district-select"><span>자치구</span><select aria-label="자치구 필터" value={district} onChange={(event) => setDistrict(event.target.value)}>{districts.map((item) => <option key={item} value={item}>{item === "전체" ? "서울 전체" : item}</option>)}</select></label>
             <label className="search-field">
               <span className="sr-only">상권 이름 검색</span>
@@ -142,10 +156,11 @@ export default function App() {
               <span>⌕</span>
             </label>
           </div>
+          <p className="filter-help">현재 검증·적재된 업종만 선택할 수 있습니다. 다른 업종 통계를 적재하면 이 목록에 자동으로 추가됩니다.</p>
 
           {error ? <div className="error-banner">{error} 백엔드 서버가 실행 중인지 확인해 주세요.</div> : null}
           <div className="explorer-grid">
-            <KakaoMap areas={mapAreas} favorites={favoriteCodes} onToggleFavorite={handleFavorite} selectedCode={focusedMapArea?.code} showDistrictGuide={!focusedMapArea && district === "전체" && !query.trim()} />
+            <KakaoMap areas={mapAreas} favorites={favoriteCodes} onSelectArea={setFocusedMapCode} selectedCode={focusedMapArea?.code} showDistrictGuide={!focusedMapArea && district === "전체" && !query.trim()} />
             <div className="area-panel">
               <div className="area-panel__header"><strong>상권 목록</strong><span>{filteredAreas.length}곳</span></div>
               {loading ? <p className="panel-state">상권 데이터를 불러오는 중입니다.</p> : null}
@@ -159,8 +174,9 @@ export default function App() {
                       <span className="area-meta">{area.district_name} · {area.area_type_name}</span>
                       <h3>{area.name}</h3>
                       <div className="data-badges">
-                        <span className={area.data_status.sales ? "ok" : "missing"}>매출 {area.data_status.sales ? "있음" : "없음"}</span>
-                        <span className={area.data_status.population ? "ok" : "missing"}>인구 {area.data_status.population ? "있음" : "없음"}</span>
+                        <span className={area.data_status.store ? "ok" : "missing"}>점포 {area.data_status.store ? "통계 있음" : "원천 없음"}</span>
+                        <span className={area.data_status.sales ? "ok" : "missing"}>매출 {area.data_status.sales ? "통계 있음" : "원천 없음"}</span>
+                        <span className={area.data_status.population ? "ok" : "missing"}>유동 {area.data_status.population ? "통계 있음" : "원천 없음"}</span>
                       </div>
                     </div>
                   </article>

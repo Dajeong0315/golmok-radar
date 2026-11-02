@@ -21,7 +21,7 @@ export function FundingPage({ code }: { code: string }) {
   useEffect(() => {
     if (!code) return;
     const controller = new AbortController();
-    fetchTradeAreas(controller.signal)
+    fetchTradeAreas(undefined, controller.signal)
       .then((areas) => setArea(areas.find((item) => item.code === code) || null))
       .catch(() => setArea(null));
     return () => controller.abort();

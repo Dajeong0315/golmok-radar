@@ -13,7 +13,7 @@ from .config import get_settings
 from .db import get_db
 from .metric_service import MetricValue, get_area_metrics
 from .models import DataSource, PopulationMetric, RentBenchmark, SalesMetric, StoreMetric, SupportProgram, TradeArea
-from .recommendations import recommend, select_diverse
+from .recommendations import percentile, recommend, select_diverse
 from .reports import build_area_report
 from .review_analysis import analyze_reviews, build_insights, sanitize_review_text
 from .support_programs import NormalizedProgram, SupportProfile, select_candidates
@@ -27,6 +27,7 @@ from .schemas import (
     ComparisonResponse,
     EvidenceArea,
     EvidenceResponse,
+    IndustryOption,
     MetricAreaValue,
     RecommendationCandidate,
     RecommendationReason,
@@ -58,6 +59,18 @@ def data_status(session: Session, code: str, quarter: str = "20254") -> dict[str
         "sales": session.get(SalesMetric, (quarter, code, INDUSTRY_CODE)) is not None,
         "population": session.get(PopulationMetric, (quarter, code)) is not None,
     }
+
+
+def industry_name(session: Session, industry_code: str, quarter: str) -> str | None:
+    store = session.scalar(select(StoreMetric.industry_name).where(
+        StoreMetric.quarter_code == quarter,
+        StoreMetric.industry_code == industry_code,
+    ).limit(1))
+    sales = session.scalar(select(SalesMetric.industry_name).where(
+        SalesMetric.quarter_code == quarter,
+        SalesMetric.industry_code == industry_code,
+    ).limit(1))
+    return store or sales
 
 
 def area_out(session: Session, area: TradeArea, status: dict[str, bool] | None = None) -> TradeAreaOut:
@@ -152,6 +165,7 @@ def health() -> dict[str, str]:
 @app.get("/api/v1/trade-areas", response_model=list[TradeAreaOut])
 def list_trade_areas(
     district: str | None = Query(default=None),
+    industry: str = Query(default=INDUSTRY_CODE),
     session: Session = Depends(get_db),
 ) -> list[TradeAreaOut]:
     query = select(TradeArea).order_by(TradeArea.district_name, TradeArea.name)
@@ -161,12 +175,12 @@ def list_trade_areas(
     codes = {area.code for area in areas}
     store_codes = set(session.scalars(select(StoreMetric.trade_area_code).where(
         StoreMetric.quarter_code == "20254",
-        StoreMetric.industry_code == INDUSTRY_CODE,
+        StoreMetric.industry_code == industry,
         StoreMetric.trade_area_code.in_(codes),
     )).all())
     sales_codes = set(session.scalars(select(SalesMetric.trade_area_code).where(
         SalesMetric.quarter_code == "20254",
-        SalesMetric.industry_code == INDUSTRY_CODE,
+        SalesMetric.industry_code == industry,
         SalesMetric.trade_area_code.in_(codes),
     )).all())
     population_codes = set(session.scalars(select(PopulationMetric.trade_area_code).where(
@@ -178,6 +192,22 @@ def list_trade_areas(
         "sales": area.code in sales_codes,
         "population": area.code in population_codes,
     }) for area in areas]
+
+
+@app.get("/api/v1/industries", response_model=list[IndustryOption])
+def list_industries(
+    quarter: str = Query(default="20254"),
+    session: Session = Depends(get_db),
+) -> list[IndustryOption]:
+    if quarter not in SUPPORTED_QUARTERS:
+        raise HTTPException(400, "지원하지 않는 기준분기입니다.")
+    rows = session.execute(
+        select(StoreMetric.industry_code, StoreMetric.industry_name)
+        .where(StoreMetric.quarter_code == quarter)
+        .distinct()
+        .order_by(StoreMetric.industry_name)
+    ).all()
+    return [IndustryOption(code=code, name=name) for code, name in rows]
 
 
 @app.get("/api/v1/trade-areas/{code}", response_model=TradeAreaOut)
@@ -192,19 +222,30 @@ def get_trade_area(code: str, session: Session = Depends(get_db)) -> TradeAreaOu
 def get_trade_area_map_insight(
     code: str,
     quarter: str = Query(default="20254"),
+    industry: str = Query(default=INDUSTRY_CODE),
     session: Session = Depends(get_db),
 ) -> AreaMapInsightResponse:
     """Return only the official, trade-area-level metrics usable beside the map."""
     if quarter not in SUPPORTED_QUARTERS:
         raise HTTPException(400, "지원하지 않는 기준분기입니다.")
-    area, metrics = get_area_metrics(session, code, quarter, INDUSTRY_CODE)
+    selected_industry_name = industry_name(session, industry, quarter)
+    if not selected_industry_name:
+        raise HTTPException(400, "해당 업종의 검증된 통계가 없습니다.")
+    area, metrics = get_area_metrics(session, code, quarter, industry)
     if not area:
         raise HTTPException(404, "상권을 찾을 수 없습니다.")
 
     metric_by_key = {metric.metric_key: metric for metric in metrics}
 
+    peer_areas = session.scalars(select(TradeArea).where(TradeArea.district_name == area.district_name)).all()
+    peer_metrics = [
+        {metric.metric_key: metric for metric in get_area_metrics(session, peer.code, quarter, industry)[1]}
+        for peer in peer_areas
+    ]
+
     def metric_out(key: str) -> AreaInsightMetric:
         metric = metric_by_key[key]
+        values = [float(items[key].value) for items in peer_metrics if items[key].status == "available" and items[key].value is not None]
         return AreaInsightMetric(
             metric_key=key,
             label=metric.label,
@@ -212,6 +253,7 @@ def get_trade_area_map_insight(
             status=metric.status,
             value=number(metric.value),
             reason=metric.reason,
+            percentile=percentile(float(metric.value), values) if metric.status == "available" and metric.value is not None and values else None,
         )
 
     population = session.get(PopulationMetric, (quarter, code))
@@ -247,8 +289,10 @@ def get_trade_area_map_insight(
         weekend_sales_ratio=metric_out("weekend_sales_ratio"),
         time_slots=time_slots,
         population_source="서울시 우리마을가게 상권분석서비스 유동인구",
-        sales_source="서울시 우리마을가게 상권분석서비스 카페 매출",
-        notice="표시는 상권 단위 공식 통계입니다. 거리별 유동량·연령대별 유동인구·개별 매물 정보는 이 데이터에 포함되지 않습니다.",
+        sales_source=f"서울시 우리마을가게 상권분석서비스 {selected_industry_name} 매출",
+        comparison_group_label=f"같은 자치구의 {selected_industry_name} 통계 보유 공식 상권",
+        comparison_group_count=len(peer_areas),
+        notice="상대 위치는 같은 자치구의 공식 상권 통계 보유 행과 비교한 값입니다. 임의 반경의 주변 상권, 성공 가능성 또는 창업 추천을 뜻하지 않습니다. 거리별 유동량·연령대별 유동인구·개별 매물 정보는 이 데이터에 포함되지 않습니다.",
     )
 
 

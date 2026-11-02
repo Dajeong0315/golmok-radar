@@ -131,6 +131,8 @@ h1 em { color: var(--teal); font-style: normal; }
 .data-badges span { padding: 4px 7px; border-radius: 4px; font-size: 11px; }
 .data-badges .ok { background: #e7f3ef; color: #146655; }
 .data-badges .missing { background: #f4eee8; color: #8b5e47; }
+.filter-help { margin: -8px 0 16px; color: #697377; font-size: 13px; }
+.map-insight__comparison { margin: 0; padding: 13px 15px; border-left: 3px solid var(--blue); background: #f5f8fb; color: #42565d; font-size: 13px; line-height: 1.55; }
 .panel-state { padding: 30px 20px; color: #697278; }
 .panel-hint { margin: 0; padding: 12px 18px; color: #515b62; background: rgba(0, 113, 227, .06); font-size: 12px; line-height: 1.5; }
 .error-banner { background: #fff0eb; color: #9d341f; border: 1px solid #f3c1b2; padding: 13px 16px; margin-bottom: 16px; }

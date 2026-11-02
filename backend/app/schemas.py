@@ -17,6 +17,11 @@ class TradeAreaOut(BaseModel):
     data_status: dict[str, bool] | None = None
 
 
+class IndustryOption(BaseModel):
+    code: str
+    name: str
+
+
 class MetricAreaValue(BaseModel):
     trade_area_code: str
     status: str
@@ -142,6 +147,7 @@ class AreaInsightMetric(BaseModel):
     status: Literal["available", "unavailable"]
     value: float | None
     reason: str | None = None
+    percentile: float | None = None
 
 
 class AreaInsightTimeSlot(AreaInsightMetric):
@@ -159,6 +165,8 @@ class AreaMapInsightResponse(BaseModel):
     time_slots: list[AreaInsightTimeSlot]
     population_source: str
     sales_source: str
+    comparison_group_label: str
+    comparison_group_count: int
     notice: str
 
 

@@ -6,7 +6,7 @@ import type { TradeArea } from "./types";
 type Props = {
   areas: TradeArea[];
   favorites: Set<string>;
-  onToggleFavorite: (code: string) => void;
+  onSelectArea: (code: string) => void;
   selectedCode?: string;
   showDistrictGuide?: boolean;
 };
@@ -21,7 +21,7 @@ export function detachMapLayers(layers: MapLayer[]) {
   layers.forEach((layer) => layer.setMap(null));
 }
 
-export function KakaoMap({ areas, favorites, onToggleFavorite, selectedCode, showDistrictGuide = false }: Props) {
+export function KakaoMap({ areas, favorites, onSelectArea, selectedCode, showDistrictGuide = false }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const [error, setError] = useState("");
 
@@ -45,13 +45,15 @@ export function KakaoMap({ areas, favorites, onToggleFavorite, selectedCode, sho
           bounds.extend(position);
           const marker = new kakao.maps.Marker({ map, position, title: area.name });
           markers.push(marker);
-          const content = document.createElement("button");
-          content.className = `map-label ${favorites.has(area.code) ? "is-favorite" : ""} ${selectedCode === area.code ? "is-selected" : ""}`;
-          content.textContent = `${favorites.has(area.code) ? "★" : "☆"} ${area.name}`;
-          content.onclick = () => onToggleFavorite(area.code);
-          const overlay = new kakao.maps.CustomOverlay({ map, position, content, yAnchor: 2.2 });
-          overlays.push(overlay);
-          kakao.maps.event.addListener(marker, "click", () => overlay.setMap(map));
+          if (favorites.has(area.code) || selectedCode === area.code) {
+            const content = document.createElement("button");
+            content.className = `map-label ${favorites.has(area.code) ? "is-favorite" : ""} ${selectedCode === area.code ? "is-selected" : ""}`;
+            content.textContent = `${favorites.has(area.code) ? "★ " : ""}${area.name}`;
+            content.onclick = () => onSelectArea(area.code);
+            const overlay = new kakao.maps.CustomOverlay({ map, position, content, yAnchor: 2.2 });
+            overlays.push(overlay);
+          }
+          kakao.maps.event.addListener(marker, "click", () => onSelectArea(area.code));
         });
         if (areas.length === 1) {
           map.setCenter(new kakao.maps.LatLng(areas[0].latitude, areas[0].longitude));
@@ -67,7 +69,7 @@ export function KakaoMap({ areas, favorites, onToggleFavorite, selectedCode, sho
       detachMapLayers(overlays);
       mapContainer.replaceChildren();
     };
-  }, [areas, favorites, onToggleFavorite, selectedCode]);
+  }, [areas, favorites, onSelectArea, selectedCode]);
 
   if (!KAKAO_KEY) {
     return (

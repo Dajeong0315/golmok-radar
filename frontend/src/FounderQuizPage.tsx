@@ -15,10 +15,13 @@ import {
 } from "./founderProfile";
 import { selectAdditionalFundingGuides, selectBankFundingGuides } from "./fundingGuides";
 import { TopNavigation } from "./TopNavigation";
+import { registerAnonymousRecord } from "./anonymousSession";
+import { useAuth } from "./auth";
 
 type Mode = "intro" | "question" | "result";
 
 export function FounderQuizPage() {
+  const { user } = useAuth();
   const existingProfile = loadProfile(localStorage);
   const draft = loadDraft(localStorage);
   const [answers, setAnswers] = useState<Record<string, string>>(existingProfile?.answers || draft);
@@ -39,6 +42,7 @@ export function FounderQuizPage() {
     const next = { ...answers, [current.id]: answerId };
     setAnswers(next);
     localStorage.setItem(DRAFT_KEY, JSON.stringify(next));
+    if (!user) registerAnonymousRecord(localStorage);
   };
 
   const next = () => {
@@ -51,6 +55,7 @@ export function FounderQuizPage() {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(completed));
     localStorage.removeItem(DRAFT_KEY);
     localStorage.removeItem(SKIPPED_KEY);
+    if (!user) registerAnonymousRecord(localStorage);
     setMode("result");
   };
 

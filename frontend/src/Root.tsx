@@ -13,6 +13,7 @@ import { parseRentAreaCode } from "./rentCalculator";
 import { PropertyWorksheetPage } from "./PropertyWorksheetPage";
 import { HomePage } from "./HomePage";
 import { isExplorerHash } from "./routing";
+import { AnonymousSessionNotice } from "./AnonymousSessionNotice";
 
 export default function Root() {
   const [hash, setHash] = useState(window.location.hash);
@@ -33,13 +34,16 @@ export default function Root() {
     return () => cancelAnimationFrame(frame);
   }, [hash]);
 
-  if (hash.startsWith("#compare")) return <ComparisonPage codes={parseComparisonCodes(hash)} />;
-  if (hash.startsWith("#recommendations")) return <RecommendationsPage />;
-  if (hash.startsWith("#rent")) return <RentPage code={parseRentAreaCode(hash)} />;
-  if (hash.startsWith("#worksheet")) return <PropertyWorksheetPage />;
-
-  if (hash.startsWith("#funding")) return <FundingPage code={parseFundingAreaCode(hash)} />;
-  if (hash.startsWith("#reviews")) return <ReviewInsightsPage />;
+  let page;
+  if (hash.startsWith("#compare")) page = <ComparisonPage codes={parseComparisonCodes(hash)} />;
+  else if (hash.startsWith("#recommendations")) page = <RecommendationsPage />;
+  else if (hash.startsWith("#rent")) page = <RentPage code={parseRentAreaCode(hash)} />;
+  else if (hash.startsWith("#worksheet")) page = <PropertyWorksheetPage />;
+  else if (hash.startsWith("#funding")) page = <FundingPage code={parseFundingAreaCode(hash)} />;
+  else if (hash.startsWith("#reviews")) page = <ReviewInsightsPage />;
+  else {
   const shouldShowQuiz = hash.startsWith("#quiz");
-  return shouldShowQuiz ? <FounderQuizPage /> : isExplorerHash(hash) ? <App /> : <HomePage />;
+    page = shouldShowQuiz ? <FounderQuizPage /> : isExplorerHash(hash) ? <App /> : <HomePage />;
+  }
+  return <><AnonymousSessionNotice />{page}</>;
 }

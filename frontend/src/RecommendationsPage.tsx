@@ -5,9 +5,11 @@ import { FAVORITES_KEY, loadFavorites } from "./favorites";
 import { loadProfile } from "./founderProfile";
 import type { AreaReportResponse, RecommendationResponse } from "./types";
 import { TopNavigation } from "./TopNavigation";
+import { useAuth } from "./auth";
 
 export function RecommendationsPage() {
-  const profile = loadProfile(localStorage);
+  const { user } = useAuth();
+  const profile = loadProfile(localStorage, user?.id ?? null);
   const [data, setData] = useState<RecommendationResponse | null>(null);
   const [reports, setReports] = useState<Record<string, AreaReportResponse>>({});
   const [error, setError] = useState("");
@@ -37,7 +39,7 @@ export function RecommendationsPage() {
 
   const codes = data.candidates.map((candidate) => candidate.trade_area.code);
   const saveAndExplore = () => {
-    const current = loadFavorites(localStorage);
+    const current = loadFavorites(localStorage, user?.id ?? null);
     localStorage.setItem(FAVORITES_KEY, JSON.stringify([...new Set([...current, ...codes])]));
     window.location.hash = `compare?codes=${codes.join(",")}`;
   };

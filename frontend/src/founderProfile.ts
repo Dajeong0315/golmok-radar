@@ -1,4 +1,5 @@
 export const PROFILE_KEY = "golmok-radar:founder-profile:v2";
+export const PROFILE_HISTORY_KEY = "golmok-radar:founder-profile-history:v1";
 export const DRAFT_KEY = "golmok-radar:founder-profile-draft:v2";
 export const SKIPPED_KEY = "golmok-radar:founder-profile-skipped:v2";
 export const PROFILE_VERSION = 2;
@@ -124,11 +125,15 @@ export function sanitizeAnswers(value: unknown): Record<string, string> {
   }));
 }
 
-export function loadDraft(storage: Storage): Record<string, string> {
+export function loadDraft(storage: Storage, userId?: string | null): Record<string, string> {
+  if (!mayReadLocalData(storage, userId)) return {};
   try { return sanitizeAnswers(JSON.parse(storage.getItem(DRAFT_KEY) || "{}")); } catch { return {}; }
 }
 
-export function loadProfile(storage: Storage): FounderProfile | null {
+export function loadProfile(storage: Storage, userId?: string | null): FounderProfile | null {
+  if (!mayReadLocalData(storage, userId)) return null;
+  const history = loadProfiles(storage, userId);
+  if (history.length) return history[0];
   try {
     const value = JSON.parse(storage.getItem(PROFILE_KEY) || "null") as Partial<FounderProfile> | null;
     if (!value || value.version !== PROFILE_VERSION) return null;
@@ -136,6 +141,26 @@ export function loadProfile(storage: Storage): FounderProfile | null {
     if (Object.keys(answers).length !== FOUNDER_QUESTIONS.length) return null;
     return { version: PROFILE_VERSION, completedAt: String(value.completedAt || ""), answers };
   } catch { return null; }
+}
+
+export function loadProfiles(storage: Storage, userId?: string | null): FounderProfile[] {
+  if (!mayReadLocalData(storage, userId)) return [];
+  try {
+    const saved = JSON.parse(storage.getItem(PROFILE_HISTORY_KEY) || "[]");
+    if (!Array.isArray(saved)) return [];
+    return saved.flatMap((value) => {
+      if (!value || value.version !== PROFILE_VERSION) return [];
+      const answers = sanitizeAnswers(value.answers);
+      return Object.keys(answers).length === FOUNDER_QUESTIONS.length ? [{ version: PROFILE_VERSION, completedAt: String(value.completedAt || ""), answers }] : [];
+    }).sort((a, b) => b.completedAt.localeCompare(a.completedAt));
+  } catch { return []; }
+}
+
+export function saveProfile(storage: Storage, profile: FounderProfile): void {
+  const history = loadProfiles(storage);
+  const existing = history.length ? [] : [loadProfile(storage)].filter((item): item is FounderProfile => item !== null);
+  storage.setItem(PROFILE_HISTORY_KEY, JSON.stringify([profile, ...history, ...existing]));
+  storage.setItem(PROFILE_KEY, JSON.stringify(profile));
 }
 
 export function answerLabel(questionId: string, answerId: string): string {
@@ -163,3 +188,5 @@ export function profileTitleLines(answers: Record<string, string>): [string, str
   const [firstLine, secondLine] = demand[answers.demand] || ["방향을", "찾아가는"];
   return [firstLine, `${secondLine} ${operation[answers.operation] || "예비 사장님"}`];
 }
+import { mayReadLocalData } from "./favorites";
+

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { fetchAccountWorksheets, mergeWorksheets, removeAccountWorksheet, saveAccountWorksheet } from "./accountStore";
 import { useAuth } from "./auth";
-import { mayImportLocalData } from "./favorites";
+import { mayImportLocalData, mayReadLocalData } from "./favorites";
 import { calculatePropertyWorksheet, CHECK_ITEMS, createWorksheet, loadPropertyWorksheets, savePropertyWorksheets, type AreaUnit, type CheckStatus, type PropertyWorksheet, type VatStatus } from "./propertyWorksheet";
 import { TopNavigation } from "./TopNavigation";
 import { registerAnonymousRecord } from "./anonymousSession";
@@ -19,15 +19,19 @@ function numberValue(value: string): number | null {
 
 export function PropertyWorksheetPage() {
   const { client, user } = useAuth();
-  const [worksheets, setWorksheets] = useState<PropertyWorksheet[]>(() => loadPropertyWorksheets(localStorage));
+  const requestedWorksheetId = new URLSearchParams(window.location.hash.split("?", 2)[1] || "").get("id");
+  const [worksheets, setWorksheets] = useState<PropertyWorksheet[]>(() => loadPropertyWorksheets(localStorage, user?.id ?? null));
   const [activeId, setActiveId] = useState<string>(() => worksheets[0]?.id || "");
   const [syncMessage, setSyncMessage] = useState("");
   const initializedUser = useRef<string | null>(null);
 
   useEffect(() => {
-    savePropertyWorksheets(localStorage, worksheets);
-    if (!user && worksheets.length) registerAnonymousRecord(localStorage);
-  }, [user, worksheets]);
+    if (!user && !mayReadLocalData(localStorage, null)) {
+      setWorksheets([]);
+      setActiveId("");
+      setSyncMessage("");
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     if (!client || !user) {
@@ -40,23 +44,13 @@ export function PropertyWorksheetPage() {
       const local = mayImportLocalData(localStorage, user.id) ? worksheets : [];
       const merged = mergeWorksheets(local, remote);
       setWorksheets(merged);
-      setActiveId((current) => current && merged.some((item) => item.id === current) ? current : merged[0]?.id || "");
+      setActiveId((current) => requestedWorksheetId && merged.some((item) => item.id === requestedWorksheetId) ? requestedWorksheetId : current && merged.some((item) => item.id === current) ? current : merged[0]?.id || "");
       initializedUser.current = user.id;
-      await Promise.all(merged.filter((item) => !remote.some((saved) => saved.id === item.id && saved.updatedAt >= item.updatedAt)).map((item) => saveAccountWorksheet(client, user.id, item)));
-      if (activeRequest) setSyncMessage("카카오 계정에 매물 기록을 동기화했습니다.");
     }).catch((reason: Error) => {
       if (activeRequest) setSyncMessage(`계정 동기화에 실패했습니다: ${reason.message}`);
     });
     return () => { activeRequest = false; };
-  }, [client, user?.id]);
-
-  useEffect(() => {
-    if (!client || !user || initializedUser.current !== user.id) return;
-    const timer = window.setTimeout(() => {
-      void Promise.all(worksheets.map((item) => saveAccountWorksheet(client, user.id, item))).catch((reason: Error) => setSyncMessage(`계정 저장에 실패했습니다: ${reason.message}`));
-    }, 500);
-    return () => window.clearTimeout(timer);
-  }, [client, user?.id, worksheets]);
+  }, [client, requestedWorksheetId, user?.id]);
 
   const active = worksheets.find((item) => item.id === activeId) || null;
   const calculation = useMemo(() => active ? calculatePropertyWorksheet(active) : null, [active]);
@@ -69,10 +63,29 @@ export function PropertyWorksheetPage() {
     if (!active) return;
     setWorksheets((current) => current.map((item) => item.id === active.id ? { ...item, ...patch, updatedAt: new Date().toISOString() } : item));
   };
+  const save = async () => {
+    if (!worksheets.length) return;
+    savePropertyWorksheets(localStorage, worksheets);
+    if (!user) {
+      registerAnonymousRecord(localStorage);
+      setSyncMessage("이 브라우저에 매물 워크시트를 저장했습니다. 로그인하면 계정에도 보관할 수 있어요.");
+      return;
+    }
+    if (!client || !active) return;
+    setSyncMessage("저장 중입니다.");
+    try {
+      await saveAccountWorksheet(client, user.id, active);
+      setSyncMessage("카카오 계정에 저장했습니다.");
+    } catch (reason) {
+      setSyncMessage(`계정 저장에 실패했습니다: ${reason instanceof Error ? reason.message : "다시 시도해 주세요."}`);
+    }
+  };
   const remove = () => {
     if (!active) return;
     if (client && user) void removeAccountWorksheet(client, user.id, active.id).catch((reason: Error) => setSyncMessage(`계정 삭제 동기화에 실패했습니다: ${reason.message}`));
-    setWorksheets((current) => current.filter((item) => item.id !== active.id));
+    const next = worksheets.filter((item) => item.id !== active.id);
+    setWorksheets(next);
+    savePropertyWorksheets(localStorage, next);
     setActiveId(worksheets.find((item) => item.id !== active.id)?.id || "");
   };
 
@@ -84,18 +97,18 @@ export function PropertyWorksheetPage() {
 
     <section className="worksheet-shell">
       <aside className="worksheet-list"><div><p className="eyebrow">내 매물 후보</p><button className="worksheet-add" onClick={addWorksheet}>+ 매물 후보 추가</button></div>{worksheets.length ? <div className="worksheet-tabs">{worksheets.map((item, index) => <button className={item.id === activeId ? "active" : ""} key={item.id} onClick={() => setActiveId(item.id)}><small>후보 {index + 1}</small><strong>{item.alias || "별칭 입력 전"}</strong></button>)}</div> : <p className="worksheet-empty">아직 저장한 매물 후보가 없습니다. 직접 확인한 정보를 넣어 시작하세요.</p>}</aside>
-      {!active || !calculation ? <section className="worksheet-empty-main"><h2>매물 후보를 추가해 주세요.</h2><p>주소 자동 조회나 외부 매물 수집 없이, 직접 확인한 정보만 기록합니다.</p><button className="primary-action" onClick={addWorksheet}>첫 매물 후보 추가 <span>→</span></button></section> : <WorksheetEditor worksheet={active} calculation={calculation} onUpdate={update} onRemove={remove} />}
+      {!active || !calculation ? <section className="worksheet-empty-main"><h2>매물 후보를 추가해 주세요.</h2><p>주소 자동 조회나 외부 매물 수집 없이, 직접 확인한 정보만 기록합니다.</p><button className="primary-action" onClick={addWorksheet}>첫 매물 후보 추가 <span>→</span></button></section> : <WorksheetEditor worksheet={active} calculation={calculation} onUpdate={update} onRemove={remove} onSave={() => void save()} />}
     </section>
   </main>;
 }
 
-function WorksheetEditor({ worksheet, calculation, onUpdate, onRemove }: { worksheet: PropertyWorksheet; calculation: ReturnType<typeof calculatePropertyWorksheet>; onUpdate: (patch: Partial<PropertyWorksheet>) => void; onRemove: () => void }) {
+function WorksheetEditor({ worksheet, calculation, onUpdate, onRemove, onSave }: { worksheet: PropertyWorksheet; calculation: ReturnType<typeof calculatePropertyWorksheet>; onUpdate: (patch: Partial<PropertyWorksheet>) => void; onRemove: () => void; onSave: () => void }) {
   const updateMoney = (key: "depositWon" | "monthlyRentWon" | "maintenanceFeeWon" | "premiumWon" | "brokerageFeeWon" | "initialCostWon" | "expectedMonthlySalesWon", value: string) => onUpdate({ [key]: numberValue(value) } as Partial<PropertyWorksheet>);
   const addObservation = () => onUpdate({ observations: [...worksheet.observations, { id: crypto.randomUUID(), date: "", dayType: "weekday", timeBand: "morning" }] });
   const updateObservation = (id: string, patch: Partial<PropertyWorksheet["observations"][number]>) => onUpdate({ observations: worksheet.observations.map((item) => item.id === id ? { ...item, ...patch } : item) });
   const removeObservation = (id: string) => onUpdate({ observations: worksheet.observations.filter((item) => item.id !== id) });
   return <section className="worksheet-editor">
-    <div className="worksheet-heading"><div><p className="eyebrow">직접 입력한 매물 정보</p><h2>{worksheet.alias || "새 매물 후보"}</h2><p>마지막 수정 {new Date(worksheet.updatedAt).toLocaleString("ko-KR")}</p></div><button className="worksheet-delete" onClick={onRemove}>이 후보 삭제</button></div>
+    <div className="worksheet-heading"><div><p className="eyebrow">직접 입력한 매물 정보</p><h2>{worksheet.alias || "새 매물 후보"}</h2><p>마지막 수정 {new Date(worksheet.updatedAt).toLocaleString("ko-KR")}</p></div><div className="worksheet-actions"><button className="worksheet-save" onClick={onSave}>저장하기</button><button className="worksheet-delete" onClick={onRemove}>이 후보 삭제</button></div></div>
     <div className="worksheet-form-grid">
       <Field label="매물 별칭"><input value={worksheet.alias} onChange={(event) => onUpdate({ alias: event.target.value })} placeholder="예: 성수 A 코너 1층" /></Field>
       <Field label="주소 또는 위치 설명"><input value={worksheet.locationDescription} onChange={(event) => onUpdate({ locationDescription: event.target.value })} placeholder="예: OO역 2번 출구 뒤편" /></Field>

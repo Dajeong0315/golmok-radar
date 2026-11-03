@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchAreaMapInsight, fetchIndustries, fetchTradeAreas } from "./api";
 import { fetchAccountFavorites, removeAccountFavorite, saveAccountFavorite } from "./accountStore";
 import { AreaMapInsight } from "./AreaMapInsight";
-import { FAVORITES_KEY, loadFavorites, mayImportLocalData, mergeFavorites, sanitizeFavorites, toggleComparison, toggleFavorite } from "./favorites";
+import { FAVORITES_KEY, loadFavorites, mayImportLocalData, mayReadLocalData, mergeFavorites, sanitizeFavorites, toggleComparison, toggleFavorite } from "./favorites";
 import { useAuth } from "./auth";
 import { registerAnonymousRecord } from "./anonymousSession";
 import { KakaoMap } from "./KakaoMap";
@@ -17,14 +17,14 @@ export default function App() {
   const [areas, setAreas] = useState<TradeArea[]>([]);
   const [industries, setIndustries] = useState<IndustryOption[]>([]);
   const [industry, setIndustry] = useState("CS100010");
-  const [favorites, setFavorites] = useState<string[]>(() => loadFavorites(localStorage));
+  const [favorites, setFavorites] = useState<string[]>(() => loadFavorites(localStorage, user?.id ?? null));
   const [selected, setSelected] = useState<string[]>([]);
   const [district, setDistrict] = useState("전체");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [focusedMapCode, setFocusedMapCode] = useState("");
+  const [focusedMapCode, setFocusedMapCode] = useState(() => new URLSearchParams(window.location.hash.split("?", 2)[1] || "").get("focus") || "");
   const [mapInsight, setMapInsight] = useState<AreaMapInsightResponse | null>(null);
   const [mapInsightLoading, setMapInsightLoading] = useState(false);
   const [mapInsightError, setMapInsightError] = useState("");
@@ -53,6 +53,11 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!user && !mayReadLocalData(localStorage, null)) {
+      setFavorites([]);
+      setSelected([]);
+      return;
+    }
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
     if (!user && favorites.length) registerAnonymousRecord(localStorage);
     setSelected((current) => current.filter((code) => favorites.includes(code)));

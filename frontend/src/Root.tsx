@@ -12,8 +12,9 @@ import { ReviewInsightsPage } from "./ReviewInsightsPage";
 import { parseRentAreaCode } from "./rentCalculator";
 import { PropertyWorksheetPage } from "./PropertyWorksheetPage";
 import { HomePage } from "./HomePage";
-import { isExplorerHash } from "./routing";
+import { isExplorerHash, isQuizRestartHash, quizRecordId } from "./routing";
 import { AnonymousSessionNotice } from "./AnonymousSessionNotice";
+import { MyPage } from "./MyPage";
 
 export default function Root() {
   const [hash, setHash] = useState(window.location.hash);
@@ -41,9 +42,10 @@ export default function Root() {
   else if (hash.startsWith("#worksheet")) page = <PropertyWorksheetPage />;
   else if (hash.startsWith("#funding")) page = <FundingPage code={parseFundingAreaCode(hash)} />;
   else if (hash.startsWith("#reviews")) page = <ReviewInsightsPage />;
+  else if (hash.startsWith("#mypage")) page = <MyPage />;
   else {
   const shouldShowQuiz = hash.startsWith("#quiz");
-    page = shouldShowQuiz ? <FounderQuizPage /> : isExplorerHash(hash) ? <App /> : <HomePage />;
+    page = shouldShowQuiz ? <FounderQuizPage restart={isQuizRestartHash(hash)} recordId={quizRecordId(hash)} /> : isExplorerHash(hash) ? <App /> : <HomePage />;
   }
   return <><AnonymousSessionNotice />{page}</>;
 }

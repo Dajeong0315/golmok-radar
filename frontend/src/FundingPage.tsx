@@ -5,9 +5,11 @@ import { loadProfile } from "./founderProfile";
 import { selectAdditionalFundingGuides, selectBankFundingGuides, type FundingStage } from "./fundingGuides";
 import type { SupportProgramResponse, TradeArea } from "./types";
 import { TopNavigation } from "./TopNavigation";
+import { useAuth } from "./auth";
 
 export function FundingPage({ code }: { code: string }) {
-  const profile = loadProfile(localStorage);
+  const { user } = useAuth();
+  const profile = loadProfile(localStorage, user?.id ?? null);
   const [stage, setStage] = useState<FundingStage>("pre_startup");
   const [age, setAge] = useState(30);
   const [years, setYears] = useState(1);

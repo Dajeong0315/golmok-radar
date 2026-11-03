@@ -1,0 +1,70 @@
+import { useEffect, useState } from "react";
+
+import { fetchTradeAreas } from "./api";
+import { fetchAccountFavorites, fetchAccountRecords, fetchAccountWorksheets, removeAccountRecord, saveAccountRecord, saveAccountWorksheet, type AccountRecord } from "./accountStore";
+import { useAuth } from "./auth";
+import { TopNavigation } from "./TopNavigation";
+import type { PropertyWorksheet } from "./propertyWorksheet";
+
+export function MyPage() {
+  const { client, configured, loading, user, signInWithKakao } = useAuth();
+  const [records, setRecords] = useState<AccountRecord[]>([]);
+  const [worksheets, setWorksheets] = useState<PropertyWorksheet[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [areaNames, setAreaNames] = useState<Record<string, string>>({});
+  const [message, setMessage] = useState("");
+
+  const reload = () => {
+    if (!client || !user) return;
+    setMessage("기록을 불러오는 중입니다.");
+    Promise.all([fetchAccountRecords(client, user.id), fetchAccountWorksheets(client, user.id), fetchAccountFavorites(client, user.id)])
+      .then(([nextRecords, nextWorksheets, nextFavorites]) => {
+        setRecords(nextRecords);
+        setWorksheets(nextWorksheets);
+        setFavorites(nextFavorites);
+        setMessage("");
+      })
+      .catch((error: Error) => setMessage(`기록을 불러오지 못했습니다: ${error.message}`));
+  };
+
+  useEffect(reload, [client, user?.id]);
+  useEffect(() => {
+    if (!favorites.length) return;
+    const controller = new AbortController();
+    void fetchTradeAreas("CS100010", controller.signal)
+      .then((areas) => setAreaNames(Object.fromEntries(areas.map((area) => [area.code, area.name]))))
+      .catch(() => setAreaNames({}));
+    return () => controller.abort();
+  }, [favorites.join(",")]);
+
+  if (loading) return <main className="mypage-state">계정 정보를 확인하는 중입니다.</main>;
+  if (!configured || !user) return <main className="mypage-state"><header className="site-header"><a className="brand" href="#home">골목 레이더</a><TopNavigation /></header><section><p className="eyebrow">MY RECORDS</p><h1>내 기록은 로그인 후에<br />안전하게 관리할 수 있어요.</h1><p>테스트 결과, 관심 상권, 매물 워크시트는 카카오 로그인 후 내 계정에서만 확인합니다.</p>{configured ? <button className="primary-action" onClick={() => void signInWithKakao()}>카카오로 로그인하기</button> : <p>현재 로그인 설정을 준비 중입니다.</p>}</section></main>;
+
+  const renameRecord = async (record: AccountRecord) => {
+    const title = window.prompt("기록 이름", record.title)?.trim();
+    if (!title || !client) return;
+    await saveAccountRecord(client, user.id, { ...record, title, updatedAt: new Date().toISOString() });
+    reload();
+  };
+  const deleteRecord = async (record: AccountRecord) => {
+    if (!client || !window.confirm(`‘${record.title}’ 기록을 삭제할까요?`)) return;
+    await removeAccountRecord(client, user.id, record.recordId);
+    reload();
+  };
+  const renameWorksheet = async (worksheet: PropertyWorksheet) => {
+    const alias = window.prompt("매물 기록 이름", worksheet.alias)?.trim();
+    if (alias === undefined || !client) return;
+    await saveAccountWorksheet(client, user.id, { ...worksheet, alias, updatedAt: new Date().toISOString() });
+    reload();
+  };
+
+  const profileRecords = records.filter((record) => record.kind === "founder_profile");
+  return <main className="mypage">
+    <header className="site-header"><a className="brand" href="#home">골목 레이더</a><TopNavigation /></header>
+    <section className="mypage-hero"><p className="eyebrow">MY RECORDS</p><h1>{user.user_metadata?.nickname || "나"}의 준비 기록</h1><p>저장한 시점의 결과와 입력값을 관리할 수 있어요.</p><div><a href="#explore">상권 탐색하기</a></div></section>
+    {message ? <p className="selection-notice">{message}</p> : null}
+    <section className="mypage-section"><div className="section-heading"><div><p className="eyebrow">테스트 결과</p><h2>내 창업 조건</h2></div><a className="primary-action mypage-retest" href="#quiz?restart=1">테스트 다시 해보기</a></div>{profileRecords.length ? <div className="mypage-grid">{profileRecords.map((record) => <article key={record.recordId}><small>{new Date(record.updatedAt).toLocaleDateString("ko-KR")}</small><a className="mypage-card-title" href={`#quiz?record=${encodeURIComponent(record.recordId)}`}>{record.title}</a><div className="mypage-card-actions"><button onClick={() => void renameRecord(record)}>이름 변경</button><button onClick={() => void deleteRecord(record)}>삭제</button></div></article>)}</div> : <p className="empty-favorites">아직 계정에 저장된 테스트 결과가 없습니다. 로그인 전 결과는 다음 로그인 때 자동 저장됩니다.</p>}</section>
+    <section className="mypage-section"><div className="section-heading"><div><p className="eyebrow">관심 상권 모음</p><h2>관심 상권 모음</h2></div><a href="#explore">상권 더 찾기</a></div>{favorites.length ? <div className="mypage-grid">{favorites.map((code) => <a className="mypage-card-link" key={code} href={`#explore?focus=${encodeURIComponent(code)}`}><small>공식 상권</small><strong>{areaNames[code] || "상권 정보 불러오는 중"}</strong><span>{areaNames[code] ? "상권 정보 보기 →" : code}</span></a>)}</div> : <p className="empty-favorites">저장한 상권이 없습니다.</p>}</section>
+    <section className="mypage-section"><div className="section-heading"><div><p className="eyebrow">매물 워크시트</p><h2>매물 워크시트</h2></div><a href="#worksheet">매물 기록하기</a></div>{worksheets.length ? <div className="mypage-grid">{worksheets.map((worksheet) => <article key={worksheet.id}><small>마지막 수정 {new Date(worksheet.updatedAt).toLocaleDateString("ko-KR")}</small><a className="mypage-card-title" href={`#worksheet?id=${encodeURIComponent(worksheet.id)}`}>{worksheet.alias || "이름 없는 매물 후보"}</a><div className="mypage-card-actions"><button onClick={() => void renameWorksheet(worksheet)}>이름 변경</button><a href={`#worksheet?id=${encodeURIComponent(worksheet.id)}`}>내용 보기</a></div></article>)}</div> : <p className="empty-favorites">저장한 매물 워크시트가 없습니다.</p>}</section>
+  </main>;
+}

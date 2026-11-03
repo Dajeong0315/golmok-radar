@@ -143,7 +143,8 @@ export function parsePropertyWorksheet(value: unknown): PropertyWorksheet | null
   };
 }
 
-export function loadPropertyWorksheets(storage: Pick<Storage, "getItem">): PropertyWorksheet[] {
+export function loadPropertyWorksheets(storage: Pick<Storage, "getItem">, userId?: string | null): PropertyWorksheet[] {
+  if (!mayReadLocalData(storage, userId)) return [];
   try {
     const parsed = JSON.parse(storage.getItem(PROPERTY_WORKSHEETS_KEY) || "[]");
     return Array.isArray(parsed) ? parsed.map(parsePropertyWorksheet).filter((item): item is PropertyWorksheet => item !== null) : [];
@@ -186,3 +187,5 @@ export function calculatePropertyWorksheet(worksheet: PropertyWorksheet): Worksh
         : { status: "available" as const, value: Math.round((monthlySpaceCost.value! / worksheet.expectedMonthlySalesWon) * 1000) / 10, reason: null };
   return { initialInvestment, monthlySpaceCost, monthlyCostPerSqm, spaceCostToSalesRatio };
 }
+import { mayReadLocalData } from "./favorites";
+

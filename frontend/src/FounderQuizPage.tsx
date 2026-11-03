@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 
 import {
   answerDescription,
@@ -7,26 +7,63 @@ import {
   FOUNDER_QUESTIONS,
   loadDraft,
   loadProfile,
-  PROFILE_KEY,
   PROFILE_VERSION,
   profileTitleLines,
   SKIPPED_KEY,
+  saveProfile,
+  sanitizeAnswers,
   type FounderProfile,
 } from "./founderProfile";
 import { selectAdditionalFundingGuides, selectBankFundingGuides } from "./fundingGuides";
 import { TopNavigation } from "./TopNavigation";
 import { registerAnonymousRecord } from "./anonymousSession";
 import { useAuth } from "./auth";
+import { fetchAccountRecords, saveAccountRecord } from "./accountStore";
+import { mayReadLocalData } from "./favorites";
 
 type Mode = "intro" | "question" | "result";
 
-export function FounderQuizPage() {
-  const { user } = useAuth();
-  const existingProfile = loadProfile(localStorage);
-  const draft = loadDraft(localStorage);
+export function FounderQuizPage({ restart = false, recordId = null }: { restart?: boolean; recordId?: string | null }) {
+  const { client, user } = useAuth();
+  const [openedProfile, setOpenedProfile] = useState<FounderProfile | null>(null);
+  const existingProfile = restart ? null : openedProfile || loadProfile(localStorage, user?.id ?? null);
+  const draft = restart ? {} : loadDraft(localStorage, user?.id ?? null);
   const [answers, setAnswers] = useState<Record<string, string>>(existingProfile?.answers || draft);
   const [step, setStep] = useState(Math.min(Object.keys(draft).length, FOUNDER_QUESTIONS.length - 1));
   const [mode, setMode] = useState<Mode>(existingProfile ? "result" : Object.keys(draft).length ? "question" : "intro");
+
+  useEffect(() => {
+    if (!user && !mayReadLocalData(localStorage, null)) {
+      setAnswers({});
+      setStep(0);
+      setMode("intro");
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!restart) return;
+    setAnswers({});
+    setStep(0);
+    setMode("question");
+  }, [restart]);
+
+  useEffect(() => {
+    if (restart || !recordId || !client || !user) {
+      setOpenedProfile(null);
+      return;
+    }
+    void fetchAccountRecords(client, user.id, "founder_profile").then((records) => {
+      const record = records.find((item) => item.recordId === recordId);
+      const payload = record?.payload as Partial<FounderProfile> | undefined;
+      const answers = sanitizeAnswers(payload?.answers);
+      if (!record || payload?.version !== PROFILE_VERSION || Object.keys(answers).length !== FOUNDER_QUESTIONS.length) return;
+      const restored = { version: PROFILE_VERSION, completedAt: String(payload.completedAt || record.createdAt), answers };
+      setOpenedProfile(restored);
+      setAnswers(restored.answers);
+      setStep(0);
+      setMode("result");
+    }).catch(() => setOpenedProfile(null));
+  }, [client, recordId, restart, user?.id]);
 
   const current = FOUNDER_QUESTIONS[step];
   const selected = answers[current?.id];
@@ -52,15 +89,15 @@ export function FounderQuizPage() {
       return;
     }
     const completed: FounderProfile = { version: PROFILE_VERSION, completedAt: new Date().toISOString(), answers };
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(completed));
+    saveProfile(localStorage, completed);
     localStorage.removeItem(DRAFT_KEY);
     localStorage.removeItem(SKIPPED_KEY);
     if (!user) registerAnonymousRecord(localStorage);
+    if (client && user) void saveAccountRecord(client, user.id, { recordId: crypto.randomUUID(), kind: "founder_profile", title: "창업 성향 테스트 결과", payload: completed, schemaVersion: PROFILE_VERSION, createdAt: completed.completedAt, updatedAt: completed.completedAt }).catch(() => undefined);
     setMode("result");
   };
 
   const startAgain = () => {
-    localStorage.removeItem(PROFILE_KEY);
     localStorage.removeItem(DRAFT_KEY);
     setAnswers({});
     setStep(0);

@@ -225,10 +225,10 @@ h1 em { color: var(--teal); font-style: normal; }
 .primary-action:disabled { cursor: not-allowed; background: #aeb3b1; }
 .primary-action span { font-size: 20px; }
 .text-action { padding: 8px 0; border: 0; border-bottom: 1px solid currentColor; color: inherit; background: transparent; font-weight: 700; }
-.quiz-intro { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(260px, .65fr); padding: clamp(24px, 5vw, 72px); background: var(--navy); color: white; }
+.quiz-intro { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(260px, .65fr); padding: clamp(24px, 5vw, 72px); background: var(--navy); color: white; }
 .quiz-intro .quiz-brand { position: absolute; }
 .quiz-intro .brand-mark { color: var(--navy); background: #f4a47e; }
-.quiz-intro__copy { align-self: center; padding: 110px clamp(0px, 5vw, 80px) 60px 0; }
+.quiz-intro__copy { width: min(100%, 840px); justify-self: start; align-self: center; padding: 110px clamp(0px, 5vw, 80px) 60px 0; }
 .quiz-intro__copy .eyebrow { color: #f4a47e; }
 .quiz-intro__copy h1 { max-width: 1000px; font-size: clamp(47px, 7.2vw, 104px); }
 .quiz-intro__copy h1 em { color: #f4a47e; }
@@ -529,6 +529,7 @@ h1 em { color: var(--teal); font-style: normal; }
 .anonymous-notice--urgent { border-color: #f2c66b; background: #fff9e9; color: #76500b; }
 .anonymous-notice--expired { border-color: #dce3eb; background: #fff; color: #566574; }
 .account-control__hint { display: block; max-width: 190px; margin-top: 4px; color: #6a7784; font-size: 10px; line-height: 1.35; }
+.mypage { min-height:100vh; background:#fbfcfe; }.mypage-hero,.mypage-section,.mypage-state>section { max-width:1080px; margin:0 auto; padding:64px 28px; }.mypage-hero { border-bottom:1px solid #e4ebf2; }.mypage-hero h1,.mypage-state h1 { font-size:clamp(34px,5vw,56px); letter-spacing:-.06em; }.mypage-hero>div { display:flex; gap:18px; align-items:center; }.mypage-hero a:not(.primary-action),.mypage-section a { color:#0671d8; font-weight:700; text-decoration:none; }.mypage-section { padding-top:38px; padding-bottom:38px; }.mypage-section .section-heading { align-items:center; }.mypage-section a.mypage-retest { min-width:auto; padding:12px 16px; color:#fff; text-decoration:none; font-size:13px; }.mypage-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }.mypage-grid article,.mypage-card-link { display:block; background:#fff; border:1px solid #e0e7ef; border-radius:14px; padding:20px; }.mypage-card-link { color:inherit; transition:border-color .15s,transform .15s; }.mypage-card-link:hover { border-color:#0671d8; transform:translateY(-2px); }.mypage-card-link small,.mypage-card-link strong,.mypage-card-link span { display:block; }.mypage-card-link strong,.mypage-card-title { margin:8px 0 20px; font-size:19px; line-height:1.35; }.mypage-card-link span { color:#5f6e7d; font-size:12px; }.mypage-card-title { display:block; color:#182433 !important; font-weight:750 !important; }.mypage-card-title:hover { color:#0671d8 !important; }.mypage-card-actions { display:flex; gap:12px; }.mypage-card-actions button,.mypage-card-actions a { margin:0; border:0; background:transparent; padding:0; cursor:pointer; font-size:13px; }.mypage-state { min-height:100vh; background:#fbfcfe; }.mypage-state .site-header { background:#fff; }@media(max-width:700px){.mypage-grid{grid-template-columns:1fr}.mypage-hero,.mypage-section,.mypage-state>section{padding:42px 20px}.mypage-hero>div,.mypage-section .section-heading{align-items:flex-start;flex-direction:column}}
 @media (max-width: 700px) { .anonymous-notice { right: 12px; bottom: 12px; left: 12px; max-width: none; } }
 
 @media (max-width: 900px) {
@@ -2027,6 +2028,8 @@ button:active:not(:disabled), .favorite-card:active, .primary-action:active, .fi
 .worksheet-empty-main .primary-action { margin-top: 18px; }
 .worksheet-editor { padding: clamp(24px, 4vw, 54px); }
 .worksheet-heading, .worksheet-section-heading { display: flex; justify-content: space-between; gap: 20px; align-items: start; }
+.worksheet-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.worksheet-save { min-height: 38px; padding: 0 14px; border: 0; border-radius: 9px; color: white; background: var(--accent); font-size: 12px; font-weight: 750; }
 .worksheet-heading h2, .worksheet-section-heading h2, .worksheet-calculations h2, .worksheet-checks h2 { margin: 0; font-size: clamp(28px, 3.4vw, 42px); letter-spacing: -.045em; }
 .worksheet-heading p:not(.eyebrow), .worksheet-section-heading p:not(.eyebrow), .worksheet-checks > div > p:not(.eyebrow) { color: var(--secondary); font-size: 12px; }
 .worksheet-delete { min-height: 38px; padding: 0 12px; border: 1px solid rgba(215,0,21,.24); border-radius: 9px; color: #b42318; background: #fff7f6; font-size: 12px; font-weight: 750; }
@@ -2086,7 +2089,8 @@ button:active:not(:disabled), .favorite-card:active, .primary-action:active, .fi
   .comparison-next, .worksheet-next, .funding-next { margin-top: 40px; padding: 22px; border-radius: 18px; }
   .worksheet-form-grid, .worksheet-metric-grid { grid-template-columns: 1fr; }
   .worksheet-heading, .worksheet-section-heading { align-items: stretch; flex-direction: column; }
-  .worksheet-delete, .worksheet-section-heading button { width: 100%; }
+  .worksheet-delete, .worksheet-save, .worksheet-section-heading button { width: 100%; }
+  .worksheet-actions { width: 100%; }
   .worksheet-editor { padding: 24px 18px; }
   .worksheet-calculations { padding: 20px; }
   .observation-list > div { grid-template-columns: 1fr 1fr; }

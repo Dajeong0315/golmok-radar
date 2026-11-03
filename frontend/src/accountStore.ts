@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { parsePropertyWorksheet, type PropertyWorksheet } from "./propertyWorksheet";
+import type { AnonymousTransferSnapshot } from "./anonymousSession";
+import { DRAFT_KEY, PROFILE_KEY, PROFILE_VERSION, sanitizeAnswers } from "./founderProfile";
+import { FAVORITES_KEY } from "./favorites";
+import { PROPERTY_WORKSHEETS_KEY } from "./propertyWorksheet";
 
 function raise(error: { message: string } | null): void {
   if (error) throw new Error(error.message);
@@ -50,4 +54,83 @@ export function mergeWorksheets(local: PropertyWorksheet[], remote: PropertyWork
     if (!existing || new Date(worksheet.updatedAt).getTime() >= new Date(existing.updatedAt).getTime()) latest.set(worksheet.id, worksheet);
   });
   return [...latest.values()].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+}
+
+export type AccountRecord = {
+  recordId: string;
+  kind: "founder_profile" | "founder_draft" | "comparison_report" | "recommendation_report";
+  title: string;
+  payload: unknown;
+  schemaVersion: number;
+  createdAt: string;
+  updatedAt: string;
+  sourceBatchId?: string;
+};
+
+function parseJson(value: string | undefined): unknown {
+  try { return JSON.parse(value || "null"); } catch { return null; }
+}
+
+function uniqueCodes(value: unknown): string[] {
+  return Array.isArray(value) ? [...new Set(value.filter((item): item is string => typeof item === "string"))] : [];
+}
+
+export async function fetchAccountRecords(client: SupabaseClient, userId: string, kind?: AccountRecord["kind"]): Promise<AccountRecord[]> {
+  let query = client.from("user_records").select("record_id, kind, title, payload, schema_version, created_at, updated_at, source_batch_id").eq("user_id", userId).order("updated_at", { ascending: false });
+  if (kind) query = query.eq("kind", kind);
+  const { data, error } = await query;
+  raise(error);
+  return (data || []).flatMap((row) => {
+    if (!row || typeof row.record_id !== "string" || typeof row.kind !== "string" || typeof row.title !== "string") return [];
+    return [{
+      recordId: row.record_id,
+      kind: row.kind as AccountRecord["kind"],
+      title: row.title,
+      payload: row.payload,
+      schemaVersion: typeof row.schema_version === "number" ? row.schema_version : 1,
+      createdAt: String(row.created_at || ""),
+      updatedAt: String(row.updated_at || ""),
+      sourceBatchId: typeof row.source_batch_id === "string" ? row.source_batch_id : undefined,
+    }];
+  });
+}
+
+export async function saveAccountRecord(client: SupabaseClient, userId: string, record: AccountRecord): Promise<void> {
+  const { error } = await client.from("user_records").upsert({
+    record_id: record.recordId,
+    user_id: userId,
+    kind: record.kind,
+    title: record.title,
+    payload: record.payload,
+    schema_version: record.schemaVersion,
+    source_batch_id: record.sourceBatchId || null,
+    created_at: record.createdAt,
+    updated_at: record.updatedAt,
+  }, { onConflict: "record_id" });
+  raise(error);
+}
+
+export async function removeAccountRecord(client: SupabaseClient, userId: string, recordId: string): Promise<void> {
+  const { error } = await client.from("user_records").delete().eq("user_id", userId).eq("record_id", recordId);
+  raise(error);
+}
+
+/** Upload every validated item from one anonymous OAuth snapshot. It never clears local data itself. */
+export async function transferAnonymousRecords(client: SupabaseClient, userId: string, snapshot: AnonymousTransferSnapshot): Promise<void> {
+  const favorites = uniqueCodes(parseJson(snapshot.records[FAVORITES_KEY]));
+  const worksheets = parseJson(snapshot.records[PROPERTY_WORKSHEETS_KEY]);
+  const profile = parseJson(snapshot.records[PROFILE_KEY]) as { version?: unknown; completedAt?: unknown; answers?: unknown } | null;
+  const draft = sanitizeAnswers(parseJson(snapshot.records[DRAFT_KEY]));
+  const now = new Date().toISOString();
+  await Promise.all(favorites.map((code) => saveAccountFavorite(client, userId, code)));
+  if (Array.isArray(worksheets)) await Promise.all(worksheets.map(parsePropertyWorksheet).filter((item): item is PropertyWorksheet => item !== null).map((item) => saveAccountWorksheet(client, userId, item)));
+  const records: AccountRecord[] = [];
+  const profileAnswers = sanitizeAnswers(profile?.answers);
+  if (profile?.version === PROFILE_VERSION && Object.keys(profileAnswers).length) records.push({
+    recordId: `${snapshot.batchId}:founder-profile`, kind: "founder_profile", title: "창업 성향 테스트 결과", payload: { version: PROFILE_VERSION, completedAt: String(profile.completedAt || now), answers: profileAnswers }, schemaVersion: PROFILE_VERSION, createdAt: String(profile.completedAt || now), updatedAt: now, sourceBatchId: snapshot.batchId,
+  });
+  if (Object.keys(draft).length) records.push({
+    recordId: `${snapshot.batchId}:founder-draft`, kind: "founder_draft", title: "작성 중인 창업 성향 테스트", payload: { version: PROFILE_VERSION, answers: draft }, schemaVersion: PROFILE_VERSION, createdAt: now, updatedAt: now, sourceBatchId: snapshot.batchId,
+  });
+  await Promise.all(records.map((record) => saveAccountRecord(client, userId, record)));
 }

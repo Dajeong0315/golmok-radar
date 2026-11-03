@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { loadFavorites, mayImportLocalData, mergeFavorites, sanitizeFavorites, toggleComparison, toggleFavorite } from "./favorites";
+import { loadFavorites, mayImportLocalData, mayReadLocalData, mergeFavorites, sanitizeFavorites, toggleComparison, toggleFavorite, SYNC_OWNER_KEY } from "./favorites";
 
 
 describe("favorites", () => {
@@ -31,6 +31,14 @@ describe("favorites", () => {
     expect(mayImportLocalData(storage, "user-a")).toBe(true);
     expect(mayImportLocalData(storage, "user-a")).toBe(true);
     expect(mayImportLocalData(storage, "user-b")).toBe(false);
+  });
+
+  it("does not expose an account-owned cache after logout", () => {
+    const values = new Map([[SYNC_OWNER_KEY, "account-a"], ["favorites", '["1"]']]);
+    const storage = { getItem: (key: string) => values.get(key) || null };
+    expect(mayReadLocalData(storage, null)).toBe(false);
+    expect(loadFavorites({ getItem: (key: string) => key === "golmok-radar:favorites:v1" ? values.get("favorites") || null : values.get(key) || null }, null)).toEqual([]);
+    expect(mayReadLocalData(storage, "account-a")).toBe(true);
   });
 });
 

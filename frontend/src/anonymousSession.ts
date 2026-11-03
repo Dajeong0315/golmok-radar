@@ -17,7 +17,7 @@ type Session = {
   lastReminderAt?: number;
 };
 
-type TransferSnapshot = {
+export type AnonymousTransferSnapshot = {
   schemaVersion: 1;
   batchId: string;
   createdAt: number;
@@ -57,7 +57,7 @@ function validSession(value: Session | null): value is Session {
   return Boolean(value && value.schemaVersion === 1 && typeof value.anonymousSessionId === "string" && Number.isFinite(value.lastActivityAt) && Number.isFinite(value.expiresAt));
 }
 
-function validTransfer(value: TransferSnapshot | null): value is TransferSnapshot {
+function validTransfer(value: AnonymousTransferSnapshot | null): value is AnonymousTransferSnapshot {
   return Boolean(value && value.schemaVersion === 1 && typeof value.batchId === "string" && Number.isFinite(value.protectedUntil) && value.records && typeof value.records === "object");
 }
 
@@ -96,7 +96,7 @@ export function registerAnonymousRecord(storage: StoragePort, now = Date.now()):
 /** Must run before a read or write; an expired session can never be revived by a later activity event. */
 export function expireAnonymousSession(storage: StoragePort, now = Date.now(), authenticated = false): AnonymousStatus {
   if (authenticated) return { state: hasRecords(storage) ? "protected" : "empty", remainingMs: 0, hasRecords: hasRecords(storage) };
-  const transfer = parse<TransferSnapshot>(storage, ANONYMOUS_TRANSFER_KEY);
+  const transfer = parse<AnonymousTransferSnapshot>(storage, ANONYMOUS_TRANSFER_KEY);
   if (validTransfer(transfer) && (transfer.userId || transfer.protectedUntil > now)) {
     return { state: "protected", remainingMs: Math.max(0, transfer.protectedUntil - now), hasRecords: true };
   }
@@ -121,7 +121,7 @@ export function touchAnonymousActivity(storage: StoragePort, now = Date.now()): 
   return { state: "active", remainingMs: ANONYMOUS_RETENTION_MS, hasRecords: true };
 }
 
-export function captureAnonymousTransfer(storage: StoragePort, returnHash: string, now = Date.now()): TransferSnapshot | null {
+export function captureAnonymousTransfer(storage: StoragePort, returnHash: string, now = Date.now()): AnonymousTransferSnapshot | null {
   const status = expireAnonymousSession(storage, now);
   if (status.state !== "active") return null;
   const records = Object.fromEntries(RECORD_KEYS.flatMap((key) => {
@@ -129,7 +129,7 @@ export function captureAnonymousTransfer(storage: StoragePort, returnHash: strin
     return meaningful(value) ? [[key, value!]] : [];
   }));
   if (!Object.keys(records).length) return null;
-  const snapshot: TransferSnapshot = { schemaVersion: 1, batchId: id("transfer", now), createdAt: now, protectedUntil: now + LOGIN_PROTECTION_MS, returnHash, records };
+  const snapshot: AnonymousTransferSnapshot = { schemaVersion: 1, batchId: id("transfer", now), createdAt: now, protectedUntil: now + LOGIN_PROTECTION_MS, returnHash, records };
   storage.setItem(ANONYMOUS_TRANSFER_KEY, JSON.stringify(snapshot));
   announce();
   return snapshot;
@@ -137,15 +137,30 @@ export function captureAnonymousTransfer(storage: StoragePort, returnHash: strin
 
 /** Authentication has completed; Phase 25 will upload this owner-scoped snapshot before clearing it. */
 export function assignAnonymousTransfer(storage: StoragePort, userId: string): void {
-  const snapshot = parse<TransferSnapshot>(storage, ANONYMOUS_TRANSFER_KEY);
+  const snapshot = parse<AnonymousTransferSnapshot>(storage, ANONYMOUS_TRANSFER_KEY);
   if (!validTransfer(snapshot) || snapshot.userId) return;
   storage.setItem(ANONYMOUS_TRANSFER_KEY, JSON.stringify({ ...snapshot, userId }));
   announce();
 }
 
 export function transferReturnHash(storage: StoragePort, userId: string): string | null {
-  const snapshot = parse<TransferSnapshot>(storage, ANONYMOUS_TRANSFER_KEY);
+  const snapshot = parse<AnonymousTransferSnapshot>(storage, ANONYMOUS_TRANSFER_KEY);
   return validTransfer(snapshot) && snapshot.userId === userId && snapshot.returnHash.startsWith("#") ? snapshot.returnHash : null;
+}
+
+export function pendingAnonymousTransfer(storage: StoragePort, userId: string): AnonymousTransferSnapshot | null {
+  const snapshot = parse<AnonymousTransferSnapshot>(storage, ANONYMOUS_TRANSFER_KEY);
+  return validTransfer(snapshot) && snapshot.userId === userId ? snapshot : null;
+}
+
+/** Only call after every record in the batch has been confirmed by the server. */
+export function clearTransferredAnonymousRecords(storage: StoragePort, userId: string): void {
+  const snapshot = pendingAnonymousTransfer(storage, userId);
+  if (!snapshot) return;
+  RECORD_KEYS.forEach((key) => storage.removeItem(key));
+  storage.removeItem(ANONYMOUS_SESSION_KEY);
+  storage.removeItem(ANONYMOUS_TRANSFER_KEY);
+  announce();
 }
 
 export function anonymousNotice(storage: StoragePort, now = Date.now()): { status: AnonymousStatus; showReminder: boolean } {

@@ -1,7 +1,18 @@
 export const FAVORITES_KEY = "golmok-radar:favorites:v1";
 export const SYNC_OWNER_KEY = "golmok-radar:sync-owner:v1";
 
-export function loadFavorites(storage: Pick<Storage, "getItem">): string[] {
+export function mayReadLocalData(storage: Pick<Storage, "getItem">, userId?: string | null): boolean {
+  if (userId === undefined) return true;
+  const owner = storage.getItem(SYNC_OWNER_KEY);
+  return owner === null || owner === userId;
+}
+
+export function markLocalDataOwner(storage: Pick<Storage, "setItem">, userId: string): void {
+  storage.setItem(SYNC_OWNER_KEY, userId);
+}
+
+export function loadFavorites(storage: Pick<Storage, "getItem">, userId?: string | null): string[] {
+  if (!mayReadLocalData(storage, userId)) return [];
   try {
     const value = JSON.parse(storage.getItem(FAVORITES_KEY) || "[]");
     return Array.isArray(value) ? [...new Set(value.filter((code): code is string => typeof code === "string"))] : [];
@@ -27,9 +38,8 @@ export function mergeFavorites(local: string[], remote: string[]): string[] {
  * Supabase for a new account when it is anonymous, or belongs to that account.
  */
 export function mayImportLocalData(storage: Pick<Storage, "getItem" | "setItem">, userId: string): boolean {
-  const owner = storage.getItem(SYNC_OWNER_KEY);
-  const allowed = owner === null || owner === userId;
-  storage.setItem(SYNC_OWNER_KEY, userId);
+  const allowed = mayReadLocalData(storage, userId);
+  markLocalDataOwner(storage, userId);
   return allowed;
 }
 

@@ -2,7 +2,9 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
 
 import { getSupabaseClient } from "./supabase";
-import { assignAnonymousTransfer, captureAnonymousTransfer, transferReturnHash } from "./anonymousSession";
+import { assignAnonymousTransfer, captureAnonymousTransfer, clearTransferredAnonymousRecords, pendingAnonymousTransfer, transferReturnHash } from "./anonymousSession";
+import { transferAnonymousRecords } from "./accountStore";
+import { markLocalDataOwner } from "./favorites";
 
 type AuthState = {
   client: SupabaseClient | null;
@@ -11,6 +13,8 @@ type AuthState = {
   session: Session | null;
   user: User | null;
   error: string | null;
+  transferStatus: "idle" | "saving" | "complete" | "failed";
+  retryTransfer: () => Promise<void>;
   signInWithKakao: () => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -22,6 +26,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(Boolean(client));
   const [error, setError] = useState<string | null>(null);
+  const [transferStatus, setTransferStatus] = useState<AuthState["transferStatus"]>("idle");
+
+  async function transferPendingRecords(userId: string): Promise<void> {
+    if (!client) return;
+    const snapshot = pendingAnonymousTransfer(localStorage, userId);
+    if (!snapshot) return;
+    setTransferStatus("saving");
+    try {
+      await transferAnonymousRecords(client, userId, snapshot);
+      clearTransferredAnonymousRecords(localStorage, userId);
+      setTransferStatus("complete");
+    } catch (transferError) {
+      setTransferStatus("failed");
+      setError(transferError instanceof Error ? `기록 저장에 실패했습니다: ${transferError.message}` : "기록 저장에 실패했습니다.");
+    }
+  }
 
   useEffect(() => {
     if (!client) return;
@@ -30,9 +50,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!active) return;
       setSession(data.session);
       if (data.session?.user) {
+        markLocalDataOwner(localStorage, data.session.user.id);
         assignAnonymousTransfer(localStorage, data.session.user.id);
         const returnHash = transferReturnHash(localStorage, data.session.user.id);
         if (returnHash && window.location.hash !== returnHash) window.location.hash = returnHash;
+        void transferPendingRecords(data.session.user.id);
       }
       setError(sessionError?.message || null);
       setLoading(false);
@@ -41,9 +63,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!active) return;
       setSession(nextSession);
       if (nextSession?.user) {
+        markLocalDataOwner(localStorage, nextSession.user.id);
         assignAnonymousTransfer(localStorage, nextSession.user.id);
         const returnHash = transferReturnHash(localStorage, nextSession.user.id);
         if (returnHash && window.location.hash !== returnHash) window.location.hash = returnHash;
+        void transferPendingRecords(nextSession.user.id);
       }
       setLoading(false);
     });
@@ -60,6 +84,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     user: session?.user || null,
     error,
+    transferStatus,
+    async retryTransfer() {
+      if (session?.user) await transferPendingRecords(session.user.id);
+    },
     async signInWithKakao() {
       if (!client) {
         setError("Supabase 연결 정보가 설정되지 않았습니다.");
@@ -79,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error: signOutError } = await client.auth.signOut();
       if (signOutError) setError(signOutError.message);
     },
-  }), [client, error, loading, session]);
+  }), [client, error, loading, session, transferStatus]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

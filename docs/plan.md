@@ -701,3 +701,9 @@ Phase 17의 업체별 문의 시각, 접수 확인 근거와 회신 처리 순�
 - 재시험: 테스트 완료 결과를 이력 localStorage에도 보관하고, 재시험은 기존 결과를 지우지 않은 채 새 답변으로 시작한다. 로그인 상태에서 완료한 결과는 새 record ID로 계정 저장을 시도한다. 마이페이지의 `테스트 다시 해보기`는 테스트 결과 섹션에 두며 `#quiz?restart=1`로 직접 질문 1번을 열고, 카드의 기존 결과 조회 경로와 분리한다.
 - 검증: `npm --prefix frontend test` 11개 파일 50개 통과, production build 통과, pytest 57개 통과. 테스트 Supabase의 `user_records` 마이그레이션과 기준 상권 데이터 적재 후 계정 A/B로 이관·새로고침 복구·로그아웃 뒤 기록 숨김·계정 간 격리를 확인했다. 이번 UI 보완(결과/상권/워크시트 카드 열기, 명시적 매물 저장, 빈 계정 내 기록 탭)은 브라우저에서 최종 확인이 남아 있다.
 - Git: `a2a7514 feat: improve my page record management`를 원격 `main`에 푸시했다.
+
+### 운영 기록 API 보안 보완 — 2026-11-03
+
+- 원인: 프런트 운영 Supabase 설정이 골목 레이더 DB가 아닌 별도 프로젝트를 가리켜 `public.user_records` 스키마 캐시 오류가 발생했다. 운영 DB에는 `0005`가 적용됐지만 프런트의 대상이 달라 생긴 설정 불일치였다.
+- 조치: 프런트를 골목 레이더 운영 프로젝트의 URL·publishable key로 정렬했다. Supabase Data API는 처음에 비활성화돼 있었고, 공개 스키마의 기존 통계 테이블에 RLS가 없어 그대로 켜지 않았다. `0006`에서 `alembic_version`과 공식 통계 7개 테이블에 기본 거부 RLS를 적용한 후 활성화했다. 사용자 기록 3개 테이블의 소유자 RLS 정책은 유지한다.
+- 확인: 익명 publishable key로 `GET /rest/v1/user_records?select=record_id&limit=1`이 HTTP 200을 반환했다. RLS 때문에 비로그인 요청은 빈 목록만 받는다.

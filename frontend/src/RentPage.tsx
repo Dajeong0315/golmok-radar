@@ -59,7 +59,7 @@ export function RentPage({ code }: { code: string }) {
   const selectedMarketName = marketList?.markets.find((market) => market.region_code === selectedMarketCode)?.name;
 
   return <main className="rent-page">
-    <header className="site-header recommendation-header"><a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a><TopNavigation active="worksheet" /><a className="back-link" href="#top">상권 탐색</a></header>
+    <header className="site-header recommendation-header"><a className="brand" href="#home"><span className="brand-mark">G</span><span>골목 레이더</span></a><TopNavigation active="worksheet" /><a className="back-link" href="#explore">상권 탐색</a></header>
     <section className="rent-hero"><p className="eyebrow">임대 비용 확인</p><h1>{benchmark?.trade_area.name || "후보 상권"}에서<br />얼마가 들지 확인하세요.</h1><p>먼저 공식 지역 통계로 가격대를 보고, 실제로 찾은 매물의 보증금과 월세를 넣어 한 달 비용을 계산해 보세요.</p></section>
     {error ? <p className="error-banner">{error}</p> : null}
 

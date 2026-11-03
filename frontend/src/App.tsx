@@ -104,7 +104,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="site-header">
-        <a className="brand" href="#top" aria-label="골목 레이더 홈">
+        <a className="brand" href="#home" aria-label="골목 레이더 홈">
           <span className="brand-mark">G</span>
           <span>골목 레이더</span>
         </a>
@@ -112,29 +112,8 @@ export default function App() {
         <div className="header-context"><span>서울 · {selectedIndustry?.name || "카페"}</span><strong>2025년 4분기</strong></div>
       </header>
 
-      <main id="top">
-        <section className="hero">
-          <p className="eyebrow">상권 통계 → 매물 검증</p>
-          <h1>첫 계약 전,<br />확인할 일을 순서대로.</h1>
-          <p className="hero-copy">상권 후보를 같은 기준으로 비교하고, 직접 찾은 매물과 현장을 기록하세요.<br />골목 레이더는 추천이나 계약 판정 대신 확인해야 할 근거와 다음 행동을 연결합니다.</p>
-          <div className="hero-actions"><a className="primary-action" href="#workflow">사용 흐름 먼저 보기 <span>→</span></a><a className="hero-text-link" href="#explorer-title">바로 상권 탐색하기</a></div>
-          <div className="hero-proof">
-            <span><b>{loading ? "—" : areas.length.toLocaleString("ko-KR")}</b> 공식 상권</span>
-            <span><b>{loading ? "—" : Math.max(districts.length - 1, 0)}</b> 서울 자치구</span>
-            <span><b>14</b> 비교 지표</span>
-            <span><b>모든 수치</b> 출처 확인</span>
-          </div>
-        </section>
-
-        <section className="starter-pipeline" aria-labelledby="pipeline-title">
-          <div className="section-heading"><div><p className="eyebrow">이용 순서</p><h2 id="pipeline-title">지금 어디까지 준비했나요?</h2></div><p><a className="workflow-inline-link" href="#workflow">전체 사용 흐름 보기 →</a></p></div>
-          <ol>
-            <li><span>01</span><strong>탐색</strong><p>조건을 정리하고 서울 공식 상권을 저장해요.</p><a href="#quiz">조건 정리하기</a></li>
-            <li><span>02</span><strong>비교</strong><p>관심 상권 2~4곳의 같은 기준분기 지표를 봐요.</p><a href="#explorer-title">상권 찾기</a></li>
-            <li><span>03</span><strong>검증</strong><p>직접 본 매물 비용과 현장 확인 상태를 남겨요.</p><a href="#worksheet">매물 기록하기</a></li>
-            <li><span>04</span><strong>의사결정 준비</strong><p>공식 지원 정보와 전문가 확인이 남은 항목을 점검해요.</p><a href="#funding">공식 정보 보기</a></li>
-          </ol>
-        </section>
+      <main id="explore">
+        <div className="explore-intro"><p className="eyebrow">서울 공식 상권 탐색</p><h1>어느 골목이 궁금하세요?</h1><p>상권을 선택해 통계를 확인하고, 관심 상권 2~4곳을 같은 기준으로 비교하세요.</p></div>
 
         <section className="explorer" aria-labelledby="explorer-title">
           <div className="section-heading">

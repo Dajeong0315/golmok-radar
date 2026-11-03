@@ -38,9 +38,9 @@ export function ComparisonPage({ codes }: Props) {
   return (
     <div className="compare-page">
       <header className="site-header compare-header">
-        <a className="brand" href="#top" aria-label="상권 탐색으로 돌아가기"><span className="brand-mark">G</span><span>골목 레이더</span></a>
+        <a className="brand" href="#home" aria-label="골목 레이더 홈"><span className="brand-mark">G</span><span>골목 레이더</span></a>
         <TopNavigation active="explore" />
-        <a className="back-link" href="#top">관심 목록</a>
+        <a className="back-link" href="#favorites-title">관심 목록</a>
       </header>
       <main>
         <section className="compare-hero">
@@ -102,6 +102,6 @@ function CompareState({ title, copy, loading = false }: { title: string; copy: s
   return <main className="compare-state">
     <span className={loading ? "state-pulse" : "state-mark"}>{loading ? "" : "!"}</span>
     <p className="eyebrow">골목 레이더</p><h1>{title}</h1><p>{copy}</p>
-    {!loading ? <a href="#top">상권 탐색으로 돌아가기</a> : null}
+    {!loading ? <a href="#explore">상권 탐색으로 돌아가기</a> : null}
   </main>;
 }

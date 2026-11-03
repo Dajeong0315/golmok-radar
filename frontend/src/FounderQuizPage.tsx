@@ -62,13 +62,13 @@ export function FounderQuizPage() {
     setMode("question");
   };
 
-  const openExplorer = () => { window.location.hash = "top"; };
+  const openExplorer = () => { window.location.hash = "explore"; };
   const openRecommendations = () => { window.location.hash = "recommendations"; };
   const skip = () => { localStorage.setItem(SKIPPED_KEY, "true"); openExplorer(); };
 
   if (mode === "intro") {
     return <main className="quiz-shell quiz-intro">
-      <header className="site-header quiz-site-header"><a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a><TopNavigation active="quiz" /></header>
+      <header className="site-header quiz-site-header"><a className="brand" href="#home"><span className="brand-mark">G</span><span>골목 레이더</span></a><TopNavigation active="quiz" /></header>
       <div className="quiz-intro__copy">
         <p className="eyebrow">첫 가게 준비 · 1단계</p>
         <h1>내가 원하는 가게의 모습을 먼저<br />정리해 보세요.</h1>
@@ -81,7 +81,7 @@ export function FounderQuizPage() {
 
   if (mode === "result" && profile) {
     return <main className="quiz-shell quiz-result">
-      <header className="quiz-result__header"><a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a><TopNavigation active="quiz" /><button className="text-action" onClick={startAgain}>다시 진단하기</button></header>
+      <header className="quiz-result__header"><a className="brand" href="#home"><span className="brand-mark">G</span><span>골목 레이더</span></a><TopNavigation active="quiz" /><button className="text-action" onClick={startAgain}>다시 진단하기</button></header>
       <section className="result-hero">
         <div className="result-report-meta"><span>나의 첫 가게 준비 리포트</span><span>{new Date(profile.completedAt).toLocaleDateString("ko-KR")}</span></div>
         <p className="eyebrow">진단 결과</p>
@@ -137,7 +137,7 @@ export function FounderQuizPage() {
   }
 
   return <main className="quiz-shell quiz-question">
-    <header className="site-header quiz-site-header"><a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a><TopNavigation active="quiz" /></header>
+    <header className="site-header quiz-site-header"><a className="brand" href="#home"><span className="brand-mark">G</span><span>골목 레이더</span></a><TopNavigation active="quiz" /></header>
     <header className="quiz-question__header"><button className="text-action" onClick={step ? () => setStep(step - 1) : () => setMode("intro")}>← 이전</button><div className="quiz-progress" aria-label={`${step + 1}/${FOUNDER_QUESTIONS.length} 진행`}><span style={{ width: `${((step + 1) / FOUNDER_QUESTIONS.length) * 100}%` }} /></div><strong>{String(step + 1).padStart(2, "0")} / 06</strong></header>
     <section className="question-card">
       <p className="eyebrow">{current.eyebrow}</p><h1>{current.questionLines.map((line, index) => <Fragment key={line}>{index > 0 && <br />}{line}</Fragment>)}</h1><p className="question-helper">{current.helper}</p>

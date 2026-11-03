@@ -3,7 +3,7 @@ import { TopNavigation } from "./TopNavigation";
 export function ReviewInsightsPage() {
   return <div className="reviews-page">
     <header className="site-header">
-      <a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a>
+      <a className="brand" href="#home"><span className="brand-mark">G</span><span>골목 레이더</span></a>
       <TopNavigation active="reviews" />
       <div className="header-context"><strong>개업 후 운영</strong></div>
     </header>
@@ -31,7 +31,7 @@ export function ReviewInsightsPage() {
           <p>지금은 리뷰를 수집하거나 분석하지 않습니다. 네이버·카카오 지도 화면이나 비공개 경로에서 리뷰를 임의로 가져오지 않습니다.</p>
         </div>
 
-        <a className="review-back-link" href="#top">서울 상권 먼저 살펴보기 →</a>
+        <a className="review-back-link" href="#explore">서울 상권 먼저 살펴보기 →</a>
       </section>
     </main>
   </div>;

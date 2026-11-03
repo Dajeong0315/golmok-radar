@@ -11,7 +11,8 @@ import { RentPage } from "./RentPage";
 import { ReviewInsightsPage } from "./ReviewInsightsPage";
 import { parseRentAreaCode } from "./rentCalculator";
 import { PropertyWorksheetPage } from "./PropertyWorksheetPage";
-import { WorkflowPage } from "./WorkflowPage";
+import { HomePage } from "./HomePage";
+import { isExplorerHash } from "./routing";
 
 export default function Root() {
   const [hash, setHash] = useState(window.location.hash);
@@ -22,13 +23,23 @@ export default function Root() {
     return () => window.removeEventListener("hashchange", update);
   }, []);
 
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const anchor = ["#workflow", "#explorer-title", "#favorites-title"].includes(hash)
+        ? document.getElementById(hash.slice(1)) : null;
+      if (anchor) anchor.scrollIntoView();
+      else window.scrollTo(0, 0);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [hash]);
+
   if (hash.startsWith("#compare")) return <ComparisonPage codes={parseComparisonCodes(hash)} />;
   if (hash.startsWith("#recommendations")) return <RecommendationsPage />;
   if (hash.startsWith("#rent")) return <RentPage code={parseRentAreaCode(hash)} />;
   if (hash.startsWith("#worksheet")) return <PropertyWorksheetPage />;
-  if (hash.startsWith("#workflow")) return <WorkflowPage />;
+
   if (hash.startsWith("#funding")) return <FundingPage code={parseFundingAreaCode(hash)} />;
   if (hash.startsWith("#reviews")) return <ReviewInsightsPage />;
   const shouldShowQuiz = hash.startsWith("#quiz");
-  return shouldShowQuiz ? <FounderQuizPage /> : <App />;
+  return shouldShowQuiz ? <FounderQuizPage /> : isExplorerHash(hash) ? <App /> : <HomePage />;
 }

@@ -43,7 +43,7 @@ export function FundingPage({ code }: { code: string }) {
   return (
     <div className="funding-page">
       <header className="site-header site-header--dark">
-        <a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a>
+        <a className="brand" href="#home"><span className="brand-mark">G</span><span>골목 레이더</span></a>
         <TopNavigation active="funding" />
         <div className="header-context"><strong>공식 출처만</strong></div>
       </header>

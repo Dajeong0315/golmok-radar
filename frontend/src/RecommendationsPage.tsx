@@ -31,9 +31,9 @@ export function RecommendationsPage() {
   }, [data]);
 
   if (!profile) return <RecommendationState title="먼저 원하는 가게를 알려주세요" copy="여섯 가지 쉬운 질문에 답하면 상권 후보를 찾을 기준이 생겨요." action="#quiz" actionLabel="성향 진단 시작" />;
-  if (error) return <RecommendationState title="후보를 불러오지 못했습니다" copy={error} action="#top" actionLabel="상권 직접 탐색" />;
+  if (error) return <RecommendationState title="후보를 불러오지 못했습니다" copy={error} action="#explore" actionLabel="상권 직접 탐색" />;
   if (!data) return <RecommendationState title="상권 후보를 찾는 중이에요" copy="비교 가능한 상권의 카페 수, 매출, 유동인구를 같은 기준으로 살펴보고 있어요." />;
-  if (data.status === "unsupported_business") return <RecommendationState title="이 업종의 추천 데이터는 준비 중입니다" copy={data.message} action="#top" actionLabel="상권 직접 탐색" secondary="#quiz" secondaryLabel="업종 답변 수정" />;
+  if (data.status === "unsupported_business") return <RecommendationState title="이 업종의 추천 데이터는 준비 중입니다" copy={data.message} action="#explore" actionLabel="상권 직접 탐색" secondary="#quiz" secondaryLabel="업종 답변 수정" />;
 
   const codes = data.candidates.map((candidate) => candidate.trade_area.code);
   const saveAndExplore = () => {
@@ -43,7 +43,7 @@ export function RecommendationsPage() {
   };
 
   return <main className="recommendation-page">
-    <header className="site-header recommendation-header"><a className="brand" href="#top"><span className="brand-mark">G</span><span>골목 레이더</span></a><TopNavigation active="explore" /><a className="back-link" href="#quiz">조건 다시 보기</a></header>
+    <header className="site-header recommendation-header"><a className="brand" href="#home"><span className="brand-mark">G</span><span>골목 레이더</span></a><TopNavigation active="explore" /><a className="back-link" href="#quiz">조건 다시 보기</a></header>
     <section className="recommendation-hero">
       <div><p className="eyebrow">첫 번째 후보 리포트</p><h1>내 답과 잘 맞는 상권 3곳을<br />먼저 살펴보세요.</h1><p>{data.message}</p></div>
       <aside><strong>{data.candidate_pool_size}</strong><span>같은 조건으로 비교한 상권</span><small>{data.quarter_label} · 계산 기준 {data.weights_version}</small></aside>

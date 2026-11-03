@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { fetchAreaMapInsight, fetchIndustries, fetchTradeAreas } from "./api";
+import { fetchAccountFavorites, removeAccountFavorite, saveAccountFavorite } from "./accountStore";
 import { AreaMapInsight } from "./AreaMapInsight";
-import { FAVORITES_KEY, loadFavorites, sanitizeFavorites, toggleComparison, toggleFavorite } from "./favorites";
+import { FAVORITES_KEY, loadFavorites, mayImportLocalData, mergeFavorites, sanitizeFavorites, toggleComparison, toggleFavorite } from "./favorites";
+import { useAuth } from "./auth";
+import { registerAnonymousRecord } from "./anonymousSession";
 import { KakaoMap } from "./KakaoMap";
 import { TopNavigation } from "./TopNavigation";
 import type { AreaMapInsightResponse, IndustryOption, TradeArea } from "./types";
@@ -10,6 +13,7 @@ import "./styles.css";
 
 
 export default function App() {
+  const { client, user } = useAuth();
   const [areas, setAreas] = useState<TradeArea[]>([]);
   const [industries, setIndustries] = useState<IndustryOption[]>([]);
   const [industry, setIndustry] = useState("CS100010");
@@ -50,8 +54,25 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+    if (!user && favorites.length) registerAnonymousRecord(localStorage);
     setSelected((current) => current.filter((code) => favorites.includes(code)));
-  }, [favorites]);
+  }, [favorites, user]);
+
+  useEffect(() => {
+    if (!client || !user) return;
+    let active = true;
+    void fetchAccountFavorites(client, user.id).then(async (remote) => {
+      if (!active) return;
+      const local = mayImportLocalData(localStorage, user.id) ? favorites : [];
+      const merged = mergeFavorites(local, remote);
+      setFavorites(merged);
+      await Promise.all(merged.filter((code) => !remote.includes(code)).map((code) => saveAccountFavorite(client, user.id, code)));
+      if (active) setNotice("카카오 계정에 관심 상권을 동기화했습니다.");
+    }).catch((reason: Error) => {
+      if (active) setNotice(`계정 동기화에 실패했습니다: ${reason.message}`);
+    });
+    return () => { active = false; };
+  }, [client, user?.id]);
 
   useEffect(() => {
     if (!focusedMapCode) {
@@ -87,8 +108,16 @@ export default function App() {
   const selectedIndustry = industries.find((item) => item.code === industry);
 
   const handleFavorite = useCallback((code: string) => {
-    setFavorites((current) => toggleFavorite(current, code));
-  }, []);
+    setFavorites((current) => {
+      const isSaved = current.includes(code);
+      const next = toggleFavorite(current, code);
+      if (client && user) {
+        const request = isSaved ? removeAccountFavorite(client, user.id, code) : saveAccountFavorite(client, user.id, code);
+        void request.catch((reason: Error) => setNotice(`계정 동기화에 실패했습니다: ${reason.message}`));
+      }
+      return next;
+    });
+  }, [client, user]);
 
   const handleCompare = (code: string) => {
     const next = toggleComparison(selected, code);
@@ -121,7 +150,7 @@ export default function App() {
               <p className="eyebrow">지도에서 후보 찾기</p>
               <h2 id="explorer-title">궁금한 상권을 별표로 저장하세요</h2>
             </div>
-            <p>로그인 없이 지금 쓰는 브라우저에 저장돼요.</p>
+            <p>{user ? "카카오 계정과 이 브라우저에 함께 저장돼요." : "로그인 없이 이 브라우저에 저장돼요. 카카오 로그인 시 다른 기기에서도 볼 수 있어요."}</p>
           </div>
 
           <div className="filters">
@@ -137,7 +166,7 @@ export default function App() {
           </div>
           <p className="filter-help">현재 검증·적재된 업종만 선택할 수 있습니다. 다른 업종 통계를 적재하면 이 목록에 자동으로 추가됩니다.</p>
 
-          {error ? <div className="error-banner">{error} 백엔드 서버가 실행 중인지 확인해 주세요.</div> : null}
+          {error ? <div className="error-banner">{error} API 서버의 실행 상태와 최신 코드 반영 여부를 확인해 주세요.</div> : null}
           <div className="explorer-grid">
             <KakaoMap areas={mapAreas} favorites={favoriteCodes} onSelectArea={setFocusedMapCode} selectedCode={focusedMapArea?.code} showDistrictGuide={!focusedMapArea && district === "전체" && !query.trim()} />
             <div className="area-panel">

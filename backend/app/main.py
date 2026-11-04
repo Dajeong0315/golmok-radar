@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import date
 from decimal import Decimal
+import json
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -45,6 +47,7 @@ from .schemas import (
 
 SUPPORTED_QUARTERS = {"20254": "2025년 4분기"}
 INDUSTRY_CODE = "CS100010"
+REVIEW_CAPTURE_DIR = Path(__file__).resolve().parents[2] / "database" / "raw" / "reviews"
 
 
 def number(value):
@@ -160,6 +163,30 @@ app.add_middleware(
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/v1/review-capture-status")
+def review_capture_status() -> dict[str, object]:
+    """Expose capture metadata only; never return review text or source URLs."""
+    captures = sorted(REVIEW_CAPTURE_DIR.glob("capture-*.json"), key=lambda path: path.stat().st_mtime)
+    if not captures:
+        return {"status": "not_collected", "review_count": 0, "provider_counts": {}}
+    try:
+        payload = json.loads(captures[-1].read_text(encoding="utf-8"))
+        reviews = payload.get("reviews", [])
+        provider_counts: dict[str, int] = defaultdict(int)
+        for review in reviews:
+            provider = review.get("provider")
+            if provider in {"naver", "kakao"}:
+                provider_counts[provider] += 1
+        return {
+            "status": "available",
+            "captured_at": payload.get("captured_at"),
+            "review_count": len(reviews),
+            "provider_counts": dict(provider_counts),
+        }
+    except (OSError, ValueError, TypeError):
+        return {"status": "unavailable", "review_count": 0, "provider_counts": {}}
 
 
 @app.get("/api/v1/trade-areas", response_model=list[TradeAreaOut])

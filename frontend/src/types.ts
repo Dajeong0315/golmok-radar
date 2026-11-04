@@ -246,3 +246,10 @@ export type ReviewAnalysisResponse = {
   notice: string;
 };
 
+export type ReviewCaptureStatus = {
+  status: "available" | "not_collected" | "unavailable";
+  captured_at?: string;
+  review_count: number;
+  provider_counts: Record<string, number>;
+};
+

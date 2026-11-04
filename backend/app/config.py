@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
     rone_api_key: str | None = None
     k_startup_api_key: str | None = None
+    review_capture_encryption_key: str | None = None
+    review_capture_browser_path: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=(ENV_FILE,),

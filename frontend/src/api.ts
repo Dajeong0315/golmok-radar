@@ -1,4 +1,4 @@
-import type { AreaMapInsightResponse, AreaReportResponse, ChecklistResponse, ComparisonResponse, EvidenceResponse, IndustryOption, RecommendationResponse, RentBenchmarkResponse, RentMarketListResponse, ReviewAnalysisResponse, SupportProgramResponse, TradeArea } from "./types";
+import type { AreaMapInsightResponse, AreaReportResponse, ChecklistResponse, ComparisonResponse, EvidenceResponse, IndustryOption, RecommendationResponse, RentBenchmarkResponse, RentMarketListResponse, ReviewAnalysisResponse, ReviewCaptureStatus, SupportProgramResponse, TradeArea } from "./types";
 
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -108,5 +108,11 @@ export async function analyzeReviewText(payload: {
   });
   if (!response.ok) throw new Error("리뷰 분석을 완료하지 못했습니다.");
   return response.json() as Promise<ReviewAnalysisResponse>;
+}
+
+export async function fetchReviewCaptureStatus(signal?: AbortSignal): Promise<ReviewCaptureStatus> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/review-capture-status`, { signal });
+  if (!response.ok) throw new Error("리뷰 수집 상태를 불러오지 못했습니다.");
+  return response.json() as Promise<ReviewCaptureStatus>;
 }
 

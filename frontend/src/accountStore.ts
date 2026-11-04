@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { parsePropertyWorksheet, type PropertyWorksheet } from "./propertyWorksheet";
 import type { AnonymousTransferSnapshot } from "./anonymousSession";
-import { DRAFT_KEY, PROFILE_KEY, PROFILE_VERSION, sanitizeAnswers } from "./founderProfile";
+import { DRAFT_KEY, FOUNDER_QUESTIONS, PROFILE_HISTORY_KEY, PROFILE_KEY, PROFILE_VERSION, sanitizeAnswers, type FounderProfile } from "./founderProfile";
 import { FAVORITES_KEY } from "./favorites";
 import { PROPERTY_WORKSHEETS_KEY } from "./propertyWorksheet";
 
@@ -67,6 +67,14 @@ export type AccountRecord = {
   sourceBatchId?: string;
 };
 
+export function profileFromAccountRecord(record: AccountRecord): FounderProfile | null {
+  if (record.kind !== "founder_profile" || !record.payload || typeof record.payload !== "object") return null;
+  const payload = record.payload as Partial<FounderProfile>;
+  const answers = sanitizeAnswers(payload.answers);
+  if (payload.version !== PROFILE_VERSION || Object.keys(answers).length !== FOUNDER_QUESTIONS.length) return null;
+  return { version: PROFILE_VERSION, completedAt: String(payload.completedAt || record.createdAt), answers };
+}
+
 function parseJson(value: string | undefined): unknown {
   try { return JSON.parse(value || "null"); } catch { return null; }
 }
@@ -119,15 +127,30 @@ export async function removeAccountRecord(client: SupabaseClient, userId: string
 export async function transferAnonymousRecords(client: SupabaseClient, userId: string, snapshot: AnonymousTransferSnapshot): Promise<void> {
   const favorites = uniqueCodes(parseJson(snapshot.records[FAVORITES_KEY]));
   const worksheets = parseJson(snapshot.records[PROPERTY_WORKSHEETS_KEY]);
-  const profile = parseJson(snapshot.records[PROFILE_KEY]) as { version?: unknown; completedAt?: unknown; answers?: unknown } | null;
+  const profile = parseJson(snapshot.records[PROFILE_KEY]);
+  const history = parseJson(snapshot.records[PROFILE_HISTORY_KEY]);
   const draft = sanitizeAnswers(parseJson(snapshot.records[DRAFT_KEY]));
   const now = new Date().toISOString();
   await Promise.all(favorites.map((code) => saveAccountFavorite(client, userId, code)));
   if (Array.isArray(worksheets)) await Promise.all(worksheets.map(parsePropertyWorksheet).filter((item): item is PropertyWorksheet => item !== null).map((item) => saveAccountWorksheet(client, userId, item)));
   const records: AccountRecord[] = [];
-  const profileAnswers = sanitizeAnswers(profile?.answers);
-  if (profile?.version === PROFILE_VERSION && Object.keys(profileAnswers).length) records.push({
-    recordId: `${snapshot.batchId}:founder-profile`, kind: "founder_profile", title: "창업 성향 테스트 결과", payload: { version: PROFILE_VERSION, completedAt: String(profile.completedAt || now), answers: profileAnswers }, schemaVersion: PROFILE_VERSION, createdAt: String(profile.completedAt || now), updatedAt: now, sourceBatchId: snapshot.batchId,
+  const candidates = [...(Array.isArray(history) ? history : []), profile];
+  const seenProfiles = new Set<string>();
+  candidates.forEach((candidate) => {
+    if (!candidate || typeof candidate !== "object" || candidate.version !== PROFILE_VERSION) return;
+    const answers = sanitizeAnswers(candidate.answers);
+    if (Object.keys(answers).length !== FOUNDER_QUESTIONS.length) return;
+    const completedAt = String(candidate.completedAt || now);
+    const signature = `${completedAt}:${JSON.stringify(answers)}`;
+    if (seenProfiles.has(signature)) return;
+    seenProfiles.add(signature);
+    const index = records.length;
+    records.push({
+      recordId: `${snapshot.batchId}:founder-profile${index ? `:${index}` : ""}`,
+      kind: "founder_profile", title: "창업 성향 테스트 결과",
+      payload: { version: PROFILE_VERSION, completedAt, answers },
+      schemaVersion: PROFILE_VERSION, createdAt: completedAt, updatedAt: completedAt, sourceBatchId: snapshot.batchId,
+    });
   });
   if (Object.keys(draft).length) records.push({
     recordId: `${snapshot.batchId}:founder-draft`, kind: "founder_draft", title: "작성 중인 창업 성향 테스트", payload: { version: PROFILE_VERSION, answers: draft }, schemaVersion: PROFILE_VERSION, createdAt: now, updatedAt: now, sourceBatchId: snapshot.batchId,

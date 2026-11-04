@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { mergeWorksheets, transferAnonymousRecords } from "./accountStore";
-import { DRAFT_KEY, PROFILE_KEY, PROFILE_VERSION } from "./founderProfile";
+import { DRAFT_KEY, PROFILE_HISTORY_KEY, PROFILE_KEY, PROFILE_VERSION } from "./founderProfile";
 import { FAVORITES_KEY } from "./favorites";
 import { createWorksheet } from "./propertyWorksheet";
 
@@ -37,5 +37,19 @@ describe("account worksheet merge", () => {
       "transfer-one:founder-profile", "transfer-one:founder-draft",
     ]);
     expect(calls.every((call) => call.value.user_id === "user-a")).toBe(true);
+  });
+
+  it("uploads each distinct completed test result from the anonymous history", async () => {
+    const ids: string[] = [];
+    const client = { from: () => ({ upsert: async (value: { record_id: string }) => { ids.push(value.record_id); return { error: null }; } }) } as never;
+    const answers = { business: "cafe", demand: "office", risk: "lean", operation: "solo", strength: "numbers", competition: "avoid" };
+    const first = { version: PROFILE_VERSION, completedAt: "2026-11-01T00:00:00Z", answers };
+    const second = { version: PROFILE_VERSION, completedAt: "2026-11-02T00:00:00Z", answers: { ...answers, demand: "neighborhood" } };
+    await transferAnonymousRecords(client, "user-a", {
+      schemaVersion: 1, batchId: "batch-two", createdAt: 1, protectedUntil: 2,
+      returnHash: "#quiz", userId: "user-a",
+      records: { [PROFILE_HISTORY_KEY]: JSON.stringify([second, first]), [PROFILE_KEY]: JSON.stringify(second) },
+    });
+    expect(ids).toEqual(["batch-two:founder-profile", "batch-two:founder-profile:1"]);
   });
 });

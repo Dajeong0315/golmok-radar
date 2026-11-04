@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import App from "./App";
 import { parseComparisonCodes } from "./comparison";
@@ -15,8 +15,10 @@ import { HomePage } from "./HomePage";
 import { isExplorerHash, isQuizRestartHash, quizRecordId } from "./routing";
 import { AnonymousSessionNotice } from "./AnonymousSessionNotice";
 import { MyPage } from "./MyPage";
+import { useAuth } from "./auth";
 
 export default function Root() {
+  const { user } = useAuth();
   const [hash, setHash] = useState(window.location.hash);
 
   useEffect(() => {
@@ -47,5 +49,5 @@ export default function Root() {
   const shouldShowQuiz = hash.startsWith("#quiz");
     page = shouldShowQuiz ? <FounderQuizPage restart={isQuizRestartHash(hash)} recordId={quizRecordId(hash)} /> : isExplorerHash(hash) ? <App /> : <HomePage />;
   }
-  return <><AnonymousSessionNotice />{page}</>;
+  return <><AnonymousSessionNotice /><Fragment key={user?.id || "anonymous"}>{page}</Fragment></>;
 }

@@ -163,6 +163,22 @@ export function saveProfile(storage: Storage, profile: FounderProfile): void {
   storage.setItem(PROFILE_KEY, JSON.stringify(profile));
 }
 
+export function forgetProfile(storage: Storage, profile: FounderProfile, userId?: string | null): void {
+  if (!mayReadLocalData(storage, userId)) return;
+  const history = loadProfiles(storage, userId);
+  const saved = history.length ? history : [loadProfile(storage, userId)].filter((item): item is FounderProfile => item !== null);
+  const index = saved.findIndex((item) => item.completedAt === profile.completedAt && JSON.stringify(item.answers) === JSON.stringify(profile.answers));
+  if (index < 0) return;
+  const remaining = saved.filter((_, itemIndex) => itemIndex !== index);
+  if (remaining.length) {
+    storage.setItem(PROFILE_HISTORY_KEY, JSON.stringify(remaining));
+    storage.setItem(PROFILE_KEY, JSON.stringify(remaining[0]));
+  } else {
+    storage.removeItem(PROFILE_HISTORY_KEY);
+    storage.removeItem(PROFILE_KEY);
+  }
+}
+
 export function answerLabel(questionId: string, answerId: string): string {
   return FOUNDER_QUESTIONS.find((question) => question.id === questionId)?.options.find((option) => option.id === answerId)?.resultLabel || "";
 }

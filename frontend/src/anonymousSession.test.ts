@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { ANONYMOUS_RETENTION_MS, ANONYMOUS_SESSION_KEY, ANONYMOUS_TRANSFER_KEY, assignAnonymousTransfer, captureAnonymousTransfer, expireAnonymousSession, touchAnonymousActivity, transferReturnHash } from "./anonymousSession";
+import { ANONYMOUS_RETENTION_MS, ANONYMOUS_SESSION_KEY, ANONYMOUS_TRANSFER_KEY, assignAnonymousTransfer, captureAnonymousTransfer, claimAccountLocalCache, clearTransferredAnonymousRecords, expireAnonymousSession, touchAnonymousActivity, transferReturnHash } from "./anonymousSession";
 import { FAVORITES_KEY, SYNC_OWNER_KEY } from "./favorites";
+import { PROFILE_HISTORY_KEY } from "./founderProfile";
 
 function storage() {
   const values = new Map<string, string>();
@@ -47,5 +48,29 @@ describe("anonymous session retention", () => {
     local.setItem(SYNC_OWNER_KEY, "user-a");
     expect(expireAnonymousSession(local, 0)).toMatchObject({ state: "empty" });
     expect(captureAnonymousTransfer(local, "#explore", 0)).toBeNull();
+  });
+
+  it("clears a previous account cache before assigning it to a different account", () => {
+    const local = storage();
+    local.setItem(SYNC_OWNER_KEY, "user-a");
+    local.setItem(FAVORITES_KEY, '["private-a"]');
+    local.setItem(PROFILE_HISTORY_KEY, '[{"private":"a"}]');
+    claimAccountLocalCache(local, "user-b");
+    expect(local.getItem(FAVORITES_KEY)).toBeNull();
+    expect(local.getItem(PROFILE_HISTORY_KEY)).toBeNull();
+    expect(local.getItem(SYNC_OWNER_KEY)).toBe("user-b");
+  });
+
+  it("keeps records changed while an anonymous transfer is saving", () => {
+    const local = storage();
+    local.setItem(FAVORITES_KEY, '["first"]');
+    expireAnonymousSession(local, 0);
+    captureAnonymousTransfer(local, "#explore", 1);
+    assignAnonymousTransfer(local, "user-a");
+    claimAccountLocalCache(local, "user-a");
+    local.setItem(FAVORITES_KEY, '["first","new"]');
+    clearTransferredAnonymousRecords(local, "user-a");
+    expect(local.getItem(FAVORITES_KEY)).toBe('["first","new"]');
+    expect(local.getItem(ANONYMOUS_TRANSFER_KEY)).toBeNull();
   });
 });

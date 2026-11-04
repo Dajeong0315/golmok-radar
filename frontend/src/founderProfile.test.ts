@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { FOUNDER_QUESTIONS, profileTitle, profileTitleLines, sanitizeAnswers } from "./founderProfile";
+import { FOUNDER_QUESTIONS, forgetProfile, loadProfile, loadProfiles, profileTitle, profileTitleLines, saveProfile, sanitizeAnswers } from "./founderProfile";
 
 describe("founder profile", () => {
   it("has exactly six questions and four unique choices each", () => {
@@ -27,5 +27,22 @@ describe("founder profile", () => {
       "직장인의 일상에",
       "들어가는 함께 운영형",
     ]);
+  });
+
+  it("removes a deleted account result from the browser while keeping other results", () => {
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => { values.set(key, value); },
+      removeItem: (key: string) => { values.delete(key); },
+    } as Storage;
+    const answers = Object.fromEntries(FOUNDER_QUESTIONS.map((question) => [question.id, question.options[0].id]));
+    const first = { version: 2, completedAt: "2026-11-01T00:00:00Z", answers };
+    const second = { version: 2, completedAt: "2026-11-02T00:00:00Z", answers };
+    saveProfile(storage, first);
+    saveProfile(storage, second);
+    forgetProfile(storage, second);
+    expect(loadProfiles(storage)).toEqual([first]);
+    expect(loadProfile(storage)).toEqual(first);
   });
 });

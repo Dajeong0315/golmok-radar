@@ -1,10 +1,10 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
 
 import { getSupabaseClient } from "./supabase";
-import { assignAnonymousTransfer, captureAnonymousTransfer, clearTransferredAnonymousRecords, pendingAnonymousTransfer, transferReturnHash } from "./anonymousSession";
+import { consumeAuthReturnHash, rememberAuthReturnHash } from "./authReturn";
+import { assignAnonymousTransfer, captureAnonymousTransfer, claimAccountLocalCache, clearTransferredAnonymousRecords, pendingAnonymousTransfer, transferReturnHash } from "./anonymousSession";
 import { transferAnonymousRecords } from "./accountStore";
-import { markLocalDataOwner } from "./favorites";
 
 type AuthState = {
   client: SupabaseClient | null;
@@ -21,12 +21,19 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+function restoreAuthReturnHash(storage: Storage, userId: string): void {
+  const destination = consumeAuthReturnHash(storage, transferReturnHash(localStorage, userId));
+  if (!destination) return;
+  if (window.location.hash !== destination) window.location.hash = destination;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const client = getSupabaseClient();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(Boolean(client));
   const [error, setError] = useState<string | null>(null);
   const [transferStatus, setTransferStatus] = useState<AuthState["transferStatus"]>("idle");
+  const activeUserId = useRef<string | null>(null);
 
   async function transferPendingRecords(userId: string): Promise<void> {
     if (!client) return;
@@ -35,9 +42,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTransferStatus("saving");
     try {
       await transferAnonymousRecords(client, userId, snapshot);
+      if (activeUserId.current !== userId) return;
       clearTransferredAnonymousRecords(localStorage, userId);
       setTransferStatus("complete");
     } catch (transferError) {
+      if (activeUserId.current !== userId) return;
       setTransferStatus("failed");
       setError(transferError instanceof Error ? `기록 저장에 실패했습니다: ${transferError.message}` : "기록 저장에 실패했습니다.");
     }
@@ -49,11 +58,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void client.auth.getSession().then(({ data, error: sessionError }) => {
       if (!active) return;
       setSession(data.session);
+      const nextUserId = data.session?.user?.id || null;
+      if (activeUserId.current !== nextUserId) setTransferStatus("idle");
+      activeUserId.current = nextUserId;
       if (data.session?.user) {
-        markLocalDataOwner(localStorage, data.session.user.id);
+        claimAccountLocalCache(localStorage, data.session.user.id);
         assignAnonymousTransfer(localStorage, data.session.user.id);
-        const returnHash = transferReturnHash(localStorage, data.session.user.id);
-        if (returnHash && window.location.hash !== returnHash) window.location.hash = returnHash;
+        restoreAuthReturnHash(sessionStorage, data.session.user.id);
         void transferPendingRecords(data.session.user.id);
       }
       setError(sessionError?.message || null);
@@ -62,11 +73,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data } = client.auth.onAuthStateChange((_event, nextSession) => {
       if (!active) return;
       setSession(nextSession);
+      const nextUserId = nextSession?.user?.id || null;
+      if (activeUserId.current !== nextUserId) setTransferStatus("idle");
+      activeUserId.current = nextUserId;
       if (nextSession?.user) {
-        markLocalDataOwner(localStorage, nextSession.user.id);
+        claimAccountLocalCache(localStorage, nextSession.user.id);
         assignAnonymousTransfer(localStorage, nextSession.user.id);
-        const returnHash = transferReturnHash(localStorage, nextSession.user.id);
-        if (returnHash && window.location.hash !== returnHash) window.location.hash = returnHash;
+        restoreAuthReturnHash(sessionStorage, nextSession.user.id);
         void transferPendingRecords(nextSession.user.id);
       }
       setLoading(false);
@@ -94,12 +107,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       setError(null);
+      rememberAuthReturnHash(sessionStorage, window.location.hash);
       captureAnonymousTransfer(localStorage, window.location.hash);
-      const { error: signInError } = await client.auth.signInWithOAuth({
+      const { data, error: signInError } = await client.auth.signInWithOAuth({
         provider: "kakao",
-        options: { redirectTo: window.location.origin },
+        options: {
+          redirectTo: window.location.origin,
+          skipBrowserRedirect: true,
+        },
       });
-      if (signInError) setError(signInError.message);
+      if (signInError) {
+        setError(signInError.message);
+        return;
+      }
+      if (!data.url) {
+        setError("카카오 로그인 주소를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        return;
+      }
+      window.location.assign(data.url);
     },
     async signOut() {
       if (!client) return;

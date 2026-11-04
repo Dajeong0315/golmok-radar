@@ -11,20 +11,19 @@ import {
   profileTitleLines,
   SKIPPED_KEY,
   saveProfile,
-  sanitizeAnswers,
   type FounderProfile,
 } from "./founderProfile";
 import { selectAdditionalFundingGuides, selectBankFundingGuides } from "./fundingGuides";
 import { TopNavigation } from "./TopNavigation";
 import { registerAnonymousRecord } from "./anonymousSession";
 import { useAuth } from "./auth";
-import { fetchAccountRecords, saveAccountRecord } from "./accountStore";
+import { fetchAccountRecords, profileFromAccountRecord, saveAccountRecord } from "./accountStore";
 import { mayReadLocalData } from "./favorites";
 
 type Mode = "intro" | "question" | "result";
 
 export function FounderQuizPage({ restart = false, recordId = null }: { restart?: boolean; recordId?: string | null }) {
-  const { client, user } = useAuth();
+  const { client, transferStatus, user } = useAuth();
   const [openedProfile, setOpenedProfile] = useState<FounderProfile | null>(null);
   const existingProfile = restart ? null : openedProfile || loadProfile(localStorage, user?.id ?? null);
   const draft = restart ? {} : loadDraft(localStorage, user?.id ?? null);
@@ -48,22 +47,25 @@ export function FounderQuizPage({ restart = false, recordId = null }: { restart?
   }, [restart]);
 
   useEffect(() => {
-    if (restart || !recordId || !client || !user) {
+    if (restart || !client || !user) {
       setOpenedProfile(null);
       return;
     }
+    if (!recordId && mode !== "intro") return;
+    let active = true;
     void fetchAccountRecords(client, user.id, "founder_profile").then((records) => {
-      const record = records.find((item) => item.recordId === recordId);
-      const payload = record?.payload as Partial<FounderProfile> | undefined;
-      const answers = sanitizeAnswers(payload?.answers);
-      if (!record || payload?.version !== PROFILE_VERSION || Object.keys(answers).length !== FOUNDER_QUESTIONS.length) return;
-      const restored = { version: PROFILE_VERSION, completedAt: String(payload.completedAt || record.createdAt), answers };
+      if (!active) return;
+      const record = recordId ? records.find((item) => item.recordId === recordId) : records[0];
+      if (!record) return;
+      const restored = profileFromAccountRecord(record);
+      if (!restored) return;
       setOpenedProfile(restored);
       setAnswers(restored.answers);
       setStep(0);
       setMode("result");
-    }).catch(() => setOpenedProfile(null));
-  }, [client, recordId, restart, user?.id]);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [client, mode, recordId, restart, transferStatus, user?.id]);
 
   const current = FOUNDER_QUESTIONS[step];
   const selected = answers[current?.id];
@@ -99,6 +101,10 @@ export function FounderQuizPage({ restart = false, recordId = null }: { restart?
 
   const startAgain = () => {
     localStorage.removeItem(DRAFT_KEY);
+    if (!restart) {
+      window.location.hash = "quiz?restart=1";
+      return;
+    }
     setAnswers({});
     setStep(0);
     setMode("question");

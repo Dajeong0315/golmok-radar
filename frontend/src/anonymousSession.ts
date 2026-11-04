@@ -1,4 +1,4 @@
-import { DRAFT_KEY, PROFILE_KEY, SKIPPED_KEY } from "./founderProfile";
+import { DRAFT_KEY, PROFILE_HISTORY_KEY, PROFILE_KEY, SKIPPED_KEY } from "./founderProfile";
 import { FAVORITES_KEY, SYNC_OWNER_KEY } from "./favorites";
 import { PROPERTY_WORKSHEETS_KEY } from "./propertyWorksheet";
 
@@ -7,7 +7,7 @@ export const ANONYMOUS_TRANSFER_KEY = "golmok-radar:anonymous-transfer:v1";
 export const ANONYMOUS_RETENTION_MS = 60 * 60 * 1000;
 export const LOGIN_PROTECTION_MS = 15 * 60 * 1000;
 
-const RECORD_KEYS = [FAVORITES_KEY, PROFILE_KEY, DRAFT_KEY, SKIPPED_KEY, PROPERTY_WORKSHEETS_KEY] as const;
+const RECORD_KEYS = [FAVORITES_KEY, PROFILE_KEY, PROFILE_HISTORY_KEY, DRAFT_KEY, SKIPPED_KEY, PROPERTY_WORKSHEETS_KEY] as const;
 
 type Session = {
   schemaVersion: 1;
@@ -34,6 +34,16 @@ export type AnonymousStatus = {
 };
 
 type StoragePort = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+
+/** Keep a previous account's browser cache out of the newly signed-in account. */
+export function claimAccountLocalCache(storage: StoragePort, userId: string): void {
+  const previousOwner = storage.getItem(SYNC_OWNER_KEY);
+  if (previousOwner && previousOwner !== userId) {
+    RECORD_KEYS.forEach((key) => storage.removeItem(key));
+    storage.removeItem(ANONYMOUS_SESSION_KEY);
+  }
+  storage.setItem(SYNC_OWNER_KEY, userId);
+}
 
 function announce(): void {
   if (typeof window !== "undefined") window.dispatchEvent(new Event("golmok-anonymous-session"));
@@ -157,7 +167,9 @@ export function pendingAnonymousTransfer(storage: StoragePort, userId: string): 
 export function clearTransferredAnonymousRecords(storage: StoragePort, userId: string): void {
   const snapshot = pendingAnonymousTransfer(storage, userId);
   if (!snapshot) return;
-  RECORD_KEYS.forEach((key) => storage.removeItem(key));
+  RECORD_KEYS.forEach((key) => {
+    if (snapshot.records[key] !== undefined && storage.getItem(key) === snapshot.records[key]) storage.removeItem(key);
+  });
   storage.removeItem(ANONYMOUS_SESSION_KEY);
   storage.removeItem(ANONYMOUS_TRANSFER_KEY);
   announce();

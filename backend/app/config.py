@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     k_startup_api_key: str | None = None
     review_capture_encryption_key: str | None = None
     review_capture_browser_path: str | None = None
+    supabase_url: str | None = None
+    supabase_anon_key: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=(ENV_FILE,),

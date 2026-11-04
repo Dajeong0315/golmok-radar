@@ -38,6 +38,12 @@ class CapturedReview:
     fetched_at: datetime
 
 
+@dataclass(frozen=True)
+class CaptureBatch:
+    reviews: list[CapturedReview]
+    failed_labels: list[str]
+
+
 class CaptureConfigurationError(ValueError):
     pass
 
@@ -85,13 +91,17 @@ class PublicReviewBrowserCollector:
         return next((candidate for candidate in candidates if Path(candidate).is_file()), None)
 
     def capture(self, targets: list[CaptureTarget]) -> list[CapturedReview]:
+        return self.capture_with_failures(targets).reviews
+
+    def capture_with_failures(self, targets: list[CaptureTarget]) -> CaptureBatch:
         validate_targets(targets)
         try:
-            from playwright.sync_api import sync_playwright
+            from playwright.sync_api import Error as PlaywrightError, sync_playwright
         except ImportError as error:
             raise CaptureConfigurationError("Playwright is required. Install backend requirements first.") from error
 
         captured: list[CapturedReview] = []
+        failed_labels: list[str] = []
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(
                 headless=True,
@@ -100,9 +110,16 @@ class PublicReviewBrowserCollector:
             try:
                 page = browser.new_page()
                 for target in targets:
-                    page.goto(target.public_url, wait_until="domcontentloaded", timeout=30_000)
-                    self._open_review_section(page, target.provider)
-                    text_values = self._read_public_review_text(page, target.provider)
+                    try:
+                        response = page.goto(target.public_url, wait_until="domcontentloaded", timeout=30_000)
+                        if response is None or response.status >= 400:
+                            failed_labels.append(target.peer_label)
+                            continue
+                        self._open_review_section(page, target.provider)
+                        text_values = self._read_public_review_text(page, target.provider)
+                    except PlaywrightError:
+                        failed_labels.append(target.peer_label)
+                        continue
                     for text in text_values[:MAX_REVIEWS_PER_PLACE]:
                         redacted = sanitize_review_text(text)
                         if not redacted:
@@ -115,10 +132,10 @@ class PublicReviewBrowserCollector:
                             fetched_at=datetime.now(timezone.utc),
                         ))
                         if len(captured) >= MAX_REVIEWS_PER_RUN:
-                            return captured
+                            return CaptureBatch(captured, failed_labels)
             finally:
                 browser.close()
-        return captured
+        return CaptureBatch(captured, failed_labels)
 
     @staticmethod
     def _open_review_section(page, provider: Provider) -> None:

@@ -75,13 +75,39 @@ export async function searchKakaoPlaces(
       radius: options.radius,
       sort: kakao.maps.services.SortBy.DISTANCE,
       size: 15,
-    } : { size: 10 };
+      category_group_code: "CE7",
+    } : { size: 10, category_group_code: "CE7" };
     new kakao.maps.services.Places().keywordSearch(query, (items: any[], status: string) => {
-      if (status === kakao.maps.services.Status.OK) resolve(items.map(normalizePlace));
+      if (status === kakao.maps.services.Status.OK) resolve(items.filter((item) => item.category_group_code === "CE7").map(normalizePlace));
       else if (status === kakao.maps.services.Status.ZERO_RESULT) resolve([]);
       else reject(new Error("가게 검색을 완료하지 못했습니다."));
     }, searchOptions);
   });
+}
+
+export async function searchNearbyCafes(latitude: number, longitude: number): Promise<KakaoPlace[]> {
+  await loadKakaoSdk();
+  const kakao = window.kakao;
+  const places = new kakao.maps.services.Places();
+  const found: KakaoPlace[] = [];
+  for (let page = 1; page <= 3; page += 1) {
+    const batch = await new Promise<KakaoPlace[]>((resolve, reject) => {
+      places.categorySearch("CE7", (items: any[], status: string) => {
+        if (status === kakao.maps.services.Status.OK) resolve(items.map(normalizePlace));
+        else if (status === kakao.maps.services.Status.ZERO_RESULT) resolve([]);
+        else reject(new Error("주변 카페 검색을 완료하지 못했습니다."));
+      }, {
+        location: new kakao.maps.LatLng(latitude, longitude),
+        radius: 1200,
+        sort: kakao.maps.services.SortBy.DISTANCE,
+        size: 15,
+        page,
+      });
+    });
+    found.push(...batch);
+    if (batch.length < 15) break;
+  }
+  return [...new Map(found.map((place) => [place.id, place])).values()];
 }
 
 export function selectNearbyPlaces(places: KakaoPlace[], ownPlaceId: string, count: number): KakaoPlace[] {

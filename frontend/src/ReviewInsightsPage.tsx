@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { analyzeReviewText, fetchReviewCaptureStatus } from "./api";
 import { TopNavigation } from "./TopNavigation";
+import { ReviewAutomaticFlow } from "./ReviewAutomaticFlow";
 import type { ReviewAnalysisResponse, ReviewCaptureStatus } from "./types";
 
 const toLines = (value: string) => value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -58,15 +59,17 @@ export function ReviewInsightsPage() {
     </header>
     <main>
       <section className="reviews-hero">
-        <p className="eyebrow">PHASE 17 · 제한 표본 리뷰 분석</p>
+        <p className="eyebrow">가게 운영 점검 · 제한 표본 리뷰 분석</p>
         <h1>손님 반응을<br /><em>같은 기준</em>으로 살펴보세요.</h1>
-        <p>내 가게와 주변 동종 가게의 공개 리뷰 표본을 메뉴·가격·응대·공간 기준으로 비교합니다. 실제 상호와 원문은 화면에 노출하지 않습니다.</p>
+        <p>내 가게를 선택하면 공식 상권을 확인하고, 주변 카페의 공개 리뷰 표본을 메뉴·가격·응대·공간 기준으로 비교합니다. 주변 가게의 실제 상호와 리뷰 원문은 표시하지 않습니다.</p>
       </section>
+
+      <ReviewAutomaticFlow />
 
       <section className="review-coming" aria-labelledby="capture-title">
         <div className="review-section-heading">
-          <div><p className="eyebrow">현재 수집 상태</p><h2 id="capture-title">암호화된 제한 표본</h2></div>
-          <p>상권별 월 1회, 최대 5개 가게와 가게당 20개 리뷰만 수집합니다.</p>
+          <div><p className="eyebrow">이전 파일럿</p><h2 id="capture-title">수동 수집 표본 기록</h2></div>
+          <p>아래 건수는 위에서 선택한 가게의 자동 분석 결과와 별개인 개발 파일럿입니다.</p>
         </div>
         <div className="review-provider-status">
           {capture?.status === "available" ? <><strong>{capture.review_count}건 수집 완료</strong><p>{providerSummary || "제공자 정보 없음"} · 수집 시각 {new Date(capture.captured_at || "").toLocaleString("ko-KR")}<br />원문은 암호화 저장되며, 이 화면에는 집계 결과만 표시합니다.</p></> : <><strong>수집 대기</strong><p>{captureError || "아직 확인할 수집 표본이 없습니다."}</p></>}
@@ -75,8 +78,8 @@ export function ReviewInsightsPage() {
 
       <form className="reviews-form" onSubmit={submit}>
         <div className="review-section-heading">
-          <div><p className="eyebrow">분석 미리보기</p><h2>비식별 리뷰 비교</h2></div>
-          <p>개발 확인용 입력입니다. 한 줄에 리뷰 하나씩 넣으면 서버에서 개인 식별 단서를 다시 제거하고 분석합니다.</p>
+          <div><p className="eyebrow">보조 흐름</p><h2>직접 입력한 리뷰 비교</h2></div>
+          <p>직접 보유한 리뷰가 있다면 한 줄에 하나씩 입력해 같은 주제 기준으로 분석할 수 있습니다.</p>
         </div>
         <div className="review-inputs">
           <label><span>내 가게 리뷰</span><textarea rows={8} value={ownReviews} onChange={(event) => setOwnReviews(event.target.value)} placeholder={"커피가 맛있고 직원이 친절해요\n공간이 깨끗해요"} /></label>

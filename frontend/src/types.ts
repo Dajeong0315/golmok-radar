@@ -253,3 +253,31 @@ export type ReviewCaptureStatus = {
   provider_counts: Record<string, number>;
 };
 
+export type ReviewAreaLocation = {
+  status: "inside" | "nearby" | "unmapped";
+  area: { code: string; name: string; district_name: string; area_type_name: string } | null;
+  distance_m: number | null;
+};
+
+export type CapturedReviewReport = {
+  status: "available" | "limited" | "insufficient_sample" | "outside_trade_area";
+  area: ReviewAreaLocation["area"];
+  location_status?: ReviewAreaLocation["status"];
+  area_distance_m?: number | null;
+  own_review_count: number;
+  peer_samples: Array<{ label: string; review_count: number; same_trade_area: boolean; included_in_analysis?: boolean }>;
+  total_review_count: number;
+  analyzed_review_count?: number;
+  eligible_place_count: number;
+  required_place_count: number;
+  required_review_count: number;
+  topics: Array<{ topic_key: string; label: string; own: Omit<ReviewTopicSide, "evidence">; nearby: Omit<ReviewTopicSide, "evidence"> }>;
+  insights: Array<{ topic_key: string; kind: "strength" | "caution"; observation: string; action_idea: string }>;
+  failed_labels: string[];
+  captured_at: string | null;
+  expires_at: string | null;
+  from_cache: boolean;
+  source: "kakao";
+  message: string;
+};
+

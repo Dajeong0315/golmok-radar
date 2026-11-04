@@ -255,6 +255,52 @@ class ReviewAnalysisRequest(BaseModel):
     nearby_reviews: list[str]
 
 
+class ReviewAreaSummary(BaseModel):
+    code: str
+    name: str
+    district_name: str
+    area_type_name: str
+
+
+class ReviewAreaLocationResponse(BaseModel):
+    status: Literal["inside", "nearby", "unmapped"]
+    area: ReviewAreaSummary | None
+    distance_m: int | None
+
+
+class ReviewPlaceRef(BaseModel):
+    id: str = Field(pattern=r"^\d{1,15}$")
+    latitude: float = Field(ge=37.3, le=37.8)
+    longitude: float = Field(ge=126.7, le=127.3)
+
+
+class CapturedReviewReportRequest(BaseModel):
+    own: ReviewPlaceRef
+    candidates: list[ReviewPlaceRef] = Field(max_length=45)
+    ownership_confirmed: bool
+
+
+class ReviewAggregateSide(BaseModel):
+    mentions: int
+    positive: int
+    negative: int
+    neutral: int
+
+
+class ReviewAggregateTopic(BaseModel):
+    topic_key: str
+    label: str
+    own: ReviewAggregateSide
+    nearby: ReviewAggregateSide
+
+
+class ReviewPeerSample(BaseModel):
+    label: str
+    review_count: int
+    same_trade_area: bool
+    included_in_analysis: bool = False
+
+
 class ReviewEvidence(BaseModel):
     review_index: int
     snippet: str
@@ -281,6 +327,28 @@ class ReviewInsight(BaseModel):
     kind: Literal["strength", "caution"]
     observation: str
     action_idea: str
+
+
+class CapturedReviewReportResponse(BaseModel):
+    status: Literal["available", "limited", "insufficient_sample", "outside_trade_area"]
+    area: ReviewAreaSummary | None
+    location_status: Literal["inside", "nearby", "unmapped"] = "inside"
+    area_distance_m: int | None = None
+    own_review_count: int
+    peer_samples: list[ReviewPeerSample]
+    total_review_count: int
+    analyzed_review_count: int = 0
+    eligible_place_count: int
+    required_place_count: int
+    required_review_count: int
+    topics: list[ReviewAggregateTopic]
+    insights: list[ReviewInsight]
+    failed_labels: list[str]
+    captured_at: str | None
+    expires_at: str | None
+    from_cache: bool
+    source: Literal["kakao"]
+    message: str
 
 
 class ReviewAnalysisResponse(BaseModel):

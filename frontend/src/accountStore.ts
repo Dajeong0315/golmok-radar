@@ -58,7 +58,7 @@ export function mergeWorksheets(local: PropertyWorksheet[], remote: PropertyWork
 
 export type AccountRecord = {
   recordId: string;
-  kind: "founder_profile" | "founder_draft" | "comparison_report" | "recommendation_report";
+  kind: "founder_profile" | "founder_draft" | "comparison_report" | "recommendation_report" | "review_report";
   title: string;
   payload: unknown;
   schemaVersion: number;

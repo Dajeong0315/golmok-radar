@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 from collections import defaultdict
-from datetime import date
+from contextlib import asynccontextmanager, suppress
+from datetime import date, datetime, timezone
 from decimal import Decimal
 import json
 from pathlib import Path
@@ -18,6 +20,10 @@ from .models import DataSource, PopulationMetric, RentBenchmark, SalesMetric, St
 from .recommendations import percentile, recommend, select_diverse
 from .reports import build_area_report
 from .review_analysis import analyze_reviews, build_insights, sanitize_review_text
+from .review_auth import get_review_user
+from .review_capture import CaptureConfigurationError
+from .review_report import append_audit, collect_or_load_report, purge_expired_captures, purge_expired_reports, select_peer_places
+from .trade_area_geometry import locate_area
 from .support_programs import NormalizedProgram, SupportProfile, select_candidates
 from .schemas import (
     AreaReportResponse,
@@ -39,6 +45,10 @@ from .schemas import (
     RentMarketListResponse,
     ReviewAnalysisRequest,
     ReviewAnalysisResponse,
+    ReviewAreaLocationResponse,
+    ReviewAreaSummary,
+    CapturedReviewReportRequest,
+    CapturedReviewReportResponse,
     SupportProgramQuery,
     SupportProgramResponse,
     TradeAreaOut,
@@ -150,7 +160,34 @@ def build_comparison(session: Session, codes: list[str], areas: list[TradeArea],
 
 
 settings = get_settings()
-app = FastAPI(title=settings.app_name, version="0.1.0")
+
+
+def _purge_expired_review_files() -> None:
+    now = datetime.now(timezone.utc)
+    removed = purge_expired_reports(REVIEW_CAPTURE_DIR, now) + purge_expired_captures(REVIEW_CAPTURE_DIR, now)
+    if removed:
+        append_audit(REVIEW_CAPTURE_DIR, event="purge", removed_count=removed, now=now)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    _purge_expired_review_files()
+
+    async def daily_cleanup() -> None:
+        while True:
+            await asyncio.sleep(24 * 60 * 60)
+            _purge_expired_review_files()
+
+    task = asyncio.create_task(daily_cleanup())
+    try:
+        yield
+    finally:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+
+app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -187,6 +224,75 @@ def review_capture_status() -> dict[str, object]:
         }
     except (OSError, ValueError, TypeError):
         return {"status": "unavailable", "review_count": 0, "provider_counts": {}}
+
+
+@app.get("/api/v1/review-trade-area", response_model=ReviewAreaLocationResponse)
+def review_trade_area(
+    latitude: float = Query(ge=37.3, le=37.8),
+    longitude: float = Query(ge=126.7, le=127.3),
+    session: Session = Depends(get_db),
+) -> ReviewAreaLocationResponse:
+    try:
+        location = locate_area(latitude, longitude)
+    except (FileNotFoundError, ValueError) as error:
+        raise HTTPException(503, "공식 상권 경계 데이터를 확인할 수 없습니다.") from error
+    area = session.get(TradeArea, location.code) if location.code else None
+    return ReviewAreaLocationResponse(
+        status=location.status if area else "unmapped",
+        area=ReviewAreaSummary(
+            code=area.code,
+            name=area.name,
+            district_name=area.district_name,
+            area_type_name=area.area_type_name,
+        ) if area else None,
+        distance_m=location.distance_m,
+    )
+
+
+@app.post("/api/v1/captured-review-report", response_model=CapturedReviewReportResponse)
+def captured_review_report(
+    payload: CapturedReviewReportRequest,
+    user_id: str = Depends(get_review_user),
+    session: Session = Depends(get_db),
+) -> CapturedReviewReportResponse:
+    if not payload.ownership_confirmed:
+        raise HTTPException(400, "내 가게 운영·관리 여부를 확인해 주세요.")
+    try:
+        location = locate_area(payload.own.latitude, payload.own.longitude)
+    except (FileNotFoundError, ValueError) as error:
+        raise HTTPException(503, "공식 상권 경계 데이터를 확인할 수 없습니다.") from error
+    area = session.get(TradeArea, location.code) if location.code else None
+    area_summary = ReviewAreaSummary(
+        code=area.code, name=area.name,
+        district_name=area.district_name, area_type_name=area.area_type_name,
+    ) if area else None
+    location_status = location.status if area or location.status == "unmapped" else "unmapped"
+    peers = select_peer_places(payload.own, payload.candidates, area.code if location_status == "inside" and area else None)
+    if len(peers) < 2:
+        return CapturedReviewReportResponse(
+            status="insufficient_sample", area=area_summary,
+            location_status=location_status, area_distance_m=location.distance_m,
+            own_review_count=0, peer_samples=[], total_review_count=0,
+            eligible_place_count=0, required_place_count=3, required_review_count=30,
+            topics=[], insights=[], failed_labels=[], captured_at=None, expires_at=None,
+            from_cache=False, source="kakao",
+            message="반경 1.2km 안에 주변 카페 후보가 2곳 미만이라 리뷰 수집을 시작하지 않았습니다.",
+        )
+    try:
+        return collect_or_load_report(
+            own=payload.own,
+            peers=peers,
+            area=area_summary,
+            location_status=location_status,
+            area_distance_m=location.distance_m,
+            user_id=user_id,
+            encryption_key=settings.review_capture_encryption_key or "",
+        )
+    except CaptureConfigurationError as error:
+        raise HTTPException(503, "리뷰 수집 저장 설정이 준비되지 않았습니다.") from error
+    except RuntimeError as error:
+        status = 429 if "횟수" in str(error) else 409
+        raise HTTPException(status, str(error)) from error
 
 
 @app.get("/api/v1/trade-areas", response_model=list[TradeAreaOut])

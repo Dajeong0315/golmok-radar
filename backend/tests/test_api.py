@@ -10,6 +10,9 @@ from sqlalchemy.orm import Session
 from app.db import Base, get_db, make_engine
 from app.main import app, settings
 from app.models import DataSource, PopulationMetric, RentBenchmark, SalesMetric, StoreMetric, SupportProgram, TradeArea
+from app.review_auth import get_review_user
+from app.schemas import ReviewPlaceRef
+from app.trade_area_geometry import AreaLocation
 
 
 @pytest.fixture
@@ -422,4 +425,83 @@ def test_review_analysis_requires_rights_confirmation_and_redacts_contacts(clien
     evidence = next(topic for topic in allowed.json()["topics"] if topic["topic_key"] == "service")["own"]["evidence"]
     assert evidence[0]["snippet"].startswith("연락처 [전화번호 제거]")
     assert "010-1234-5678" not in evidence[0]["snippet"]
+
+
+def test_review_area_location_and_capture_require_login(client: TestClient, monkeypatch) -> None:
+    from app import main
+
+    monkeypatch.setattr(main, "locate_area", lambda _lat, _lon: AreaLocation("1", "inside", 0))
+    place = {"id": "123", "latitude": 37.51, "longitude": 127.01}
+    located = client.get("/api/v1/review-trade-area", params={"latitude": place["latitude"], "longitude": place["longitude"]})
+    assert located.status_code == 200
+    assert located.json()["area"]["code"] == "1"
+    assert located.json()["status"] == "inside"
+
+    denied = client.post("/api/v1/captured-review-report", json={
+        "own": place, "candidates": [], "ownership_confirmed": True,
+    })
+    assert denied.status_code == 401
+
+
+def test_capture_report_validates_ownership_and_returns_aggregate_only(client: TestClient, monkeypatch) -> None:
+    from app import main
+    from app.schemas import CapturedReviewReportResponse
+
+    app.dependency_overrides[get_review_user] = lambda: "test-user"
+    monkeypatch.setattr(main, "locate_area", lambda _lat, _lon: AreaLocation("1", "inside", 0))
+    monkeypatch.setattr(main, "select_peer_places", lambda *_args: [
+        (ReviewPlaceRef(id="456", latitude=37.5101, longitude=127.0101), True),
+        (ReviewPlaceRef(id="789", latitude=37.5102, longitude=127.0102), True),
+    ])
+    monkeypatch.setattr(main, "collect_or_load_report", lambda **kwargs: CapturedReviewReportResponse(
+        status="insufficient_sample", area=kwargs["area"], own_review_count=3,
+        peer_samples=[], total_review_count=3, eligible_place_count=0,
+        required_place_count=5, required_review_count=50, topics=[], insights=[],
+        failed_labels=[], captured_at=None, expires_at=None, from_cache=False,
+        source="kakao", message="표본 부족",
+    ))
+    payload = {"own": {"id": "123", "latitude": 37.51, "longitude": 127.01}, "candidates": [], "ownership_confirmed": False}
+    try:
+        assert client.post("/api/v1/captured-review-report", json=payload).status_code == 400
+        payload["ownership_confirmed"] = True
+        response = client.post("/api/v1/captured-review-report", json=payload)
+        assert response.status_code == 200
+        assert response.json()["status"] == "insufficient_sample"
+        assert response.json()["area"]["code"] == "1"
+        assert "reviews" not in response.json()
+    finally:
+        app.dependency_overrides.pop(get_review_user, None)
+
+
+def test_capture_report_allows_nearby_area_without_claiming_membership(client: TestClient, monkeypatch) -> None:
+    from app import main
+    from app.schemas import CapturedReviewReportResponse
+
+    app.dependency_overrides[get_review_user] = lambda: "test-user"
+    monkeypatch.setattr(main, "locate_area", lambda _lat, _lon: AreaLocation("1", "nearby", 75))
+    seen = {}
+
+    def fake_report(**kwargs):
+        seen.update(kwargs)
+        return CapturedReviewReportResponse(
+            status="insufficient_sample", area=kwargs["area"], location_status=kwargs["location_status"],
+            area_distance_m=kwargs["area_distance_m"], own_review_count=0, peer_samples=[],
+            total_review_count=0, eligible_place_count=0, required_place_count=3,
+            required_review_count=30, topics=[], insights=[], failed_labels=[],
+            captured_at=None, expires_at=None, from_cache=False, source="kakao", message="표본 부족",
+        )
+
+    monkeypatch.setattr(main, "collect_or_load_report", fake_report)
+    payload = {"own": {"id": "123", "latitude": 37.51, "longitude": 127.01}, "candidates": [
+        {"id": "456", "latitude": 37.5101, "longitude": 127.0101},
+        {"id": "789", "latitude": 37.5102, "longitude": 127.0102},
+    ], "ownership_confirmed": True}
+    try:
+        response = client.post("/api/v1/captured-review-report", json=payload)
+        assert response.status_code == 200
+        assert response.json()["location_status"] == "nearby"
+        assert response.json()["area_distance_m"] == 75
+        assert seen["peers"][0][1] is False
+    finally:
+        app.dependency_overrides.pop(get_review_user, None)
 

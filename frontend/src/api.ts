@@ -1,4 +1,4 @@
-import type { AreaMapInsightResponse, AreaReportResponse, ChecklistResponse, ComparisonResponse, EvidenceResponse, IndustryOption, RecommendationResponse, RentBenchmarkResponse, RentMarketListResponse, ReviewAnalysisResponse, ReviewCaptureStatus, SupportProgramResponse, TradeArea } from "./types";
+import type { AreaMapInsightResponse, AreaReportResponse, CapturedReviewReport, ChecklistResponse, ComparisonResponse, EvidenceResponse, IndustryOption, RecommendationResponse, RentBenchmarkResponse, RentMarketListResponse, ReviewAnalysisResponse, ReviewAreaLocation, ReviewCaptureStatus, SupportProgramResponse, TradeArea } from "./types";
 
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -114,5 +114,32 @@ export async function fetchReviewCaptureStatus(signal?: AbortSignal): Promise<Re
   const response = await fetch(`${API_BASE_URL}/api/v1/review-capture-status`, { signal });
   if (!response.ok) throw new Error("리뷰 수집 상태를 불러오지 못했습니다.");
   return response.json() as Promise<ReviewCaptureStatus>;
+}
+
+export type ReviewPlaceInput = { id: string; latitude: number; longitude: number };
+
+export async function fetchReviewTradeArea(place: ReviewPlaceInput, signal?: AbortSignal): Promise<ReviewAreaLocation> {
+  const query = new URLSearchParams({ latitude: String(place.latitude), longitude: String(place.longitude) });
+  const response = await fetch(`${API_BASE_URL}/api/v1/review-trade-area?${query}`, { signal });
+  if (!response.ok) throw new Error("가게 위치의 공식 상권을 확인하지 못했습니다.");
+  return response.json() as Promise<ReviewAreaLocation>;
+}
+
+export async function fetchCapturedReviewReport(
+  own: ReviewPlaceInput,
+  candidates: ReviewPlaceInput[],
+  accessToken: string,
+  ownershipConfirmed: boolean,
+): Promise<CapturedReviewReport> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/captured-review-report`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ own, candidates, ownership_confirmed: ownershipConfirmed }),
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as { detail?: string } | null;
+    throw new Error(payload?.detail || "리뷰 수집과 비교를 완료하지 못했습니다.");
+  }
+  return response.json() as Promise<CapturedReviewReport>;
 }
 

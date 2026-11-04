@@ -147,22 +147,14 @@ def audit_desktop(browser, results: list[dict]) -> None:
 
     def reviews():
         page.goto(BASE + "#reviews", wait_until="networkidle")
-        page.locator("textarea").nth(0).fill("커피가 맛있어요\n직원이 친절해요\n공간이 깨끗해요\n가격이 좋아요\n메뉴가 다양해요")
-        page.locator("textarea").nth(1).fill("커피가 맛있어요\n대기가 길어요\n공간이 깨끗해요\n가격이 비싸요\n응대가 친절해요")
-        page.get_by_role("button", name="주제별 비교 분석").click()
-        page.get_by_role("heading", name="주제별 언급을").wait_for()
-        return "review sample analysis rendered"
+        page.locator("#review-auto-title").wait_for()
+        assert page.locator(".review-shop-search").count() == 1
+        assert page.locator(".review-coming").count() == 0
+        assert page.locator(".reviews-form").count() == 0
+        assert page.locator("textarea").count() == 0
+        return "automatic review flow rendered without retired inputs"
 
-    check("review analysis", reviews, results)
-
-    def insufficient_reviews():
-        page.locator("textarea").nth(0).fill("커피가 맛있어요")
-        page.locator("textarea").nth(1).fill("대기가 길어요")
-        page.get_by_role("button", name="주제별 비교 분석").click()
-        page.get_by_text("표본 부족:", exact=False).wait_for()
-        return "small sample clearly marked insufficient"
-
-    check("review sample limit", insufficient_reviews, results)
+    check("automatic review entry", reviews, results)
 
     def mypage():
         page.goto(BASE + "#mypage", wait_until="networkidle")

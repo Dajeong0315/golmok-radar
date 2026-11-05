@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     review_capture_browser_path: str | None = None
     supabase_url: str | None = None
     supabase_anon_key: str | None = None
+    supabase_service_role_key: str | None = None
+    supabase_secret_key: str | None = None
+    kakao_admin_key: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=(ENV_FILE,),

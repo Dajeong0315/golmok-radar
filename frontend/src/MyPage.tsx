@@ -5,6 +5,7 @@ import { fetchAccountFavorites, fetchAccountRecords, fetchAccountWorksheets, pro
 import { useAuth } from "./auth";
 import { forgetProfile } from "./founderProfile";
 import { TopNavigation } from "./TopNavigation";
+import { AccountManagement } from "./AccountManagement";
 import type { CapturedReviewReport } from "./types";
 import type { PropertyWorksheet } from "./propertyWorksheet";
 
@@ -100,5 +101,6 @@ export function MyPage() {
     <section className="mypage-section"><div className="section-heading"><div><p className="eyebrow">개업 후 점검</p><h2>리뷰 비교 기록</h2></div><a href="#reviews">리뷰 비교하기</a></div>{reviewRecords.length ? <div className="mypage-grid">{reviewRecords.map((record) => { const report = record.payload as Partial<CapturedReviewReport> | null; return <article key={record.recordId}><small>{new Date(record.updatedAt).toLocaleDateString("ko-KR")}</small><a className="mypage-card-title" href={`#reviews?record=${encodeURIComponent(record.recordId)}`}>{record.title}</a><p>{report?.status === "available" ? "전체 표본 비교" : report?.status === "limited" ? "제한 표본 비교" : "표본 부족"} · {typeof report?.total_review_count === "number" ? `${report.total_review_count}건` : "건수 미확인"}</p><div className="mypage-card-actions"><a href={`#reviews?record=${encodeURIComponent(record.recordId)}`}>내용 보기</a><button onClick={() => void deleteRecord(record)}>삭제</button></div></article>; })}</div> : <p className="empty-favorites">저장된 리뷰 비교 기록이 없습니다.</p>}</section>
     <section className="mypage-section"><div className="section-heading"><div><p className="eyebrow">관심 상권 모음</p><h2>관심 상권 모음</h2></div><a href="#explore">상권 더 찾기</a></div>{visibleFavorites.length ? <div className="mypage-grid">{visibleFavorites.map((code) => <a className="mypage-card-link" key={code} href={`#explore?focus=${encodeURIComponent(code)}`}><small>공식 상권</small><strong>{areaNames[code] || "상권 정보 불러오는 중"}</strong><span>{areaNames[code] ? "상권 정보 보기 →" : code}</span></a>)}</div> : <p className="empty-favorites">저장한 상권이 없습니다.</p>}</section>
     <section className="mypage-section"><div className="section-heading"><div><p className="eyebrow">매물 워크시트</p><h2>매물 워크시트</h2></div><a href="#worksheet">매물 기록하기</a></div>{visibleWorksheets.length ? <div className="mypage-grid">{visibleWorksheets.map((worksheet) => <article key={worksheet.id}><small>마지막 수정 {new Date(worksheet.updatedAt).toLocaleDateString("ko-KR")}</small><a className="mypage-card-title" href={`#worksheet?id=${encodeURIComponent(worksheet.id)}`}>{worksheet.alias || "이름 없는 매물 후보"}</a><div className="mypage-card-actions"><button onClick={() => void renameWorksheet(worksheet)}>이름 변경</button><a href={`#worksheet?id=${encodeURIComponent(worksheet.id)}`}>내용 보기</a></div></article>)}</div> : <p className="empty-favorites">저장한 매물 워크시트가 없습니다.</p>}</section>
+    <AccountManagement />
   </main>;
 }

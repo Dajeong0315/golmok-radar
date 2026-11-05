@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ANONYMOUS_RETENTION_MS, ANONYMOUS_SESSION_KEY, ANONYMOUS_TRANSFER_KEY, assignAnonymousTransfer, captureAnonymousTransfer, claimAccountLocalCache, clearTransferredAnonymousRecords, expireAnonymousSession, touchAnonymousActivity, transferReturnHash } from "./anonymousSession";
+import { ANONYMOUS_RETENTION_MS, ANONYMOUS_SESSION_KEY, ANONYMOUS_TRANSFER_KEY, assignAnonymousTransfer, captureAnonymousTransfer, claimAccountLocalCache, clearAccountRecordCache, clearTransferredAnonymousRecords, expireAnonymousSession, touchAnonymousActivity, transferReturnHash } from "./anonymousSession";
 import { FAVORITES_KEY, SYNC_OWNER_KEY } from "./favorites";
 import { PROFILE_HISTORY_KEY } from "./founderProfile";
 
@@ -10,6 +10,18 @@ function storage() {
 }
 
 describe("anonymous session retention", () => {
+  it("clears only the current account cache after server deletion", () => {
+    const local = storage();
+    local.setItem(SYNC_OWNER_KEY, "user-a");
+    local.setItem(FAVORITES_KEY, '["3120052"]');
+    local.setItem(ANONYMOUS_TRANSFER_KEY, '{"userId":"user-a"}');
+    clearAccountRecordCache(local, "user-b");
+    expect(local.getItem(FAVORITES_KEY)).not.toBeNull();
+    clearAccountRecordCache(local, "user-a");
+    expect(local.getItem(FAVORITES_KEY)).toBeNull();
+    expect(local.getItem(ANONYMOUS_TRANSFER_KEY)).toBeNull();
+    expect(local.getItem(SYNC_OWNER_KEY)).toBe("user-a");
+  });
   it("keeps records at 59:59 and removes only anonymous keys at 60 minutes", () => {
     const local = storage();
     local.setItem(FAVORITES_KEY, '["3120052"]');

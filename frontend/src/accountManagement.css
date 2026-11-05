@@ -1,0 +1,12 @@
+.account-management > p { color: #596267; }
+.account-management button { cursor: pointer; }
+.account-management-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.account-management-actions button, .account-management-confirm button, .account-management > button { border: 1px solid #aeb8b6; border-radius: 8px; background: white; padding: 10px 14px; font: inherit; }
+.account-management-actions button:last-child, .account-management-confirm button:first-child { border-color: #9a463f; color: #8b3129; }
+.account-management-confirm { max-width: 640px; margin-top: 20px; padding: 20px; border: 1px solid #d5c6c0; border-radius: 10px; background: #fffaf8; }
+.account-management-confirm p { line-height: 1.6; }
+.account-management-confirm label { display: block; margin: 18px 0 8px; }
+.account-management-confirm input { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #aeb8b6; border-radius: 6px; font: inherit; }
+.account-management-confirm > div { display: flex; gap: 10px; margin-top: 14px; }
+.account-management-confirm button:disabled { cursor: not-allowed; opacity: .5; }
+.account-management-message { color: #8b3129; font-weight: 700; }

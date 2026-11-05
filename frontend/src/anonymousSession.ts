@@ -45,6 +45,15 @@ export function claimAccountLocalCache(storage: StoragePort, userId: string): vo
   storage.setItem(SYNC_OWNER_KEY, userId);
 }
 
+/** Remove this account's cached records after a confirmed server deletion. */
+export function clearAccountRecordCache(storage: StoragePort, userId: string): void {
+  if (storage.getItem(SYNC_OWNER_KEY) !== userId) return;
+  RECORD_KEYS.forEach((key) => storage.removeItem(key));
+  storage.removeItem(ANONYMOUS_SESSION_KEY);
+  storage.removeItem(ANONYMOUS_TRANSFER_KEY);
+  announce();
+}
+
 function announce(): void {
   if (typeof window !== "undefined") window.dispatchEvent(new Event("golmok-anonymous-session"));
 }

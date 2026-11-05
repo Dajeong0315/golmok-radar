@@ -16,6 +16,7 @@ type AuthState = {
   transferStatus: "idle" | "saving" | "complete" | "failed";
   retryTransfer: () => Promise<void>;
   signInWithKakao: () => Promise<void>;
+  reauthenticateWithKakao: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -131,6 +132,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(null);
       const { error: signOutError } = await client.auth.signOut();
       if (signOutError) setError(signOutError.message);
+    },
+    async reauthenticateWithKakao() {
+      if (!client) return;
+      setError(null);
+      rememberAuthReturnHash(sessionStorage, window.location.hash);
+      const { data, error: signInError } = await client.auth.signInWithOAuth({
+        provider: "kakao",
+        options: { redirectTo: window.location.origin, skipBrowserRedirect: true, queryParams: { prompt: "login" } },
+      });
+      if (signInError || !data.url) {
+        setError(signInError?.message || "카카오 재인증을 시작하지 못했습니다.");
+        return;
+      }
+      window.location.assign(data.url);
     },
   }), [client, error, loading, session, transferStatus]);
 

@@ -215,10 +215,12 @@ def audit_mock_account(browser, results: list[dict]) -> None:
         const user = { id: 'browser-audit-user', aud: 'authenticated', role: 'authenticated',
           app_metadata: { provider: 'kakao', providers: ['kakao'] },
           user_metadata: { nickname: '점검 계정' }, created_at: '2026-01-01T00:00:00Z' };
-        localStorage.setItem('sb-hngvwhpujtotgoqligji-auth-token', JSON.stringify({
-          access_token: 'e30.eyJleHAiOjQxMDI0NDQ4MDB9.signature', refresh_token: 'browser-audit',
-          token_type: 'bearer', expires_at: 4102444800, expires_in: 3600, user
-        }));
+        if (!sessionStorage.getItem('browser-audit-withdrawn')) {
+          localStorage.setItem('sb-hngvwhpujtotgoqligji-auth-token', JSON.stringify({
+            access_token: 'e30.eyJleHAiOjQxMDI0NDQ4MDB9.signature', refresh_token: 'browser-audit',
+            token_type: 'bearer', expires_at: 4102444800, expires_in: 3600, user
+          }));
+        }
         if (!sessionStorage.getItem('browser-audit-return-used')) {
           sessionStorage.setItem('golmok-radar:auth-return-hash', '#mypage');
           sessionStorage.setItem('browser-audit-return-used', '1');
@@ -303,6 +305,34 @@ def audit_mock_account(browser, results: list[dict]) -> None:
 
     check("mock account record actions", account_record_actions, results)
 
+    account_delete_calls = 0
+
+    def mock_account_delete(route):
+        nonlocal account_delete_calls
+        account_delete_calls += 1
+        if account_delete_calls == 1:
+            route.fulfill(status=403, content_type="application/json", body=json.dumps({"detail": {"stage": "reauthentication", "message": "Reauthentication required"}}))
+        else:
+            route.fulfill(status=200, content_type="application/json", body='{"status":"deleted","scope":"records"}')
+
+    context.route("**/api/v1/account/records", mock_account_delete)
+
+    def account_bulk_delete():
+        page.goto(BASE + "#mypage", wait_until="networkidle")
+        page.evaluate("localStorage.setItem('golmok-radar:favorites:v1', '[\"3120052\"]')")
+        page.locator(".account-management-actions button").first.click()
+        page.locator(".account-management-confirm input").fill("전체 삭제")
+        page.locator(".account-management-confirm button").first.click()
+        page.get_by_text("Reauthentication required").wait_for()
+        assert page.locator(".account-management > button").count() >= 2
+        with page.expect_navigation(wait_until="networkidle"):
+            page.locator(".account-management-confirm button").first.click()
+        assert account_delete_calls == 2
+        assert page.evaluate("localStorage.getItem('golmok-radar:favorites:v1')") is None
+        return "reauthentication error shown; confirmed server deletion clears account cache"
+
+    check("mock account bulk deletion", account_bulk_delete, results)
+
     def account_logout():
         page.goto(BASE + "#worksheet", wait_until="networkidle")
         page.get_by_role("button", name="+ 매물 후보 추가").click()
@@ -317,6 +347,40 @@ def audit_mock_account(browser, results: list[dict]) -> None:
         return "worksheet cache and account view hidden after sign out"
 
     check("mock account logout", account_logout, results)
+
+    membership_calls = 0
+
+    def mock_membership_delete(route):
+        nonlocal membership_calls
+        membership_calls += 1
+        if membership_calls == 1:
+            route.fulfill(status=502, content_type="application/json", body=json.dumps({"detail": {"stage": "supabase_delete", "message": "Deletion incomplete; retry"}}))
+        else:
+            route.fulfill(status=200, content_type="application/json", body='{"status":"deleted","scope":"membership","kakao_unlinked":true}')
+
+    context.route("**/api/v1/account/membership", mock_membership_delete)
+
+    def account_withdrawal():
+        page.goto(BASE + "#mypage", wait_until="networkidle")
+        page.reload(wait_until="networkidle")
+        page.locator(".account-management-actions button").last.click()
+        page.locator(".account-management-confirm button").last.click()
+        assert membership_calls == 0
+        page.locator(".account-management-actions button").last.click()
+        page.locator(".account-management-confirm input").fill("회원 탈퇴")
+        page.locator(".account-management-confirm button").first.click()
+        page.get_by_text("Deletion incomplete; retry").wait_for()
+        assert page.evaluate("localStorage.getItem('sb-hngvwhpujtotgoqligji-auth-token')") is not None
+        page.evaluate("sessionStorage.setItem('browser-audit-withdrawn', '1')")
+        with page.expect_navigation(wait_until="networkidle"):
+            page.locator(".account-management-confirm button").first.click()
+        page.locator(".home-page").wait_for()
+        assert membership_calls == 2
+        assert page.evaluate("localStorage.getItem('sb-hngvwhpujtotgoqligji-auth-token')") is None
+        assert page.url.endswith("/#home")
+        return "cancel and partial failure retain account; completed withdrawal clears local session"
+
+    check("mock account withdrawal", account_withdrawal, results)
     context.close()
 
 

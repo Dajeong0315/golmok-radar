@@ -23,11 +23,14 @@ from .reports import build_area_report
 from .review_analysis import analyze_reviews, build_insights, sanitize_review_text
 from .review_auth import get_review_user
 from .review_capture import CaptureConfigurationError
-from .review_report import append_audit, collect_or_load_report, purge_expired_captures, purge_expired_reports, select_peer_places
+from .review_report import append_audit, collect_or_load_area_review_report, collect_or_load_report, purge_expired_captures, purge_expired_reports, select_peer_places
+from .review_industry import EXCLUSIONS, category_matches, category_terms, verified_kakao_place
 from .trade_area_geometry import locate_area
 from .support_programs import NormalizedProgram, SupportProfile, select_candidates
 from .schemas import (
     AreaReportResponse,
+    AreaReviewReportRequest,
+    AreaReviewReportResponse,
     AreaInsightMetric,
     AreaInsightTimeSlot,
     AreaMapInsightResponse,
@@ -48,6 +51,7 @@ from .schemas import (
     ReviewAnalysisResponse,
     ReviewAreaLocationResponse,
     ReviewAreaSummary,
+    ReviewPeerSample,
     CapturedReviewReportRequest,
     CapturedReviewReportResponse,
     SupportProgramQuery,
@@ -232,6 +236,20 @@ def review_capture_status() -> dict[str, object]:
         return {"status": "unavailable", "review_count": 0, "provider_counts": {}}
 
 
+@app.get("/api/v1/review-industry/{code}")
+def review_industry_mapping(code: str, session: Session = Depends(get_db)) -> dict:
+    name = industry_name(session, code, "20254")
+    if name is None:
+        raise HTTPException(404, "공식 점포 원천에서 업종을 찾을 수 없습니다.")
+    terms = category_terms(code, name)
+    return {
+        "industry_code": code, "industry_name": name,
+        "supported": bool(terms), "terms": terms,
+        "excluded_terms": EXCLUSIONS.get(code, ()),
+        "reason": None if terms else "이 업종과 카카오 장소 분류의 대응을 확인할 수 없어 리뷰 비교를 보류합니다.",
+    }
+
+
 @app.get("/api/v1/review-trade-area", response_model=ReviewAreaLocationResponse)
 def review_trade_area(
     latitude: float = Query(ge=37.3, le=37.8),
@@ -263,8 +281,29 @@ def captured_review_report(
 ) -> CapturedReviewReportResponse:
     if not payload.ownership_confirmed:
         raise HTTPException(400, "내 가게 운영·관리 여부를 확인해 주세요.")
+    selected_industry_name = industry_name(session, payload.industry_code, "20254")
+    if selected_industry_name is None or not category_terms(payload.industry_code, selected_industry_name):
+        raise HTTPException(400, "선택 업종과 카카오 장소 분류의 대응을 확인할 수 없습니다.")
+    if not settings.kakao_rest_api_key:
+        raise HTTPException(503, "카카오 장소 검증용 REST API 키가 설정되지 않았습니다.")
     try:
-        location = locate_area(payload.own.latitude, payload.own.longitude)
+        verified_own = verified_kakao_place(payload.own, settings.kakao_rest_api_key)
+        if not category_matches(payload.industry_code, selected_industry_name, verified_own.category or ""):
+            raise ValueError("내 가게의 카카오 분류가 선택 업종과 다릅니다.")
+        own_location = locate_area(verified_own.latitude, verified_own.longitude)
+        selected_candidates = select_peer_places(
+            verified_own, payload.candidates,
+            own_location.code if own_location.status == "inside" else None,
+        )
+        verified_candidates = [verified_kakao_place(place, settings.kakao_rest_api_key) for place, _ in selected_candidates]
+        if any(not category_matches(payload.industry_code, selected_industry_name, place.category or "") for place in verified_candidates):
+            raise ValueError("주변 가게의 카카오 분류가 선택 업종과 다릅니다. 다시 검색해 주세요.")
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from error
+    except Exception as error:
+        raise HTTPException(503, "카카오 장소 재확인에 실패했습니다. 잠시 뒤 다시 시도해 주세요.") from error
+    try:
+        location = locate_area(verified_own.latitude, verified_own.longitude)
     except (FileNotFoundError, ValueError) as error:
         raise HTTPException(503, "공식 상권 경계 데이터를 확인할 수 없습니다.") from error
     area = session.get(TradeArea, location.code) if location.code else None
@@ -273,7 +312,7 @@ def captured_review_report(
         district_name=area.district_name, area_type_name=area.area_type_name,
     ) if area else None
     location_status = location.status if area or location.status == "unmapped" else "unmapped"
-    peers = select_peer_places(payload.own, payload.candidates, area.code if location_status == "inside" and area else None)
+    peers = select_peer_places(verified_own, verified_candidates, area.code if location_status == "inside" and area else None)
     if len(peers) < 2:
         return CapturedReviewReportResponse(
             status="insufficient_sample", area=area_summary,
@@ -282,17 +321,88 @@ def captured_review_report(
             eligible_place_count=0, required_place_count=3, required_review_count=30,
             topics=[], insights=[], failed_labels=[], captured_at=None, expires_at=None,
             from_cache=False, source="kakao",
-            message="반경 1.2km 안에 주변 카페 후보가 2곳 미만이라 리뷰 수집을 시작하지 않았습니다.",
+            message=f"반경 1.2km 안에 같은 업종({selected_industry_name})의 주변 후보가 2곳 미만이라 리뷰 수집을 시작하지 않았습니다.",
+            industry_code=payload.industry_code, industry_name=selected_industry_name,
         )
     try:
         return collect_or_load_report(
-            own=payload.own,
+            own=verified_own,
             peers=peers,
             area=area_summary,
             location_status=location_status,
             area_distance_m=location.distance_m,
             user_id=user_id,
             encryption_key=settings.review_capture_encryption_key or "",
+            industry_code=payload.industry_code,
+            industry_name=selected_industry_name,
+        )
+    except CaptureConfigurationError as error:
+        raise HTTPException(503, "리뷰 수집 저장 설정이 준비되지 않았습니다.") from error
+    except RuntimeError as error:
+        status = 429 if "횟수" in str(error) else 409
+        raise HTTPException(status, str(error)) from error
+
+
+@app.post("/api/v1/area-review-report", response_model=AreaReviewReportResponse)
+def area_review_report(
+    payload: AreaReviewReportRequest,
+    user_id: str = Depends(get_review_user),
+    session: Session = Depends(get_db),
+) -> AreaReviewReportResponse:
+    area = session.get(TradeArea, payload.trade_area_code)
+    if area is None:
+        raise HTTPException(404, "공식 상권을 찾을 수 없습니다.")
+    selected_industry_name = industry_name(session, payload.industry_code, "20254")
+    if selected_industry_name is None or not category_terms(payload.industry_code, selected_industry_name):
+        raise HTTPException(400, "선택 업종과 카카오 장소 분류의 대응을 확인할 수 없습니다.")
+    if not settings.kakao_rest_api_key:
+        raise HTTPException(503, "카카오 장소 검증용 REST API 키가 설정되지 않았습니다.")
+    summary = ReviewAreaSummary(code=area.code, name=area.name, district_name=area.district_name,
+                                area_type_name=area.area_type_name)
+    unique = {place.id: place for place in payload.candidates}
+    nearby = sorted(unique.values(), key=lambda place: (
+        (place.latitude - area.latitude) ** 2 + (place.longitude - area.longitude) ** 2, place.id,
+    ))
+    verified = []
+    try:
+        attempts = 0
+        for place in nearby:
+            if len(verified) >= 5:
+                break
+            location = locate_area(place.latitude, place.longitude)
+            if location.status != "inside" or location.code != area.code:
+                continue
+            if attempts >= 12:
+                break
+            attempts += 1
+            try:
+                current = verified_kakao_place(place, settings.kakao_rest_api_key)
+            except ValueError:
+                continue
+            location = locate_area(current.latitude, current.longitude)
+            if location.status == "inside" and location.code == area.code and category_matches(
+                payload.industry_code, selected_industry_name, current.category or "",
+            ):
+                verified.append(current)
+    except (FileNotFoundError, ValueError) as error:
+        raise HTTPException(503, "공식 상권 경계 데이터를 확인할 수 없습니다.") from error
+    except Exception as error:
+        raise HTTPException(503, "카카오 장소 재확인에 실패했습니다. 잠시 뒤 다시 시도해 주세요.") from error
+    if len(verified) < 3:
+        return AreaReviewReportResponse(
+            status="insufficient_sample", area=summary, industry_code=payload.industry_code,
+            industry_name=selected_industry_name,
+            place_samples=[ReviewPeerSample(label=label, review_count=0, same_trade_area=True)
+                           for label, _ in zip("ABCDE", verified)],
+            total_review_count=0, analyzed_review_count=0, eligible_place_count=0,
+            required_place_count=3, required_review_count=30, topics=[], failed_labels=[],
+            captured_at=None, expires_at=None, from_cache=False, source="kakao",
+            message=f"{area.name} 안에서 분류가 확인된 {selected_industry_name} 가게가 3곳 미만이라 수집하지 않았습니다.",
+        )
+    try:
+        return collect_or_load_area_review_report(
+            area=summary, industry_code=payload.industry_code, industry_name=selected_industry_name,
+            places=verified, user_id=user_id, encryption_key=settings.review_capture_encryption_key or "",
         )
     except CaptureConfigurationError as error:
         raise HTTPException(503, "리뷰 수집 저장 설정이 준비되지 않았습니다.") from error

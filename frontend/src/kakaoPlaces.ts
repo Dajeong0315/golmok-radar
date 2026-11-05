@@ -10,6 +10,7 @@ export type KakaoPlace = {
   id: string;
   name: string;
   category: string;
+  categoryGroupCode: string;
   address: string;
   roadAddress: string;
   latitude: number;
@@ -54,6 +55,7 @@ function normalizePlace(item: any): KakaoPlace {
     id: String(item.id),
     name: item.place_name,
     category: item.category_name,
+    categoryGroupCode: item.category_group_code || "",
     address: item.address_name,
     roadAddress: item.road_address_name,
     latitude: Number(item.y),
@@ -75,10 +77,9 @@ export async function searchKakaoPlaces(
       radius: options.radius,
       sort: kakao.maps.services.SortBy.DISTANCE,
       size: 15,
-      category_group_code: "CE7",
-    } : { size: 10, category_group_code: "CE7" };
+    } : { size: 10 };
     new kakao.maps.services.Places().keywordSearch(query, (items: any[], status: string) => {
-      if (status === kakao.maps.services.Status.OK) resolve(items.filter((item) => item.category_group_code === "CE7").map(normalizePlace));
+      if (status === kakao.maps.services.Status.OK) resolve(items.map(normalizePlace));
       else if (status === kakao.maps.services.Status.ZERO_RESULT) resolve([]);
       else reject(new Error("가게 검색을 완료하지 못했습니다."));
     }, searchOptions);
@@ -108,6 +109,48 @@ export async function searchNearbyCafes(latitude: number, longitude: number): Pr
     if (batch.length < 15) break;
   }
   return [...new Map(found.map((place) => [place.id, place])).values()];
+}
+
+export function matchesIndustryCategory(category: string, terms: string[], excludedTerms: string[] = []): boolean {
+  const leaf = category.split(">").at(-1)?.replace(/\s+/g, "") || "";
+  return Boolean(leaf) && !excludedTerms.some((term) => leaf.includes(term)) && terms.some((term) => leaf.includes(term));
+}
+
+export async function searchNearbyIndustry(
+  latitude: number,
+  longitude: number,
+  industryCode: string,
+  terms: string[],
+  excludedTerms: string[] = [],
+): Promise<KakaoPlace[]> {
+  if (!terms.length) return [];
+  if (industryCode === "CS100010") {
+    const cafes = await searchNearbyCafes(latitude, longitude);
+    return cafes.filter((place) => matchesIndustryCategory(place.category, terms, excludedTerms));
+  }
+  await loadKakaoSdk();
+  const kakao = window.kakao;
+  const places = new kakao.maps.services.Places();
+  const found: KakaoPlace[] = [];
+  for (const term of terms.slice(0, 2)) {
+    for (let page = 1; page <= 3; page += 1) {
+      const batch = await new Promise<KakaoPlace[]>((resolve, reject) => {
+        places.keywordSearch(term, (items: any[], status: string) => {
+          if (status === kakao.maps.services.Status.OK) resolve(items.map(normalizePlace));
+          else if (status === kakao.maps.services.Status.ZERO_RESULT) resolve([]);
+          else reject(new Error("주변 동종 가게 검색을 완료하지 못했습니다."));
+        }, {
+          location: new kakao.maps.LatLng(latitude, longitude), radius: 1200,
+          sort: kakao.maps.services.SortBy.DISTANCE, size: 15, page,
+        });
+      });
+      found.push(...batch);
+      if (batch.length < 15) break;
+    }
+    if (found.filter((place) => matchesIndustryCategory(place.category, terms, excludedTerms)).length >= 5) break;
+  }
+  return [...new Map(found.map((place) => [place.id, place])).values()]
+    .filter((place) => matchesIndustryCategory(place.category, terms, excludedTerms));
 }
 
 export function selectNearbyPlaces(places: KakaoPlace[], ownPlaceId: string, count: number): KakaoPlace[] {

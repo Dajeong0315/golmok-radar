@@ -5,6 +5,7 @@ import type { KakaoPlace } from "./kakaoPlaces";
 
 const place: KakaoPlace = {
   id: "123", name: "테스트 가게", category: "음식점", address: "서울 성동구",
+  categoryGroupCode: "FD6",
   roadAddress: "", latitude: 37.54, longitude: 127.05, distance: null, placeUrl: "",
 };
 

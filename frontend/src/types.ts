@@ -267,6 +267,15 @@ export type ReviewAreaLocation = {
   distance_m: number | null;
 };
 
+export type ReviewIndustryMapping = {
+  industry_code: string;
+  industry_name: string;
+  supported: boolean;
+  terms: string[];
+  excluded_terms: string[];
+  reason: string | null;
+};
+
 export type CapturedReviewReport = {
   status: "available" | "limited" | "insufficient_sample" | "outside_trade_area";
   area: ReviewAreaLocation["area"];
@@ -281,6 +290,28 @@ export type CapturedReviewReport = {
   required_review_count: number;
   topics: Array<{ topic_key: string; label: string; own: Omit<ReviewTopicSide, "evidence">; nearby: Omit<ReviewTopicSide, "evidence"> }>;
   insights: Array<{ topic_key: string; kind: "strength" | "caution"; observation: string; action_idea: string }>;
+  failed_labels: string[];
+  captured_at: string | null;
+  expires_at: string | null;
+  from_cache: boolean;
+  source: "kakao";
+  message: string;
+  industry_code: string;
+  industry_name: string;
+};
+
+export type AreaReviewReport = {
+  status: "available" | "limited" | "insufficient_sample";
+  area: NonNullable<ReviewAreaLocation["area"]>;
+  industry_code: string;
+  industry_name: string;
+  place_samples: Array<{ label: string; review_count: number; included_in_analysis: boolean }>;
+  total_review_count: number;
+  analyzed_review_count: number;
+  eligible_place_count: number;
+  required_place_count: number;
+  required_review_count: number;
+  topics: Array<{ topic_key: string; label: string; mentions: number; positive: number; negative: number; neutral: number }>;
   failed_labels: string[];
   captured_at: string | null;
   expires_at: string | null;

@@ -1,11 +1,13 @@
 from datetime import datetime, timezone
+import hashlib
+import json
 from pathlib import Path
 
 import pytest
 from cryptography.fernet import Fernet
 
 from app.review_capture import CaptureBatch, CapturedReview
-from app.review_report import build_captured_report, collect_or_load_report, purge_expired_captures, purge_expired_reports, select_peer_places
+from app.review_report import build_area_review_report, build_captured_report, collect_or_load_area_review_report, collect_or_load_report, purge_expired_captures, purge_expired_reports, select_peer_places
 from app.schemas import ReviewAreaSummary, ReviewPlaceRef
 from app.trade_area_geometry import AreaLocation, load_area_polygons, locate_area
 
@@ -173,3 +175,70 @@ def test_expired_encrypted_files_are_removed(tmp_path) -> None:
     assert purge_expired_captures(tmp_path, NOW) == 1
     assert not report.exists()
     assert not capture.exists()
+
+
+def test_area_review_report_is_anonymous_encrypted_and_cached(tmp_path) -> None:
+    key = Fernet.generate_key().decode()
+    calls = []
+
+    class FakeCollector:
+        def __init__(self, encryption_key: str):
+            self.cipher = Fernet(encryption_key.encode())
+
+        def capture_with_failures(self, targets):
+            calls.append(len(targets))
+            return CaptureBatch([
+                CapturedReview("kakao", target.peer_label, "상품 품질이 좋아요",
+                               self.cipher.encrypt("상품 품질이 좋아요".encode()), NOW)
+                for target in targets for _ in range(10)
+            ], [])
+
+    inputs = dict(area=AREA, industry_code="CS300011", industry_name="일반의류",
+                  places=[place(str(index)) for index in range(1, 6)], user_id="viewer",
+                  encryption_key=key, directory=tmp_path, now=NOW, collector_factory=FakeCollector)
+    first = collect_or_load_area_review_report(**inputs)
+    second = collect_or_load_area_review_report(**inputs)
+    assert calls == [5]
+    assert first.status == "available"
+    assert first.topics[0].topic_key == "product"
+    assert second.from_cache
+    assert [sample.label for sample in first.place_samples] == list("ABCDE")
+    assert "상품 품질이 좋아요" not in first.model_dump_json()
+    stored = next(tmp_path.glob("area-report-*.json")).read_text(encoding="utf-8")
+    assert "상품 품질이 좋아요" not in stored
+    assert "place.map.kakao.com" not in stored
+
+    sparse = {"place_labels": list("ABC"), "captured_at": NOW.isoformat(),
+              "expires_at": "2027-02-02T00:00:00+00:00", "failed_labels": [], "reviews": []}
+    cipher = Fernet(key.encode())
+    sparse["reviews"] = [
+        {"peer_label": label, "provider": "kakao", "encrypted_text": cipher.encrypt("상품 품질이 좋아요".encode()).decode()}
+        for label in "ABC" for _ in range(10)
+    ]
+    partial = build_area_review_report(sparse, AREA, "CS300011", "일반의류", key, False)
+    assert partial.status == "limited"
+    assert partial.eligible_place_count == 3
+    sparse["reviews"] = []
+    limited = build_area_review_report(sparse, AREA, "CS300011", "일반의류", key, False)
+    assert limited.status == "insufficient_sample"
+    assert limited.topics == []
+
+
+def test_area_review_shares_monthly_quota_with_own_shop_reports(tmp_path) -> None:
+    user_hash = hashlib.sha256("viewer".encode()).hexdigest()[:24]
+    for index in range(5):
+        (tmp_path / f"report-202611-{index}.json").write_text(json.dumps({
+            "requested_by_hash": user_hash, "expires_at": "2027-02-02T00:00:00+00:00",
+        }), encoding="utf-8")
+
+    class UnexpectedCollector:
+        def __init__(self, _key):
+            raise AssertionError("Quota must stop capture before the collector starts")
+
+    with pytest.raises(RuntimeError, match="횟수"):
+        collect_or_load_area_review_report(
+            area=AREA, industry_code="CS100010", industry_name="커피-음료",
+            places=[place("1"), place("2"), place("3")], user_id="viewer",
+            encryption_key=Fernet.generate_key().decode(), directory=tmp_path,
+            now=NOW, collector_factory=UnexpectedCollector,
+        )

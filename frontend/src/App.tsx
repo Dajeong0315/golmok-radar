@@ -199,6 +199,7 @@ export default function App() {
             </div>
           </div>
           <AreaMapInsight data={mapInsight} loading={mapInsightLoading} error={mapInsightError} />
+          {focusedMapArea ? <a className="back-link" href={`#reviews?area=${focusedMapArea.code}&industry=${industry}`}>이 상권의 동종 가게 리뷰 표본 보기 →</a> : null}
         </section>
 
         <section className="favorites-section" aria-labelledby="favorites-title">

@@ -284,12 +284,21 @@ class ReviewPlaceRef(BaseModel):
     id: str = Field(pattern=r"^\d{1,15}$")
     latitude: float = Field(ge=37.3, le=37.8)
     longitude: float = Field(ge=126.7, le=127.3)
+    name: str | None = None
+    category: str | None = None
 
 
 class CapturedReviewReportRequest(BaseModel):
     own: ReviewPlaceRef
     candidates: list[ReviewPlaceRef] = Field(max_length=45)
     ownership_confirmed: bool
+    industry_code: str = "CS100010"
+
+
+class AreaReviewReportRequest(BaseModel):
+    trade_area_code: str
+    industry_code: str
+    candidates: list[ReviewPlaceRef] = Field(max_length=45)
 
 
 class ReviewAggregateSide(BaseModel):
@@ -355,6 +364,37 @@ class CapturedReviewReportResponse(BaseModel):
     required_review_count: int
     topics: list[ReviewAggregateTopic]
     insights: list[ReviewInsight]
+    failed_labels: list[str]
+    captured_at: str | None
+    expires_at: str | None
+    from_cache: bool
+    source: Literal["kakao"]
+    message: str
+    industry_code: str = "CS100010"
+    industry_name: str = "커피-음료"
+
+
+class AreaReviewTopic(BaseModel):
+    topic_key: str
+    label: str
+    mentions: int
+    positive: int
+    negative: int
+    neutral: int
+
+
+class AreaReviewReportResponse(BaseModel):
+    status: Literal["available", "limited", "insufficient_sample"]
+    area: ReviewAreaSummary
+    industry_code: str
+    industry_name: str
+    place_samples: list[ReviewPeerSample]
+    total_review_count: int
+    analyzed_review_count: int
+    eligible_place_count: int
+    required_place_count: int
+    required_review_count: int
+    topics: list[AreaReviewTopic]
     failed_labels: list[str]
     captured_at: str | None
     expires_at: str | None

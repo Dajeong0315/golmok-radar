@@ -12,6 +12,18 @@ TOPICS = {
     "cleanliness": ("청결", ("깨끗", "청결", "더럽")),
     "space": ("공간·분위기", ("분위기", "좌석", "공간", "인테리어", "시끄", "조용")),
 }
+SERVICE_TOPICS = {
+    "quality": ("서비스·결과", ("결과", "실력", "정확", "전문", "만족", "효과", "품질")),
+    "price": TOPICS["price"], "service": TOPICS["service"],
+    "wait": TOPICS["wait"], "cleanliness": TOPICS["cleanliness"],
+    "space": TOPICS["space"],
+}
+RETAIL_TOPICS = {
+    "product": ("상품·품질", ("상품", "제품", "품질", "재질", "디자인", "종류")),
+    "price": TOPICS["price"], "service": TOPICS["service"],
+    "stock": ("재고·구색", ("재고", "품절", "구색", "선택", "다양")),
+    "wait": TOPICS["wait"], "space": TOPICS["space"],
+}
 POSITIVE = ("좋아", "좋았", "맛있", "친절", "깨끗", "만족", "훌륭", "추천", "빠르", "편안", "예쁘", "저렴")
 NEGATIVE = ("별로", "맛없", "불친절", "더럽", "비싸", "느리", "오래", "시끄", "불편", "아쉽")
 
@@ -61,9 +73,17 @@ def classify_sentiment(text: str) -> str:
     return "neutral"
 
 
-def analyze_reviews(reviews: list[str]) -> dict[str, TopicStats]:
+def topics_for_industry(industry_code: str) -> dict:
+    if industry_code.startswith("CS200"):
+        return SERVICE_TOPICS
+    if industry_code.startswith("CS300"):
+        return RETAIL_TOPICS
+    return TOPICS
+
+
+def analyze_reviews(reviews: list[str], industry_code: str = "CS100010") -> dict[str, TopicStats]:
     result: dict[str, TopicStats] = {}
-    for topic_key, (label, keywords) in TOPICS.items():
+    for topic_key, (label, keywords) in topics_for_industry(industry_code).items():
         evidence: list[Evidence] = []
         counts = {"positive": 0, "negative": 0, "neutral": 0}
         for index, raw in enumerate(reviews, start=1):
@@ -100,7 +120,7 @@ def positive_rate(stats: TopicStats) -> float | None:
 
 def build_insights(own: dict[str, TopicStats], nearby: dict[str, TopicStats]) -> list[dict[str, str]]:
     insights: list[dict[str, str]] = []
-    for key in TOPICS:
+    for key in own:
         own_stats = own[key]
         nearby_stats = nearby[key]
         own_negative = negative_rate(own_stats)

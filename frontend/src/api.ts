@@ -1,4 +1,4 @@
-import type { AreaMapInsightResponse, AreaReportResponse, CapturedReviewReport, ChecklistResponse, ComparisonResponse, EvidenceResponse, IndustryOption, RecommendationResponse, RentBenchmarkResponse, RentMarketListResponse, ReviewAnalysisResponse, ReviewAreaLocation, ReviewCaptureStatus, SupportProgramResponse, TradeArea } from "./types";
+import type { AreaMapInsightResponse, AreaReportResponse, AreaReviewReport, CapturedReviewReport, ChecklistResponse, ComparisonResponse, EvidenceResponse, IndustryOption, RecommendationResponse, RentBenchmarkResponse, RentMarketListResponse, ReviewAnalysisResponse, ReviewAreaLocation, ReviewCaptureStatus, ReviewIndustryMapping, SupportProgramResponse, TradeArea } from "./types";
 
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -116,7 +116,13 @@ export async function fetchReviewCaptureStatus(signal?: AbortSignal): Promise<Re
   return response.json() as Promise<ReviewCaptureStatus>;
 }
 
-export type ReviewPlaceInput = { id: string; latitude: number; longitude: number };
+export type ReviewPlaceInput = { id: string; latitude: number; longitude: number; name: string; category: string };
+
+export async function fetchReviewIndustryMapping(code: string, signal?: AbortSignal): Promise<ReviewIndustryMapping> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/review-industry/${encodeURIComponent(code)}`, { signal });
+  if (!response.ok) throw new Error("업종별 장소 분류를 불러오지 못했습니다.");
+  return response.json() as Promise<ReviewIndustryMapping>;
+}
 
 export async function fetchReviewTradeArea(place: ReviewPlaceInput, signal?: AbortSignal): Promise<ReviewAreaLocation> {
   const query = new URLSearchParams({ latitude: String(place.latitude), longitude: String(place.longitude) });
@@ -130,16 +136,32 @@ export async function fetchCapturedReviewReport(
   candidates: ReviewPlaceInput[],
   accessToken: string,
   ownershipConfirmed: boolean,
+  industryCode: string,
 ): Promise<CapturedReviewReport> {
   const response = await fetch(`${API_BASE_URL}/api/v1/captured-review-report`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify({ own, candidates, ownership_confirmed: ownershipConfirmed }),
+    body: JSON.stringify({ own, candidates, ownership_confirmed: ownershipConfirmed, industry_code: industryCode }),
   });
   if (!response.ok) {
     const payload = await response.json().catch(() => null) as { detail?: string } | null;
     throw new Error(payload?.detail || "리뷰 수집과 비교를 완료하지 못했습니다.");
   }
   return response.json() as Promise<CapturedReviewReport>;
+}
+
+export async function fetchAreaReviewReport(
+  areaCode: string, industryCode: string, candidates: ReviewPlaceInput[], accessToken: string,
+): Promise<AreaReviewReport> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/area-review-report`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ trade_area_code: areaCode, industry_code: industryCode, candidates }),
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as { detail?: string } | null;
+    throw new Error(payload?.detail || "상권 리뷰 표본을 불러오지 못했습니다.");
+  }
+  return response.json() as Promise<AreaReviewReport>;
 }
 

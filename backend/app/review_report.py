@@ -15,6 +15,8 @@ from cryptography.fernet import InvalidToken
 from .review_analysis import analyze_reviews, build_insights
 from .review_capture import CaptureBatch, CaptureTarget, PublicReviewBrowserCollector, cipher_from_key
 from .schemas import (
+    AreaReviewReportResponse,
+    AreaReviewTopic,
     CapturedReviewReportResponse,
     ReviewAggregateSide,
     ReviewAggregateTopic,
@@ -65,6 +67,7 @@ def select_peer_places(
     candidates: list[ReviewPlaceRef],
     own_area_code: str | None,
     locator: Callable[[float, float], AreaLocation] = locate_area,
+    limit: int = 4,
 ) -> list[tuple[ReviewPlaceRef, bool]]:
     unique: dict[str, tuple[ReviewPlaceRef, bool, int]] = {}
     for candidate in candidates:
@@ -76,12 +79,13 @@ def select_peer_places(
         location = locator(candidate.latitude, candidate.longitude) if own_area_code else None
         same_area = bool(location and location.status == "inside" and location.code == own_area_code)
         unique[candidate.id] = (candidate, same_area, distance)
-    ranked = sorted(unique.values(), key=lambda item: (not item[1], item[2]))[:4]
+    ranked = sorted(unique.values(), key=lambda item: (not item[1], item[2]))[:limit]
     return [(place, same_area) for place, same_area, _ in ranked]
 
 
-def _report_path(directory: Path, area_code: str, own_id: str, month: str) -> Path:
-    digest = hashlib.sha256(f"{area_code}:{own_id}:{month}".encode()).hexdigest()[:24]
+def _report_path(directory: Path, area_code: str, own_id: str, month: str, industry_code: str = "CS100010") -> Path:
+    basis = f"{area_code}:{own_id}:{month}" if industry_code == "CS100010" else f"{area_code}:{own_id}:{industry_code}:{month}"
+    digest = hashlib.sha256(basis.encode()).hexdigest()[:24]
     return directory / f"report-{month}-{digest}.json"
 
 
@@ -104,7 +108,7 @@ def _read_report(path: Path, now: datetime) -> dict | None:
 
 def purge_expired_reports(directory: Path, now: datetime) -> int:
     removed = 0
-    for path in directory.glob("report-*.json"):
+    for path in list(directory.glob("report-*.json")) + list(directory.glob("area-report-*.json")):
         if _read_report(path, now) is None and not path.exists():
             removed += 1
     return removed
@@ -140,6 +144,8 @@ def build_captured_report(
     from_cache: bool,
     location_status: str = "inside",
     area_distance_m: int | None = None,
+    industry_code: str = "CS100010",
+    industry_name: str = "커피-음료",
 ) -> CapturedReviewReportResponse:
     cipher = cipher_from_key(encryption_key)
     grouped: dict[str, list[str]] = {"OWN": [], "A": [], "B": [], "C": [], "D": []}
@@ -171,8 +177,8 @@ def build_captured_report(
     topics: list[ReviewAggregateTopic] = []
     insights = []
     if comparable:
-        own_stats = analyze_reviews(grouped["OWN"])
-        nearby_stats = analyze_reviews([text for peer in eligible_peers for text in grouped[peer.label]])
+        own_stats = analyze_reviews(grouped["OWN"], industry_code)
+        nearby_stats = analyze_reviews([text for peer in eligible_peers for text in grouped[peer.label]], industry_code)
         topics = [
             ReviewAggregateTopic(topic_key=key, label=own.label, own=_side(own), nearby=_side(nearby_stats[key]))
             for key, own in own_stats.items()
@@ -182,7 +188,7 @@ def build_captured_report(
     missing_places = max(0, REQUIRED_PLACES - eligible_count)
     missing_reviews = max(0, MIN_TOTAL_REVIEWS - analyzed_total)
     message = (
-        "내 가게와 주변 카페 4곳의 적격 리뷰 50건 이상을 같은 기준으로 비교했습니다."
+        f"내 가게와 주변 {industry_name} 4곳의 적격 리뷰 50건 이상을 같은 기준으로 비교했습니다."
         if full else
         "적격 가게 3곳 이상·리뷰 30건 이상의 제한 표본 비교입니다. 리뷰가 5건 미만인 가게는 분석에서 제외했고, 운영 아이디어는 표시하지 않습니다."
         if comparable else
@@ -209,6 +215,8 @@ def build_captured_report(
         from_cache=from_cache,
         source="kakao",
         message=message,
+        industry_code=industry_code,
+        industry_name=industry_name,
     )
 
 
@@ -221,6 +229,8 @@ def collect_or_load_report(
     encryption_key: str,
     location_status: str = "inside",
     area_distance_m: int | None = None,
+    industry_code: str = "CS100010",
+    industry_name: str = "커피-음료",
     directory: Path = REPORT_DIR,
     now: datetime | None = None,
     collector_factory: Callable[[str], PublicReviewBrowserCollector] = PublicReviewBrowserCollector,
@@ -231,10 +241,10 @@ def collect_or_load_report(
     purge_expired_reports(directory, now)
     purge_expired_captures(directory, now)
     area_code = area.code if area else "outside"
-    path = _report_path(directory, area_code, own.id, month)
+    path = _report_path(directory, area_code, own.id, month, industry_code)
     cached = _read_report(path, now)
     if cached is not None:
-        return build_captured_report(cached, area, encryption_key, True, location_status, area_distance_m)
+        return build_captured_report(cached, area, encryption_key, True, location_status, area_distance_m, industry_code, industry_name)
     user_hash = _user_hash(user_id)
     user_lock = directory / f"quota-{month}-{user_hash}.lock"
     report_lock = path.with_suffix(".lock")
@@ -253,9 +263,9 @@ def collect_or_load_report(
         locked_report = True
         cached = _read_report(path, now)
         if cached is not None:
-            return build_captured_report(cached, area, encryption_key, True, location_status, area_distance_m)
+            return build_captured_report(cached, area, encryption_key, True, location_status, area_distance_m, industry_code, industry_name)
         runs = 0
-        for previous in directory.glob(f"report-{month}-*.json"):
+        for previous in list(directory.glob(f"report-{month}-*.json")) + list(directory.glob(f"area-report-{month}-*.json")):
             try:
                 if json.loads(previous.read_text(encoding="utf-8")).get("requested_by_hash") == user_hash:
                     runs += 1
@@ -275,6 +285,7 @@ def collect_or_load_report(
             "expires_at": (now + timedelta(days=RETENTION_DAYS)).isoformat(),
             "requested_by_hash": user_hash,
             "area_code": area_code,
+            "industry_code": industry_code,
             "location_status": location_status,
             "area_distance_m": area_distance_m,
             "own_place_id": own.id,
@@ -301,7 +312,128 @@ def collect_or_load_report(
             temporary.unlink(missing_ok=True)
         append_audit(directory, event="capture", place_count=len(targets), review_count=len(batch.reviews),
                      failed_count=len(batch.failed_labels), now=now)
-        return build_captured_report(captured, area, encryption_key, False, location_status, area_distance_m)
+        return build_captured_report(captured, area, encryption_key, False, location_status, area_distance_m, industry_code, industry_name)
+    finally:
+        if locked_report:
+            report_lock.unlink(missing_ok=True)
+        user_lock.unlink(missing_ok=True)
+
+
+def build_area_review_report(
+    payload: dict, area: ReviewAreaSummary, industry_code: str, industry_name: str,
+    encryption_key: str, from_cache: bool,
+) -> AreaReviewReportResponse:
+    cipher = cipher_from_key(encryption_key)
+    grouped: dict[str, list[str]] = {label: [] for label in "ABCDE"}
+    for review in payload.get("reviews", []):
+        label = review.get("peer_label")
+        if label not in grouped or review.get("provider") != "kakao":
+            continue
+        try:
+            grouped[label].append(cipher.decrypt(review["encrypted_text"].encode()).decode())
+        except (InvalidToken, KeyError, UnicodeError, ValueError):
+            continue
+    samples = [
+        ReviewPeerSample(label=label, review_count=len(grouped[label]), same_trade_area=True,
+                         included_in_analysis=len(grouped[label]) >= MIN_REVIEWS_PER_PLACE)
+        for label in payload.get("place_labels", []) if label in grouped
+    ]
+    eligible = [sample for sample in samples if sample.included_in_analysis]
+    analyzed = [text for sample in eligible for text in grouped[sample.label]]
+    comparable = len(eligible) >= REQUIRED_PLACES and len(analyzed) >= MIN_TOTAL_REVIEWS
+    full = comparable and len(eligible) == FULL_PLACES and len(analyzed) >= FULL_TOTAL_REVIEWS
+    topics = [
+        AreaReviewTopic(topic_key=key, label=stats.label, mentions=stats.mentions,
+                        positive=stats.positive, negative=stats.negative, neutral=stats.neutral)
+        for key, stats in analyze_reviews(analyzed, industry_code).items()
+    ] if comparable else []
+    missing_places = max(0, REQUIRED_PLACES - len(eligible))
+    missing_reviews = max(0, MIN_TOTAL_REVIEWS - len(analyzed))
+    message = (
+        f"{industry_name} 가게 5곳의 적격 리뷰 50건 이상을 상권 단위로 집계했습니다."
+        if full else
+        f"{industry_name} 가게 {len(eligible)}곳·적격 리뷰 {len(analyzed)}건의 제한 표본입니다. 개별 가게의 성과를 뜻하지 않습니다."
+        if comparable else
+        f"표본 부족: 적격 가게 {missing_places}곳, 적격 리뷰 {missing_reviews}건이 더 필요합니다. 가게당 최소 5건, 3곳·30건이 필요합니다."
+    )
+    return AreaReviewReportResponse(
+        status="available" if full else "limited" if comparable else "insufficient_sample",
+        area=area, industry_code=industry_code, industry_name=industry_name,
+        place_samples=samples, total_review_count=sum(sample.review_count for sample in samples),
+        analyzed_review_count=len(analyzed), eligible_place_count=len(eligible),
+        required_place_count=REQUIRED_PLACES, required_review_count=MIN_TOTAL_REVIEWS,
+        topics=topics, failed_labels=[label for label in payload.get("failed_labels", []) if label in grouped],
+        captured_at=payload.get("captured_at"), expires_at=payload.get("expires_at"),
+        from_cache=from_cache, source="kakao", message=message,
+    )
+
+
+def collect_or_load_area_review_report(
+    *, area: ReviewAreaSummary, industry_code: str, industry_name: str,
+    places: list[ReviewPlaceRef], user_id: str, encryption_key: str,
+    directory: Path = REPORT_DIR, now: datetime | None = None,
+    collector_factory: Callable[[str], PublicReviewBrowserCollector] = PublicReviewBrowserCollector,
+) -> AreaReviewReportResponse:
+    now = now or datetime.now(timezone.utc)
+    month = now.strftime("%Y%m")
+    directory.mkdir(parents=True, exist_ok=True)
+    purge_expired_reports(directory, now)
+    purge_expired_captures(directory, now)
+    digest = hashlib.sha256(f"{area.code}:{industry_code}:{month}".encode()).hexdigest()[:24]
+    path = directory / f"area-report-{month}-{digest}.json"
+    cached = _read_report(path, now)
+    if cached is not None:
+        return build_area_review_report(cached, area, industry_code, industry_name, encryption_key, True)
+    user_hash = _user_hash(user_id)
+    user_lock = directory / f"quota-{month}-{user_hash}.lock"
+    report_lock = path.with_suffix(".lock")
+    try:
+        descriptor = os.open(user_lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError as error:
+        raise RuntimeError("다른 리뷰 수집이 진행 중입니다. 완료 후 다시 확인해 주세요.") from error
+    os.close(descriptor)
+    locked_report = False
+    try:
+        try:
+            descriptor = os.open(report_lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError as error:
+            raise RuntimeError("이 상권의 리뷰 수집이 이미 진행 중입니다.") from error
+        os.close(descriptor)
+        locked_report = True
+        cached = _read_report(path, now)
+        if cached is not None:
+            return build_area_review_report(cached, area, industry_code, industry_name, encryption_key, True)
+        runs = 0
+        for previous in list(directory.glob(f"report-{month}-*.json")) + list(directory.glob(f"area-report-{month}-*.json")):
+            try:
+                if json.loads(previous.read_text(encoding="utf-8")).get("requested_by_hash") == user_hash:
+                    runs += 1
+            except (OSError, ValueError):
+                continue
+        if runs >= MAX_NEW_RUNS_PER_USER_MONTH:
+            raise RuntimeError("이번 달 계정별 신규 리뷰 수집 횟수를 모두 사용했습니다.")
+        targets = [CaptureTarget("kakao", f"https://place.map.kakao.com/{place.id}", label)
+                   for place, label in zip(places[:5], "ABCDE")]
+        batch: CaptureBatch = collector_factory(encryption_key).capture_with_failures(targets)
+        captured = {
+            "schema_version": 1, "captured_at": now.isoformat(),
+            "expires_at": (now + timedelta(days=RETENTION_DAYS)).isoformat(),
+            "requested_by_hash": user_hash, "area_code": area.code,
+            "industry_code": industry_code, "place_labels": [target.peer_label for target in targets],
+            "place_ids": [place.id for place in places[:5]], "failed_labels": batch.failed_labels,
+            "reviews": [{"provider": review.provider, "peer_label": review.peer_label,
+                         "encrypted_text": review.encrypted_text.decode("utf-8"),
+                         "fetched_at": review.fetched_at.isoformat()} for review in batch.reviews],
+        }
+        temporary = path.with_suffix(".tmp")
+        try:
+            temporary.write_text(json.dumps(captured, ensure_ascii=False), encoding="utf-8")
+            temporary.replace(path)
+        finally:
+            temporary.unlink(missing_ok=True)
+        append_audit(directory, event="capture", place_count=len(targets), review_count=len(batch.reviews),
+                     failed_count=len(batch.failed_labels), now=now)
+        return build_area_review_report(captured, area, industry_code, industry_name, encryption_key, False)
     finally:
         if locked_report:
             report_lock.unlink(missing_ok=True)

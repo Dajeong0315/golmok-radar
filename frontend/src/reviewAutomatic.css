@@ -8,6 +8,8 @@
 }
 
 .review-auto .review-section-heading { margin-bottom: 28px; }
+.review-industry-select { display: flex; align-items: center; gap: 12px; margin: 0 0 20px; font-weight: 700; }
+.review-industry-select select { min-width: 0; width: min(360px, 100%); padding: 12px; border: 1px solid #b7c8d9; border-radius: 10px; background: white; font: inherit; }
 .review-shop-search label { display: block; margin-bottom: 10px; font-weight: 700; }
 .review-shop-search > div { display: flex; gap: 10px; }
 .review-shop-search input { flex: 1; min-width: 0; padding: 15px 17px; border: 1px solid #b7c8d9; border-radius: 12px; background: white; font: inherit; }
@@ -65,12 +67,21 @@
 .review-auto-insights { display: grid; gap: 10px; margin: 22px 0; }
 .review-auto-insights h3 { margin: 0; }
 .review-auto-insights p { margin: 7px 0 0; color: #5b6978; }
+.review-area-flow { margin-top: 40px; }
+.review-area-query { display: grid; gap: 8px; margin: 20px 0 12px; font-weight: 700; }
+.review-area-query input { width: 100%; box-sizing: border-box; padding: 13px 15px; border: 1px solid #b7c8d9; border-radius: 10px; background: white; font: inherit; }
+.review-area-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; max-height: 250px; overflow-y: auto; }
+.review-area-options button { display: flex; min-width: 0; flex-direction: column; gap: 3px; padding: 11px 13px; border: 1px solid #dbe5ee; border-radius: 10px; background: white; text-align: left; cursor: pointer; }
+.review-area-options button[aria-selected="true"] { border-color: #1769d2; background: #e8f3ff; }
+.review-area-options small { color: #5b6978; }
 
 @media (max-width: 600px) {
   .review-auto { margin: 32px 16px 64px; padding: 20px; border-radius: 18px; }
   .review-shop-search > div { flex-direction: column; }
   .review-selected-shop { align-items: flex-start; flex-direction: column; }
   .review-run > button { justify-self: stretch; }
+  .review-industry-select { align-items: stretch; flex-direction: column; }
   .review-shop-picker.has-preview { grid-template-columns: 1fr; }
   .review-place-map { height: 240px; }
+  .review-area-options { grid-template-columns: 1fr; }
 }

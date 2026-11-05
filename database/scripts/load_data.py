@@ -1,4 +1,4 @@
-"""검증된 2025년 4분기 카페 상권 데이터를 서비스 DB에 적재한다.
+"""검증된 2025년 4분기 전체 업종 상권 데이터를 서비스 DB에 적재한다.
 
 기본 실행:
     python database/scripts/load_data.py
@@ -33,7 +33,6 @@ from app.db import Base, make_engine  # noqa: E402
 from app.models import DataSource, PopulationMetric, SalesMetric, StoreMetric, TradeArea  # noqa: E402
 from database.scripts.validate_phase1 import (  # noqa: E402
     DISTRICTS,
-    INDUSTRY,
     QUARTER,
     close_zip_reader,
     csv_rows_from_zip,
@@ -43,7 +42,9 @@ from database.scripts.validate_phase1 import (  # noqa: E402
 
 
 def as_int(value: str) -> int:
-    return int(Decimal(value or "0"))
+    if value in ("", None):
+        raise ValueError("필수 원천값이 비어 있습니다.")
+    return int(Decimal(value))
 
 
 def as_float_or_none(value: str) -> float | None:
@@ -82,20 +83,28 @@ def collect_rows() -> tuple[list[TradeArea], list[StoreMetric], list[SalesMetric
     area_codes = {area.code for area in trade_areas}
 
     store_metrics: list[StoreMetric] = []
+    store_keys: set[tuple[str, str, str]] = set()
+    store_industries: dict[str, str] = {}
     store_reader = csv_rows_from_zip(store_zip)
     try:
         for row in store_reader:
-            if (
-                row["stdr_yyqu_cd"] == QUARTER
-                and row["svc_induty_cd"] == INDUSTRY
-                and row["trdar_cd"] in area_codes
-            ):
+            if row["stdr_yyqu_cd"] == QUARTER:
+                if row["trdar_cd"] not in area_codes:
+                    raise ValueError("점포 원천의 상권 코드가 공식 영역에 없습니다.")
+                key = (QUARTER, row["trdar_cd"], row["svc_induty_cd"])
+                if key in store_keys:
+                    raise ValueError(f"점포 논리 키 중복: {key}")
+                store_keys.add(key)
+                name = row["svc_induty_cd_nm"]
+                if row["svc_induty_cd"] in store_industries and store_industries[row["svc_induty_cd"]] != name:
+                    raise ValueError(f"점포 업종명 불일치: {row['svc_induty_cd']}")
+                store_industries[row["svc_induty_cd"]] = name
                 store_metrics.append(
                     StoreMetric(
                         quarter_code=QUARTER,
                         trade_area_code=row["trdar_cd"],
-                        industry_code=INDUSTRY,
-                        industry_name=row["svc_induty_cd_nm"],
+                        industry_code=row["svc_induty_cd"],
+                        industry_name=name,
                         store_count=as_int(row["stor_co"]),
                         opening_rate=as_float_or_none(row["opbiz_rt"]),
                         closing_rate=as_float_or_none(row["clsbiz_rt"]),
@@ -105,20 +114,28 @@ def collect_rows() -> tuple[list[TradeArea], list[StoreMetric], list[SalesMetric
         close_zip_reader(store_reader)
 
     sales_metrics: list[SalesMetric] = []
+    sales_keys: set[tuple[str, str, str]] = set()
+    sales_industries: dict[str, str] = {}
     sales_reader = csv_rows_from_zip(sales_zip)
     try:
         for row in sales_reader:
-            if (
-                row["기준_년분기_코드"] == QUARTER
-                and row["서비스_업종_코드"] == INDUSTRY
-                and row["상권_코드"] in area_codes
-            ):
+            if row["기준_년분기_코드"] == QUARTER:
+                if row["상권_코드"] not in area_codes:
+                    raise ValueError("매출 원천의 상권 코드가 공식 영역에 없습니다.")
+                key = (QUARTER, row["상권_코드"], row["서비스_업종_코드"])
+                if key in sales_keys:
+                    raise ValueError(f"매출 논리 키 중복: {key}")
+                sales_keys.add(key)
+                name = row["서비스_업종_코드_명"]
+                if row["서비스_업종_코드"] in sales_industries and sales_industries[row["서비스_업종_코드"]] != name:
+                    raise ValueError(f"매출 업종명 불일치: {row['서비스_업종_코드']}")
+                sales_industries[row["서비스_업종_코드"]] = name
                 sales_metrics.append(
                     SalesMetric(
                         quarter_code=QUARTER,
                         trade_area_code=row["상권_코드"],
-                        industry_code=INDUSTRY,
-                        industry_name=row["서비스_업종_코드_명"],
+                        industry_code=row["서비스_업종_코드"],
+                        industry_name=name,
                         sales_amount=as_int(row["당월_매출_금액"]),
                         sales_count=as_int(row["당월_매출_건수"]),
                         weekday_sales_amount=as_int(row["주중_매출_금액"]),
@@ -127,6 +144,8 @@ def collect_rows() -> tuple[list[TradeArea], list[StoreMetric], list[SalesMetric
                 )
     finally:
         close_zip_reader(sales_reader)
+    if not set(sales_industries).issubset(store_industries):
+        raise ValueError("매출 업종 코드가 점포 원천에 없습니다.")
 
     population_metrics: list[PopulationMetric] = []
     with population_csv.open(encoding="utf-8-sig", newline="") as file:
@@ -197,8 +216,11 @@ def load(database_url: str | None = None) -> dict[str, int]:
         for model in (PopulationMetric, SalesMetric, StoreMetric):
             session.execute(delete(model))
         session.execute(delete(DataSource).where(DataSource.key.in_([source.key for source in sources])))
-        session.execute(delete(TradeArea))
-        session.add_all(trade_areas)
+        existing_codes = set(session.scalars(select(TradeArea.code)).all())
+        source_codes = {area.code for area in trade_areas}
+        if not existing_codes.issubset(source_codes):
+            raise ValueError("기존 공식 상권 코드가 새 원천에 없습니다. 계정 관심 상권을 보존해야 합니다.")
+        session.add_all(area for area in trade_areas if area.code not in existing_codes)
         session.add_all(stores)
         session.add_all(sales)
         session.add_all(populations)

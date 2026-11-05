@@ -108,6 +108,12 @@ def client(tmp_path: Path) -> Generator[TestClient, None, None]:
                     closing_rate=3.0,
                 )
             )
+            if index == 1:
+                session.add(StoreMetric(
+                    quarter_code="20254", trade_area_code=code,
+                    industry_code="CS200004", industry_name="컴퓨터학원",
+                    store_count=2, opening_rate=None, closing_rate=None,
+                ))
             session.add(
                 SalesMetric(
                     quarter_code="20254",
@@ -158,7 +164,10 @@ def test_trade_area_list_and_detail(client: TestClient) -> None:
 def test_industries_expose_only_loaded_official_industries(client: TestClient) -> None:
     response = client.get("/api/v1/industries")
     assert response.status_code == 200
-    assert response.json() == [{"code": "CS100010", "name": "커피-음료"}]
+    assert response.json() == [
+        {"code": "CS100010", "name": "커피-음료", "store_area_count": 5, "sales_area_count": 5, "has_sales_source": True},
+        {"code": "CS200004", "name": "컴퓨터학원", "store_area_count": 1, "sales_area_count": 0, "has_sales_source": False},
+    ]
 
 
 def test_trade_area_map_insight_exposes_trade_area_metrics_without_street_claims(client: TestClient) -> None:

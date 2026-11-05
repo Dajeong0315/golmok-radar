@@ -20,6 +20,9 @@ class TradeAreaOut(BaseModel):
 class IndustryOption(BaseModel):
     code: str
     name: str
+    store_area_count: int
+    sales_area_count: int
+    has_sales_source: bool
 
 
 class MetricAreaValue(BaseModel):

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .config import get_settings
@@ -337,12 +337,20 @@ def list_industries(
     if quarter not in SUPPORTED_QUARTERS:
         raise HTTPException(400, "지원하지 않는 기준분기입니다.")
     rows = session.execute(
-        select(StoreMetric.industry_code, StoreMetric.industry_name)
+        select(StoreMetric.industry_code, StoreMetric.industry_name, func.count(StoreMetric.trade_area_code))
         .where(StoreMetric.quarter_code == quarter)
-        .distinct()
+        .group_by(StoreMetric.industry_code, StoreMetric.industry_name)
         .order_by(StoreMetric.industry_name)
     ).all()
-    return [IndustryOption(code=code, name=name) for code, name in rows]
+    sales_counts = dict(session.execute(
+        select(SalesMetric.industry_code, func.count(SalesMetric.trade_area_code))
+        .where(SalesMetric.quarter_code == quarter)
+        .group_by(SalesMetric.industry_code)
+    ).all())
+    return [IndustryOption(
+        code=code, name=name, store_area_count=store_count,
+        sales_area_count=sales_counts.get(code, 0), has_sales_source=code in sales_counts,
+    ) for code, name, store_count in rows]
 
 
 @app.get("/api/v1/trade-areas/{code}", response_model=TradeAreaOut)

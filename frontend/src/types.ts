@@ -14,7 +14,7 @@ export type TradeArea = {
   data_status: DataStatus;
 };
 
-export type IndustryOption = { code: string; name: string };
+export type IndustryOption = { code: string; name: string; store_area_count: number; sales_area_count: number; has_sales_source: boolean };
 
 export type MetricAreaValue = {
   trade_area_code: string;

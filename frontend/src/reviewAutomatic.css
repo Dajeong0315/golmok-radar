@@ -20,6 +20,17 @@
 .review-shop-results button { display: flex; flex-direction: column; width: 100%; gap: 4px; padding: 14px 17px; border: 0; background: transparent; text-align: left; cursor: pointer; }
 .review-shop-results button:hover,
 .review-shop-results button:focus-visible { background: #eef6ff; }
+.review-shop-results button.is-selected { background: #e3f0ff; outline: 2px solid #1769d2; outline-offset: -2px; }
+.review-shop-results small { color: #617080; }
+.review-shop-picker.has-preview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; margin-top: 14px; }
+.review-shop-picker.has-preview .review-shop-results { margin: 0; max-height: 450px; }
+.review-place-preview { min-width: 0; padding: 16px; border: 1px solid #b9cee4; border-radius: 14px; background: white; }
+.review-place-preview h3 { margin: 5px 0; font-size: 1.2rem; }
+.review-place-preview p { margin: 5px 0; color: #5b6978; font-size: .9rem; }
+.review-place-preview small { color: #1769d2; font-weight: 700; }
+.review-place-map { width: 100%; height: 300px; margin: 14px 0; border-radius: 10px; background: #edf3f8; }
+.review-place-preview > button { width: 100%; min-height: 46px; margin-top: 12px; border: 0; border-radius: 10px; color: white; background: #1769d2; font: inherit; font-weight: 700; cursor: pointer; }
+.review-place-preview > button:disabled { opacity: .55; cursor: not-allowed; }
 .review-shop-results span,
 .review-selected-shop span { color: #5b6978; font-size: .9rem; }
 .review-selected-shop,
@@ -60,4 +71,6 @@
   .review-shop-search > div { flex-direction: column; }
   .review-selected-shop { align-items: flex-start; flex-direction: column; }
   .review-run > button { justify-self: stretch; }
+  .review-shop-picker.has-preview { grid-template-columns: 1fr; }
+  .review-place-map { height: 240px; }
 }

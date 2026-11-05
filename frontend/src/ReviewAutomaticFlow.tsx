@@ -4,6 +4,7 @@ import { fetchCapturedReviewReport, fetchReviewTradeArea } from "./api";
 import { fetchAccountRecords, saveAccountRecord } from "./accountStore";
 import { useAuth } from "./auth";
 import { searchKakaoPlaces, searchNearbyCafes, selectNearbyPlaces, type KakaoPlace } from "./kakaoPlaces";
+import { ReviewPlaceMap } from "./ReviewPlaceMap";
 import type { CapturedReviewReport, ReviewAreaLocation } from "./types";
 import "./reviewAutomatic.css";
 
@@ -31,6 +32,7 @@ export function ReviewAutomaticFlow() {
   const [locating, setLocating] = useState(false);
   const [running, setRunning] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -45,7 +47,7 @@ export function ReviewAutomaticFlow() {
   }, [client, user?.id]);
 
   useEffect(() => {
-    if (!selected) return;
+    if (!selected || !locationConfirmed) return;
     let active = true;
     setArea(null);
     setNearby([]);
@@ -62,7 +64,7 @@ export function ReviewAutomaticFlow() {
       if (active) setError(reason.message);
     }).finally(() => { if (active) setLocating(false); });
     return () => { active = false; };
-  }, [selected?.id]);
+  }, [selected?.id, locationConfirmed]);
 
   const search = async (event: FormEvent) => {
     event.preventDefault();
@@ -85,13 +87,15 @@ export function ReviewAutomaticFlow() {
   const choose = (place: KakaoPlace) => {
     sessionStorage.setItem(SELECTED_SHOP_KEY, JSON.stringify(place));
     setSelected(place);
-    setMatches([]);
+    setArea(null);
+    setNearby([]);
     setReport(null);
     setConfirmed(false);
+    setLocationConfirmed(false);
   };
 
   const runReport = async () => {
-    if (!selected || !area || nearby.length < 2 || !session || !confirmed || running) return;
+    if (!selected || !locationConfirmed || !area || nearby.length < 2 || !session || !confirmed || running) return;
     setRunning(true);
     setError("");
     setReport(null);
@@ -137,11 +141,14 @@ export function ReviewAutomaticFlow() {
       <label htmlFor="review-shop-query">내 가게 이름</label>
       <div><input id="review-shop-query" value={query} onChange={(event) => { setQuery(event.target.value); setSearched(false); setMatches([]); }} placeholder="예: 성수 온더" autoComplete="off" /><button type="submit" disabled={searching}>{searching ? "검색 중" : "가게 찾기"}</button></div>
     </form>
-    {matches.length ? <ul className="review-shop-results" aria-label="가게 검색 결과">{matches.map((place) => <li key={place.id}><button type="button" onClick={() => choose(place)}><strong>{place.name}</strong><span>{place.roadAddress || place.address}</span></button></li>)}</ul> : searched && !searching ? <p className="review-auto-note">카페 검색 결과가 없습니다. 지역 이름과 가게 이름을 함께 입력해 보세요.</p> : null}
+    <div className={`review-shop-picker ${selected ? "has-preview" : ""}`}>
+      <div>{matches.length ? <ul className="review-shop-results" aria-label="가게 검색 결과">{matches.map((place) => <li key={place.id}><button type="button" className={selected?.id === place.id ? "is-selected" : ""} onClick={() => choose(place)}><strong>{place.name}</strong><span>{place.roadAddress || place.address}</span><small>{place.category}</small></button></li>)}</ul> : searched && !searching ? <p className="review-auto-note">검색 결과가 없습니다. 지역 이름과 가게 이름을 함께 입력해 보세요.</p> : null}</div>
+      {selected ? <ReviewPlaceMap key={selected.id} place={selected} onConfirm={() => setLocationConfirmed(true)} /> : null}
+    </div>
 
     {selected ? <div className="review-selected-shop">
-      <div><small>선택한 내 가게</small><strong>{selected.name}</strong><span>{selected.roadAddress || selected.address}</span></div>
-      <button type="button" onClick={() => { sessionStorage.removeItem(SELECTED_SHOP_KEY); setSelected(null); setArea(null); setReport(null); setNearby([]); }}>다른 가게 선택</button>
+      <div><small>선택한 내 가게 {locationConfirmed ? "· 위치 확인 완료" : "· 지도에서 확인 대기"}</small><strong>{selected.name}</strong><span>{selected.roadAddress || selected.address}</span></div>
+      <button type="button" onClick={() => { sessionStorage.removeItem(SELECTED_SHOP_KEY); setSelected(null); setArea(null); setReport(null); setNearby([]); setLocationConfirmed(false); }}>다른 가게 선택</button>
     </div> : null}
     {locating ? <p className="review-auto-note" role="status">공식 상권 경계와 주변 카페를 확인하고 있습니다.</p> : null}
     {area?.area ? <div className="review-area-card"><small>{area.status === "inside" ? "가게가 속한 공식 상권" : "가장 가까운 공식 상권"}</small><strong>{area.area.district_name} · {area.area.name}</strong><p>{area.status === "inside" ? `공식 상권 코드 ${area.area.code} · 주변 카페 후보 ${nearby.length}곳` : `가게가 상권 경계 밖에 있습니다. 경계까지 약 ${area.distance_m}m이며 소속 상권으로 단정하지 않습니다. 반경 1.2km의 카페 후보 ${nearby.length}곳과 비교할 수 있습니다.`}</p></div> : area?.status === "unmapped" ? <p className="review-auto-note">이 위치는 적재된 공식 상권 경계에서 멀어 소속 상권을 판별할 수 없습니다. 반경 1.2km의 카페 후보 {nearby.length}곳을 위치 기준으로 비교할 수 있습니다.</p> : null}

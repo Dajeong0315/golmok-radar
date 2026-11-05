@@ -117,16 +117,21 @@ erDiagram
 | --- | --- | --- |
 | GET | `/health` | 앱·DB 상태 확인 |
 | GET | `/api/v1/trade-areas` | 서울 25개 자치구 상권 목록과 데이터 보유 상태 |
+| GET | `/api/v1/industries?quarter=20254` | 공식 점포 100개 업종과 업종별 점포·매출 원천 보유 상권 수 |
 | GET | `/api/v1/trade-areas/{code}` | 상권 상세와 지표 |
-| GET | `/api/v1/trade-areas/{code}/map-insight` | 지도 선택용 상권 단위 유동·카페 매출·시간대 비중; 계산 불가 사유와 데이터 경계 포함 |
-| POST | `/api/v1/recommendations` | 창업 성향 답변 기반 설명 가능한 카페 후보 2~3곳 |
-| GET | `/api/v1/trade-areas/{code}/report` | 완전 데이터 상권 1,068곳 비교군 기준 강점·주의·수요 특성 리포트 |
+| GET | `/api/v1/trade-areas/{code}/map-insight?industry={code}` | 지도 선택용 상권 단위 유동·선택 업종 매출·시간대 비중 및 결측 사유 |
+| POST | `/api/v1/recommendations` | 창업 성향 답변과 선택한 공식 세부 업종의 설명 가능한 후보 2~3곳 |
+| GET | `/api/v1/trade-areas/{code}/report?industry={code}` | 같은 업종의 점포·유동·가용 매출 지표로 강점·주의·특성 리포트 |
 | GET | `/api/v1/trade-areas/{code}/rent-benchmark` | R-ONE 서울 전체 소규모상가 참고지표와 공간 범위·공식 출처 확인 |
 | GET | `/api/v1/rent-markets` | R-ONE 서울 세부 조사상권 59곳의 코드·이름·권역·기준기간 조회 |
 | GET | `/api/v1/trade-areas/{code}/rent-benchmark?market_code={R-ONE코드}` | 선택한 R-ONE 조사상권과 서울 전체의 임대료·공실률·임대가격지수 비교 |
 | POST | `/api/v1/support-programs` | 최소 조건 기반 공식 창업지원 연동 상태와 후보 확인 |
 | POST | `/api/v1/review-analysis` | 사용자 제공 리뷰의 주제별 내 가게·주변 비교군 분석 |
-| GET | `/api/v1/comparisons?codes=A,B&quarter=20254` | 서로 다른 상권 2~4곳, 지표 14개 비교 |
+| GET | `/api/v1/review-industry/{code}` | 공식 업종과 카카오 장소 분류 검색어·제외어 |
+| GET | `/api/v1/review-trade-area` | 선택 가게 좌표의 공식 상권 포함·근접 여부 |
+| POST | `/api/v1/captured-review-report` | 카카오 REST로 검증한 내 가게와 동종 주변 최대 4곳의 익명 리뷰 비교 |
+| POST | `/api/v1/area-review-report` | 선택 공식 상권 안의 동종 최대 5곳 리뷰 집계 |
+| GET | `/api/v1/comparisons?codes=A,B&quarter=20254&industry={code}` | 같은 업종·분기의 서로 다른 상권 2~4곳, 최대 14개 지표 비교 |
 | GET | `/api/v1/comparisons/{comparison_id}/evidence/{metric_key}` | 지표 출처·필터·수식·원천값 확인 |
 | GET | `/api/v1/field-checklist` | 현장 확인 질문 5개 |
 
@@ -141,7 +146,7 @@ Phase 19는 워크시트용 FastAPI 엔드포인트를 추가하지 않습니다
 
 비교 API는 코드 1개·5개 이상·중복·없는 코드·미지원 분기를 거부합니다. 프런트엔드는 금액, 비율, 점포 수 단위를 구분하며 결측 사유를 각 셀에 표시합니다.
 
-`map-insight`는 `PopulationMetric`과 카페(`CS100010`) `SalesMetric`의 같은 기준분기 행만 읽습니다. 시간대 막대의 비율은 백엔드에서 `시간대 유동인구 ÷ 총 유동인구 × 100`으로 계산하고, 프런트엔드는 반환된 비율만 표시합니다. 위치는 `TradeArea` 중심점이며, 거리별 좌표·연령대 유동인구·개별 매물 데이터는 응답과 화면에 포함하지 않습니다.
+`map-insight`는 `PopulationMetric`과 선택 업종의 `StoreMetric`·`SalesMetric`을 같은 기준분기·상권 코드로 읽습니다. 매출 원천이 없는 38개 업종은 매출을 0으로 채우지 않습니다. 시간대 막대의 비율은 백엔드에서 `시간대 유동인구 ÷ 총 유동인구 × 100`으로 계산하고, 프런트엔드는 반환된 비율만 표시합니다. 위치는 `TradeArea` 중심점이며, 거리별 좌표·연령대 유동인구·개별 매물 데이터는 응답과 화면에 포함하지 않습니다.
 
 ## 검증 기준
 

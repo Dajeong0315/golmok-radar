@@ -498,7 +498,13 @@ def get_trade_area_map_insight(
 
     metric_by_key = {metric.metric_key: metric for metric in metrics}
 
-    peer_areas = session.scalars(select(TradeArea).where(TradeArea.district_name == area.district_name)).all()
+    peer_areas = session.scalars(
+        select(TradeArea).join(StoreMetric, StoreMetric.trade_area_code == TradeArea.code).where(
+            TradeArea.district_name == area.district_name,
+            StoreMetric.quarter_code == quarter,
+            StoreMetric.industry_code == industry,
+        )
+    ).all()
     peer_metrics = [
         {metric.metric_key: metric for metric in get_area_metrics(session, peer.code, quarter, industry)[1]}
         for peer in peer_areas

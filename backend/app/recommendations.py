@@ -21,6 +21,7 @@ class CandidateScore:
     area: TradeArea
     score: float
     components: list[dict]
+    available_count: int = 14
 
 
 DEMAND_RULES = {
@@ -62,17 +63,33 @@ def combined_rules(demand: str, risk: str, competition: str) -> list[PreferenceR
     return [PreferenceRule(metric_key, weight, direction) for (metric_key, direction), weight in grouped.items()]
 
 
-def recommend(session: Session, *, demand: str, risk: str, competition: str, quarter: str = "20254") -> list[CandidateScore]:
+def recommend(session: Session, *, demand: str, risk: str, competition: str, quarter: str = "20254", industry: str = "CS100010") -> list[CandidateScore]:
     rules = combined_rules(demand, risk, competition)
     records: list[tuple[TradeArea, dict[str, tuple[str, str, float]]]] = []
-    for area, metrics in get_all_area_metrics(session, quarter):
+    for area, metrics in get_all_area_metrics(session, quarter, industry):
         available = {
             metric.metric_key: (metric.label, metric.unit, float(metric.value))
             for metric in metrics
             if metric.status == "available" and metric.value is not None
         }
-        if len(available) == 14 and all(rule.metric_key in available for rule in rules):
+        if "store_count" in available and "total_population" in available:
             records.append((area, available))
+
+    if len(records) < 3:
+        return []
+    # Every scored area must use the same set of criteria. Missing sales never becomes zero.
+    if any("sales_amount" in metrics for _, metrics in records):
+        records = [(area, metrics) for area, metrics in records if all(rule.metric_key in metrics for rule in rules)]
+        if len(records) < 3:
+            return []
+    common = set.intersection(*(set(metrics) for _, metrics in records))
+    rules = [rule for rule in rules if rule.metric_key in common]
+    if len(rules) < 2:
+        rules.extend(rule for rule in (
+            PreferenceRule("store_count", 1, -1), PreferenceRule("total_population", 1),
+        ) if rule.metric_key in common and rule.metric_key not in {item.metric_key for item in rules})
+    if len(rules) < 2:
+        return []
 
     populations = {
         rule.metric_key: [metrics[rule.metric_key][2] for _, metrics in records]
@@ -98,7 +115,7 @@ def recommend(session: Session, *, demand: str, risk: str, competition: str, qua
                 "weight": rule.weight,
                 "direction": "higher" if rule.direction == 1 else "lower",
             })
-        scored.append(CandidateScore(area, round(float(weighted_total) / total_weight, 1), components))
+        scored.append(CandidateScore(area, round(float(weighted_total) / total_weight, 1), components, len(metrics)))
     return sorted(scored, key=lambda candidate: (-candidate.score, candidate.area.code))
 
 

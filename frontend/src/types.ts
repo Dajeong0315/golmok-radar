@@ -34,6 +34,8 @@ export type ComparisonResponse = {
   comparison_id: string;
   quarter_code: string;
   quarter_label: string;
+  industry_code: string;
+  industry_name: string;
   trade_areas: TradeArea[];
   metrics: ComparisonMetric[];
 };
@@ -58,6 +60,8 @@ export type EvidenceResponse = {
   source_file: string;
   fetched_at: string | null;
   quarter_code: string;
+  industry_code: string;
+  industry_name: string;
   formula: string | null;
   rounding: string | null;
   areas: EvidenceArea[];
@@ -94,6 +98,8 @@ export type RecommendationResponse = {
   message: string;
   quarter_code: string;
   quarter_label: string;
+  industry_code: string;
+  industry_name: string;
   weights_version: string;
   candidate_pool_size: number;
   diversity_rule: string;
@@ -112,6 +118,8 @@ export type AreaReportInsight = {
 export type AreaReportResponse = {
   quarter_code: string;
   quarter_label: string;
+  industry_code: string;
+  industry_name: string;
   comparison_count: number;
   trade_area: TradeArea;
   strengths: AreaReportInsight[];

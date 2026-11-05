@@ -279,6 +279,8 @@ h1 em { color: var(--teal); font-style: normal; }
 .result-next h2 { margin: 0; font-size: clamp(40px, 5.2vw, 70px); letter-spacing: -.05em; }
 .result-next > div > p:last-child { max-width: 650px; color: #626d70; line-height: 1.7; }
 .recommendation-page { min-height: 100vh; background: var(--paper); }
+.recommendation-industry { display: flex; align-items: center; gap: 12px; width: min(420px, calc(100% - 40px)); margin: 20px clamp(20px, 8vw, 120px); }
+.recommendation-industry select { flex: 1; min-width: 0; }
 .recommendation-header { position: relative; }
 .recommendation-hero { display: grid; grid-template-columns: 1.5fr .5fr; gap: 60px; align-items: end; padding: 90px clamp(20px, 8vw, 120px); color: white; background: var(--navy); }
 .recommendation-hero h1 { font-size: clamp(48px, 7vw, 96px); }

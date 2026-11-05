@@ -20,7 +20,7 @@ export function HomePage() {
         <h1>궁금한 골목에서,<br /><em>내 가게의 첫걸음.</em></h1>
         <p className="home-lead">어디서 시작할지 막막하다면.<br />내 조건을 정리하고, 상권을 비교하고,<br className="mobile-break" /> 직접 확인할 일까지 함께 찾아보세요.</p>
         <div className="home-actions"><a className="primary-action" href="#quiz">내 창업 조건 정리하기 <span aria-hidden="true">→</span></a><a className="home-secondary" href="#explore">상권 바로 탐색하기</a></div>
-        <p className="home-caption">로그인 없이 둘러볼 수 있어요 · 서울 카페 상권부터</p>
+        <p className="home-caption">로그인 없이 둘러볼 수 있어요 · 서울 공식 상권 100개 업종</p>
         <div className="home-journey" aria-label="조건 정리에서 상권 비교, 매물 확인까지"><span>01 <b>내 조건</b></span><i aria-hidden="true">→</i><span>02 <b>상권 비교</b></span><i aria-hidden="true">→</i><span>03 <b>매물 확인</b></span></div>
       </section>
 

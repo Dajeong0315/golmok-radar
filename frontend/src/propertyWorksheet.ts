@@ -45,7 +45,7 @@ export type WorksheetCalculation = {
 };
 
 export const CHECK_ITEMS = [
-  { key: "foot_traffic", category: "현장", label: "보행 흐름과 실제 카페 이용 가능성" },
+  { key: "foot_traffic", category: "현장", label: "보행 흐름과 선택 업종의 실제 이용 가능성" },
   { key: "competition", category: "현장", label: "인접 경쟁점, 좌석, 대기, 공실" },
   { key: "visibility", category: "현장", label: "전면 폭, 가시성, 출입 동선" },
   { key: "facilities", category: "시설", label: "전기, 급배수, 배기, 화장실, 주차·상하차" },

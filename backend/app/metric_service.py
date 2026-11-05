@@ -62,6 +62,7 @@ def build_area_metrics(
     store: StoreMetric | None,
     sales: SalesMetric | None,
     population: PopulationMetric | None,
+    industry_name: str = "커피-음료",
 ) -> tuple[TradeArea | None, list[MetricValue]]:
     store_reason = "해당 분기·업종의 점포 원천 행이 없습니다."
     sales_reason = "해당 분기·업종의 매출 원천 행이 없습니다."
@@ -70,7 +71,7 @@ def build_area_metrics(
     metrics = [
         raw_metric(
             "store_count",
-            "카페 점포 수",
+            f"{industry_name} 점포 수",
             "개",
             store.store_count if store else None,
             missing_reason=store_reason,
@@ -98,7 +99,7 @@ def build_area_metrics(
         ),
         raw_metric(
             "sales_amount",
-            "카페 추정매출",
+            f"{industry_name} 추정매출",
             "원",
             sales.sales_amount if sales else None,
             missing_reason=sales_reason,
@@ -162,11 +163,19 @@ def get_area_metrics(
     quarter_code: str,
     industry_code: str = "CS100010",
 ) -> tuple[TradeArea | None, list[MetricValue]]:
+    store = session.get(StoreMetric, (quarter_code, trade_area_code, industry_code))
+    sales = session.get(SalesMetric, (quarter_code, trade_area_code, industry_code))
+    name = (store.industry_name if store else sales.industry_name if sales else None) or session.scalar(
+        select(StoreMetric.industry_name).where(
+            StoreMetric.quarter_code == quarter_code, StoreMetric.industry_code == industry_code,
+        ).limit(1)
+    ) or "선택 업종"
     return build_area_metrics(
         session.get(TradeArea, trade_area_code),
-        session.get(StoreMetric, (quarter_code, trade_area_code, industry_code)),
-        session.get(SalesMetric, (quarter_code, trade_area_code, industry_code)),
+        store,
+        sales,
         session.get(PopulationMetric, (quarter_code, trade_area_code)),
+        name,
     )
 
 
@@ -201,8 +210,9 @@ def get_all_area_metrics(
             select(PopulationMetric).where(PopulationMetric.quarter_code == quarter_code)
         ).all()
     }
+    name = next((row.industry_name for row in stores.values()), None) or next((row.industry_name for row in sales.values()), "선택 업종")
     return [
-        (area, build_area_metrics(area, stores.get(area.code), sales.get(area.code), populations.get(area.code))[1])
+        (area, build_area_metrics(area, stores.get(area.code), sales.get(area.code), populations.get(area.code), name)[1])
         for area in areas
     ]
 

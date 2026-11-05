@@ -108,7 +108,7 @@ def client(tmp_path: Path) -> Generator[TestClient, None, None]:
                     closing_rate=3.0,
                 )
             )
-            if index == 1:
+            if index <= 3:
                 session.add(StoreMetric(
                     quarter_code="20254", trade_area_code=code,
                     industry_code="CS200004", industry_name="컴퓨터학원",
@@ -166,7 +166,7 @@ def test_industries_expose_only_loaded_official_industries(client: TestClient) -
     assert response.status_code == 200
     assert response.json() == [
         {"code": "CS100010", "name": "커피-음료", "store_area_count": 5, "sales_area_count": 5, "has_sales_source": True},
-        {"code": "CS200004", "name": "컴퓨터학원", "store_area_count": 1, "sales_area_count": 0, "has_sales_source": False},
+        {"code": "CS200004", "name": "컴퓨터학원", "store_area_count": 3, "sales_area_count": 0, "has_sales_source": False},
     ]
 
 
@@ -247,6 +247,7 @@ def test_recommendations_return_explainable_candidates(client: TestClient) -> No
 def test_recommendations_do_not_invent_unsupported_industry(client: TestClient) -> None:
     response = client.post("/api/v1/recommendations", json={
         "business": "retail",
+        "industry_code": "CS999999",
         "demand": "neighborhood",
         "risk": "lean",
         "operation": "solo",
@@ -256,6 +257,33 @@ def test_recommendations_do_not_invent_unsupported_industry(client: TestClient) 
     assert response.status_code == 200
     assert response.json()["status"] == "unsupported_business"
     assert response.json()["candidates"] == []
+
+
+def test_store_only_industry_comparison_report_and_recommendation(client: TestClient) -> None:
+    comparison = client.get("/api/v1/comparisons", params={"codes": "1,2", "industry": "CS200004"})
+    assert comparison.status_code == 200
+    body = comparison.json()
+    assert body["industry_name"] == "컴퓨터학원"
+    assert body["comparison_id"] == "20254~CS200004--1-2"
+    metrics = {item["metric_key"]: item for item in body["metrics"]}
+    assert metrics["store_count"]["label"] == "컴퓨터학원 점포 수"
+    assert metrics["sales_amount"]["values"][0]["status"] == "unavailable"
+    assert metrics["sales_amount"]["values"][0]["value"] is None
+    evidence = client.get("/api/v1/comparisons/20254~CS200004--1-2/evidence/store_count")
+    assert evidence.status_code == 200
+    assert evidence.json()["industry_code"] == "CS200004"
+    report = client.get("/api/v1/trade-areas/1/report", params={"industry": "CS200004"})
+    assert report.status_code == 200
+    assert report.json()["industry_name"] == "컴퓨터학원"
+    assert any(item["metric_key"] == "sales_amount" and item["percentile"] is None for item in report.json()["cautions"])
+    recommendation = client.post("/api/v1/recommendations", json={
+        "business": "service", "industry_code": "CS200004", "demand": "neighborhood",
+        "risk": "lean", "operation": "solo", "strength": "product", "competition": "avoid",
+    })
+    assert recommendation.status_code == 200
+    assert recommendation.json()["industry_code"] == "CS200004"
+    assert recommendation.json()["candidate_pool_size"] == 3
+    assert all(item["data_completeness"] == "8/14" for item in recommendation.json()["candidates"])
 
 
 def test_area_report_links_every_statement_to_metric_evidence(client: TestClient) -> None:

@@ -6,9 +6,9 @@ import { EvidenceDrawer } from "./EvidenceDrawer";
 import type { ChecklistResponse, ComparisonResponse } from "./types";
 import { TopNavigation } from "./TopNavigation";
 
-type Props = { codes: string[] };
+type Props = { codes: string[]; industry: string };
 
-export function ComparisonPage({ codes }: Props) {
+export function ComparisonPage({ codes, industry }: Props) {
   const [data, setData] = useState<ComparisonResponse | null>(null);
   const [checklist, setChecklist] = useState<ChecklistResponse | null>(null);
   const [evidenceKey, setEvidenceKey] = useState<string | null>(null);
@@ -17,11 +17,11 @@ export function ComparisonPage({ codes }: Props) {
   useEffect(() => {
     if (codes.length < 2) return;
     const controller = new AbortController();
-    fetchComparison(codes, controller.signal).then(setData).catch((reason: Error) => {
+    fetchComparison(codes, industry, controller.signal).then(setData).catch((reason: Error) => {
       if (reason.name !== "AbortError") setError(reason.message);
     });
     return () => controller.abort();
-  }, [codes.join(",")]);
+  }, [codes.join(","), industry]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -44,7 +44,7 @@ export function ComparisonPage({ codes }: Props) {
       </header>
       <main>
         <section className="compare-hero">
-          <p className="eyebrow">상권 비교 · {data.quarter_label}</p>
+          <p className="eyebrow">{data.industry_name} 상권 비교 · {data.quarter_label}</p>
           <h1>나란히 놓고 보면<br />상권의 차이를 쉽게 찾을 수 있어요.</h1>
           <p>값의 크기는 성공 가능성이나 추천 점수가 아닙니다. 같은 출처와 기준으로 후보지의 특성을 확인하세요.</p>
         </section>
@@ -52,7 +52,7 @@ export function ComparisonPage({ codes }: Props) {
         <section className="comparison-section" aria-labelledby="comparison-title">
           <div className="comparison-title-row">
             <div><p className="eyebrow">2–4 AREAS</p><h2 id="comparison-title">{data.trade_areas.length}개 상권 비교</h2></div>
-            <span className="quarter-badge">기준 {data.quarter_label}</span>
+            <span className="quarter-badge">{data.industry_name} · {data.quarter_label}</span>
           </div>
           <div className="comparison-scroll" tabIndex={0} aria-label="상권 지표 비교표">
             <table className="comparison-table">

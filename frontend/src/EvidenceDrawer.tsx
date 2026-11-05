@@ -32,6 +32,7 @@ export function EvidenceDrawer({ comparisonId, metricKey, onClose }: Props) {
           <div><dt>제공기관</dt><dd>{evidence.provider}</dd></div>
           <div><dt>데이터셋</dt><dd>{evidence.dataset_name}</dd></div>
           <div><dt>기준분기</dt><dd>{evidence.quarter_code}</dd></div>
+          <div><dt>업종</dt><dd>{evidence.industry_name} ({evidence.industry_code})</dd></div>
           <div><dt>수집일</dt><dd>{evidence.fetched_at || "로컬 원천 파일 기준"}</dd></div>
           <div className="wide"><dt>원천 파일</dt><dd>{evidence.source_file}</dd></div>
           {evidence.formula ? <div className="wide"><dt>계산식</dt><dd>{evidence.formula}</dd></div> : null}

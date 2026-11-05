@@ -38,7 +38,7 @@ export default function Root() {
   }, [hash]);
 
   let page;
-  if (hash.startsWith("#compare")) page = <ComparisonPage codes={parseComparisonCodes(hash)} />;
+  if (hash.startsWith("#compare")) page = <ComparisonPage codes={parseComparisonCodes(hash)} industry={new URLSearchParams(hash.split("?")[1] || "").get("industry") || "CS100010"} />;
   else if (hash.startsWith("#recommendations")) page = <RecommendationsPage />;
   else if (hash.startsWith("#rent")) page = <RentPage code={parseRentAreaCode(hash)} />;
   else if (hash.startsWith("#worksheet")) page = <PropertyWorksheetPage />;

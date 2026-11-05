@@ -8,6 +8,7 @@ import { useAuth } from "./auth";
 import { registerAnonymousRecord } from "./anonymousSession";
 import { KakaoMap } from "./KakaoMap";
 import { TopNavigation } from "./TopNavigation";
+import { initialIndustry, rememberIndustry } from "./industrySelection";
 import type { AreaMapInsightResponse, IndustryOption, TradeArea } from "./types";
 import "./styles.css";
 
@@ -16,7 +17,7 @@ export default function App() {
   const { client, user } = useAuth();
   const [areas, setAreas] = useState<TradeArea[]>([]);
   const [industries, setIndustries] = useState<IndustryOption[]>([]);
-  const [industry, setIndustry] = useState("CS100010");
+  const [industry, setIndustry] = useState(initialIndustry);
   const [favorites, setFavorites] = useState<string[]>(() => loadFavorites(localStorage, user?.id ?? null));
   const [selected, setSelected] = useState<string[]>([]);
   const [district, setDistrict] = useState("전체");
@@ -132,7 +133,7 @@ export default function App() {
 
   const goToCompare = () => {
     if (selected.length < 2) return;
-    window.location.hash = `compare?codes=${selected.join(",")}`;
+    window.location.hash = `compare?codes=${selected.join(",")}&industry=${industry}`;
   };
 
   return (
@@ -159,7 +160,7 @@ export default function App() {
           </div>
 
           <div className="filters">
-            <label className="district-select"><span>업종</span><select aria-label="업종 필터" value={industry} onChange={(event) => { setIndustry(event.target.value); setFocusedMapCode(""); }}>
+            <label className="district-select"><span>업종</span><select aria-label="업종 필터" value={industry} onChange={(event) => { const code = event.target.value; setIndustry(code); rememberIndustry(code); setFocusedMapCode(""); window.history.replaceState(null, "", `#explore?industry=${code}`); }}>
               {industries.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}
             </select></label>
             <label className="district-select"><span>자치구</span><select aria-label="자치구 필터" value={district} onChange={(event) => setDistrict(event.target.value)}>{districts.map((item) => <option key={item} value={item}>{item === "전체" ? "서울 전체" : item}</option>)}</select></label>
@@ -169,7 +170,7 @@ export default function App() {
               <span>⌕</span>
             </label>
           </div>
-          <p className="filter-help">현재 검증·적재된 업종만 선택할 수 있습니다. 다른 업종 통계를 적재하면 이 목록에 자동으로 추가됩니다.</p>
+          <p className="filter-help">2025년 4분기 공식 점포 원천의 100개 업종을 볼 수 있습니다. 일부 업종에는 매출 원천이 없어 해당 지표가 비교 불가로 표시됩니다.</p>
 
           {error ? <div className="error-banner">{error} API 서버의 실행 상태와 최신 코드 반영 여부를 확인해 주세요.</div> : null}
           <div className="explorer-grid">

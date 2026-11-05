@@ -17,8 +17,8 @@ export async function fetchIndustries(signal?: AbortSignal): Promise<IndustryOpt
   return response.json() as Promise<IndustryOption[]>;
 }
 
-export async function fetchComparison(codes: string[], signal?: AbortSignal): Promise<ComparisonResponse> {
-  const query = new URLSearchParams({ codes: codes.join(","), quarter: "20254" });
+export async function fetchComparison(codes: string[], industry = "CS100010", signal?: AbortSignal): Promise<ComparisonResponse> {
+  const query = new URLSearchParams({ codes: codes.join(","), quarter: "20254", industry });
   const response = await fetch(`${API_BASE_URL}/api/v1/comparisons?${query}`, { signal });
   if (!response.ok) {
     const body = await response.json().catch(() => null) as { detail?: string } | null;
@@ -39,19 +39,19 @@ export async function fetchChecklist(signal?: AbortSignal): Promise<ChecklistRes
   return response.json() as Promise<ChecklistResponse>;
 }
 
-export async function fetchRecommendations(answers: Record<string, string>, signal?: AbortSignal): Promise<RecommendationResponse> {
+export async function fetchRecommendations(answers: Record<string, string>, industry = "CS100010", signal?: AbortSignal): Promise<RecommendationResponse> {
   const response = await fetch(`${API_BASE_URL}/api/v1/recommendations`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(answers),
+    body: JSON.stringify({ ...answers, industry_code: industry }),
     signal,
   });
   if (!response.ok) throw new Error("후보 상권을 계산하지 못했습니다.");
   return response.json() as Promise<RecommendationResponse>;
 }
 
-export async function fetchAreaReport(code: string, signal?: AbortSignal): Promise<AreaReportResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/trade-areas/${code}/report?quarter=20254`, { signal });
+export async function fetchAreaReport(code: string, industry = "CS100010", signal?: AbortSignal): Promise<AreaReportResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/trade-areas/${code}/report?${new URLSearchParams({ quarter: "20254", industry })}`, { signal });
   if (!response.ok) throw new Error("상권 리포트를 불러오지 못했습니다.");
   return response.json() as Promise<AreaReportResponse>;
 }

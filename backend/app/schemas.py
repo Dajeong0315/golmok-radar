@@ -43,6 +43,8 @@ class ComparisonResponse(BaseModel):
     comparison_id: str
     quarter_code: str
     quarter_label: str
+    industry_code: str
+    industry_name: str
     trade_areas: list[TradeAreaOut]
     metrics: list[ComparisonMetric]
 
@@ -67,6 +69,8 @@ class EvidenceResponse(BaseModel):
     source_file: str
     fetched_at: str | None
     quarter_code: str
+    industry_code: str
+    industry_name: str
     formula: str | None
     rounding: str | None
     areas: list[EvidenceArea]
@@ -84,6 +88,7 @@ class ChecklistResponse(BaseModel):
 
 class RecommendationRequest(BaseModel):
     business: Literal["cafe", "food", "retail", "service"]
+    industry_code: str = "CS100010"
     demand: Literal["neighborhood", "office", "destination", "nightlife"]
     risk: Literal["lean", "balanced", "growth", "unknown"]
     operation: Literal["solo", "partner", "team", "community"]
@@ -117,6 +122,8 @@ class RecommendationResponse(BaseModel):
     message: str
     quarter_code: str
     quarter_label: str
+    industry_code: str
+    industry_name: str
     weights_version: str
     candidate_pool_size: int
     diversity_rule: str
@@ -135,6 +142,8 @@ class AreaReportInsight(BaseModel):
 class AreaReportResponse(BaseModel):
     quarter_code: str
     quarter_label: str
+    industry_code: str
+    industry_name: str
     comparison_count: int
     trade_area: TradeAreaOut
     strengths: list[AreaReportInsight]

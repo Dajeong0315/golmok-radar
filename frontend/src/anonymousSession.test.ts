@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ANONYMOUS_RETENTION_MS, ANONYMOUS_SESSION_KEY, ANONYMOUS_TRANSFER_KEY, assignAnonymousTransfer, captureAnonymousTransfer, claimAccountLocalCache, clearAccountRecordCache, clearTransferredAnonymousRecords, expireAnonymousSession, touchAnonymousActivity, transferReturnHash } from "./anonymousSession";
+import { ANONYMOUS_RETENTION_MS, ANONYMOUS_SESSION_KEY, ANONYMOUS_TRANSFER_KEY, LOGIN_PROTECTION_MS, assignAnonymousTransfer, captureAnonymousTransfer, claimAccountLocalCache, clearAccountRecordCache, clearTransferredAnonymousRecords, expireAnonymousSession, touchAnonymousActivity, transferReturnHash } from "./anonymousSession";
 import { FAVORITES_KEY, SYNC_OWNER_KEY } from "./favorites";
 import { PROFILE_HISTORY_KEY } from "./founderProfile";
 
@@ -41,6 +41,17 @@ describe("anonymous session retention", () => {
     expect(expireAnonymousSession(local, 90 * 60_000)).toMatchObject({ state: "expired" });
   });
 
+  it("shares the expiry boundary across tabs and cannot revive expired records", () => {
+    const shared = storage();
+    shared.setItem(FAVORITES_KEY, '["3120052"]');
+    expireAnonymousSession(shared, 0);
+    touchAnonymousActivity(shared, 10 * 60_000);
+    expect(expireAnonymousSession(shared, 70 * 60_000 - 1).state).toBe("active");
+    expect(expireAnonymousSession(shared, 70 * 60_000).state).toBe("expired");
+    expect(touchAnonymousActivity(shared, 70 * 60_000 + 1).state).toBe("empty");
+    expect(shared.getItem(FAVORITES_KEY)).toBeNull();
+  });
+
   it("protects a valid snapshot during OAuth and scopes it after authentication", () => {
     const local = storage();
     local.setItem(FAVORITES_KEY, '["3120052"]');
@@ -48,10 +59,57 @@ describe("anonymous session retention", () => {
     const snapshot = captureAnonymousTransfer(local, "#explore", ANONYMOUS_RETENTION_MS - 1);
     expect(snapshot?.records[FAVORITES_KEY]).toBe('["3120052"]');
     expect(expireAnonymousSession(local, ANONYMOUS_RETENTION_MS + 1)).toMatchObject({ state: "protected" });
-    assignAnonymousTransfer(local, "user-a");
+    assignAnonymousTransfer(local, "user-a", ANONYMOUS_RETENTION_MS + 1);
     expect(JSON.parse(local.getItem(ANONYMOUS_TRANSFER_KEY) || "{}").userId).toBe("user-a");
     expect(transferReturnHash(local, "user-a")).toBe("#explore");
     expect(expireAnonymousSession(local, ANONYMOUS_RETENTION_MS + 20 * 60_000)).toMatchObject({ state: "protected" });
+  });
+
+  it("does not upload an expired anonymous record when OAuth returns after protection", () => {
+    const local = storage();
+    local.setItem(FAVORITES_KEY, '["3120052"]');
+    expireAnonymousSession(local, 0);
+    captureAnonymousTransfer(local, "#explore", ANONYMOUS_RETENTION_MS - 1);
+    assignAnonymousTransfer(local, "user-a", ANONYMOUS_RETENTION_MS + 15 * 60_000);
+    expect(local.getItem(ANONYMOUS_TRANSFER_KEY)).toBeNull();
+    expect(local.getItem(FAVORITES_KEY)).toBeNull();
+  });
+
+  it("refreshes a stale login snapshot from still-valid records", () => {
+    const local = storage();
+    local.setItem(FAVORITES_KEY, '["old"]');
+    expireAnonymousSession(local, 0);
+    captureAnonymousTransfer(local, "#explore", 1);
+    local.setItem(FAVORITES_KEY, '["old","new"]');
+    assignAnonymousTransfer(local, "user-a", LOGIN_PROTECTION_MS + 2);
+    const snapshot = JSON.parse(local.getItem(ANONYMOUS_TRANSFER_KEY) || "{}");
+    expect(snapshot.userId).toBe("user-a");
+    expect(snapshot.records[FAVORITES_KEY]).toBe('["old","new"]');
+  });
+
+  it("never assigns a previous account's pending snapshot to another account", () => {
+    const local = storage();
+    local.setItem(SYNC_OWNER_KEY, "user-a");
+    local.setItem(FAVORITES_KEY, '["private-a"]');
+    local.setItem(ANONYMOUS_TRANSFER_KEY, JSON.stringify({ schemaVersion: 1, batchId: "a", createdAt: 0, protectedUntil: 100, returnHash: "#explore", records: { [FAVORITES_KEY]: '["private-a"]' } }));
+    assignAnonymousTransfer(local, "user-b", 1);
+    claimAccountLocalCache(local, "user-b");
+    expect(local.getItem(ANONYMOUS_TRANSFER_KEY)).toBeNull();
+    expect(local.getItem(FAVORITES_KEY)).toBeNull();
+  });
+
+  it("keeps an already assigned transfer for its owner when another account logs in", () => {
+    const local = storage();
+    local.setItem(SYNC_OWNER_KEY, "user-a");
+    local.setItem(FAVORITES_KEY, '["private-a"]');
+    local.setItem(ANONYMOUS_TRANSFER_KEY, JSON.stringify({ schemaVersion: 1, batchId: "a", createdAt: 0, protectedUntil: 100, returnHash: "#explore", userId: "user-a", records: { [FAVORITES_KEY]: '["private-a"]' } }));
+    claimAccountLocalCache(local, "user-b");
+    expect(local.getItem(FAVORITES_KEY)).toBeNull();
+    expect(transferReturnHash(local, "user-b")).toBeNull();
+    expect(transferReturnHash(local, "user-a")).toBe("#explore");
+    expect(expireAnonymousSession(local, 1).state).toBe("empty");
+    clearAccountRecordCache(local, "user-b");
+    expect(transferReturnHash(local, "user-a")).toBe("#explore");
   });
 
   it("does not reclassify a previous account cache as anonymous after logout", () => {

@@ -52,4 +52,28 @@ describe("account worksheet merge", () => {
     });
     expect(ids).toEqual(["batch-two:founder-profile", "batch-two:founder-profile:1"]);
   });
+
+  it("retries a failed transfer with stable IDs instead of duplicating saved records", async () => {
+    const saved = new Map<string, Record<string, unknown>>();
+    let failOnce = true;
+    const client = { from: (table: string) => ({ upsert: async (value: Record<string, unknown>) => {
+      if (table === "user_records" && failOnce) {
+        failOnce = false;
+        return { error: { message: "network interrupted" } };
+      }
+      saved.set(`${table}:${value.record_id || value.trade_area_code}`, value);
+      return { error: null };
+    } }) } as never;
+    const snapshot = {
+      schemaVersion: 1 as const, batchId: "retry-batch", createdAt: 1, protectedUntil: 2,
+      returnHash: "#quiz", userId: "user-a",
+      records: {
+        [FAVORITES_KEY]: '["3120052"]',
+        [PROFILE_KEY]: JSON.stringify({ version: PROFILE_VERSION, completedAt: "2026-11-02T00:00:00Z", answers: { business: "cafe", demand: "office", risk: "lean", operation: "solo", strength: "numbers", competition: "avoid" } }),
+      },
+    };
+    await expect(transferAnonymousRecords(client, "user-a", snapshot)).rejects.toThrow("network interrupted");
+    await transferAnonymousRecords(client, "user-a", snapshot);
+    expect([...saved.keys()].sort()).toEqual(["user_favorites:3120052", "user_records:retry-batch:founder-profile"]);
+  });
 });

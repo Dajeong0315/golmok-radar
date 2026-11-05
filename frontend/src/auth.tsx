@@ -63,8 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (activeUserId.current !== nextUserId) setTransferStatus("idle");
       activeUserId.current = nextUserId;
       if (data.session?.user) {
-        claimAccountLocalCache(localStorage, data.session.user.id);
         assignAnonymousTransfer(localStorage, data.session.user.id);
+        claimAccountLocalCache(localStorage, data.session.user.id);
         restoreAuthReturnHash(sessionStorage, data.session.user.id);
         void transferPendingRecords(data.session.user.id);
       }
@@ -78,8 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (activeUserId.current !== nextUserId) setTransferStatus("idle");
       activeUserId.current = nextUserId;
       if (nextSession?.user) {
-        claimAccountLocalCache(localStorage, nextSession.user.id);
         assignAnonymousTransfer(localStorage, nextSession.user.id);
+        claimAccountLocalCache(localStorage, nextSession.user.id);
         restoreAuthReturnHash(sessionStorage, nextSession.user.id);
         void transferPendingRecords(nextSession.user.id);
       }

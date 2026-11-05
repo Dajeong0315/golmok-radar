@@ -41,6 +41,8 @@ export function claimAccountLocalCache(storage: StoragePort, userId: string): vo
   if (previousOwner && previousOwner !== userId) {
     RECORD_KEYS.forEach((key) => storage.removeItem(key));
     storage.removeItem(ANONYMOUS_SESSION_KEY);
+    const transfer = parse<AnonymousTransferSnapshot>(storage, ANONYMOUS_TRANSFER_KEY);
+    if (!validTransfer(transfer) || !transfer.userId) storage.removeItem(ANONYMOUS_TRANSFER_KEY);
   }
   storage.setItem(SYNC_OWNER_KEY, userId);
 }
@@ -50,7 +52,8 @@ export function clearAccountRecordCache(storage: StoragePort, userId: string): v
   if (storage.getItem(SYNC_OWNER_KEY) !== userId) return;
   RECORD_KEYS.forEach((key) => storage.removeItem(key));
   storage.removeItem(ANONYMOUS_SESSION_KEY);
-  storage.removeItem(ANONYMOUS_TRANSFER_KEY);
+  const transfer = parse<AnonymousTransferSnapshot>(storage, ANONYMOUS_TRANSFER_KEY);
+  if (!validTransfer(transfer) || !transfer.userId || transfer.userId === userId) storage.removeItem(ANONYMOUS_TRANSFER_KEY);
   announce();
 }
 
@@ -116,7 +119,7 @@ export function registerAnonymousRecord(storage: StoragePort, now = Date.now()):
 export function expireAnonymousSession(storage: StoragePort, now = Date.now(), authenticated = false): AnonymousStatus {
   if (authenticated) return { state: hasRecords(storage) ? "protected" : "empty", remainingMs: 0, hasRecords: hasRecords(storage) };
   const transfer = parse<AnonymousTransferSnapshot>(storage, ANONYMOUS_TRANSFER_KEY);
-  if (validTransfer(transfer) && (transfer.userId || transfer.protectedUntil > now)) {
+  if (validTransfer(transfer) && (transfer.userId ? !storage.getItem(SYNC_OWNER_KEY) : transfer.protectedUntil > now)) {
     return { state: "protected", remainingMs: Math.max(0, transfer.protectedUntil - now), hasRecords: true };
   }
   const session = ensureAnonymousSession(storage, now);
@@ -155,9 +158,17 @@ export function captureAnonymousTransfer(storage: StoragePort, returnHash: strin
 }
 
 /** Authentication has completed; Phase 25 will upload this owner-scoped snapshot before clearing it. */
-export function assignAnonymousTransfer(storage: StoragePort, userId: string): void {
-  const snapshot = parse<AnonymousTransferSnapshot>(storage, ANONYMOUS_TRANSFER_KEY);
+export function assignAnonymousTransfer(storage: StoragePort, userId: string, now = Date.now()): void {
+  let snapshot = parse<AnonymousTransferSnapshot>(storage, ANONYMOUS_TRANSFER_KEY);
   if (!validTransfer(snapshot) || snapshot.userId) return;
+  const previousOwner = storage.getItem(SYNC_OWNER_KEY);
+  if (previousOwner && previousOwner !== userId) return;
+  if (snapshot.protectedUntil <= now) {
+    const status = expireAnonymousSession(storage, now);
+    if (status.state !== "active") return;
+    snapshot = captureAnonymousTransfer(storage, snapshot.returnHash, now);
+    if (!snapshot) return;
+  }
   storage.setItem(ANONYMOUS_TRANSFER_KEY, JSON.stringify({ ...snapshot, userId }));
   announce();
 }

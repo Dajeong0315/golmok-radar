@@ -1,18 +1,36 @@
 import { useEffect, useState } from "react";
 
 import { fetchAreaReport, fetchRecommendations } from "./api";
+import { fetchAccountRecords, profileFromAccountRecord, saveAccountFavorite } from "./accountStore";
+import { registerAnonymousRecord } from "./anonymousSession";
 import { FAVORITES_KEY, loadFavorites } from "./favorites";
-import { loadProfile } from "./founderProfile";
+import { loadProfile, type FounderProfile } from "./founderProfile";
 import type { AreaReportResponse, RecommendationResponse } from "./types";
 import { TopNavigation } from "./TopNavigation";
 import { useAuth } from "./auth";
 
 export function RecommendationsPage() {
-  const { user } = useAuth();
-  const profile = loadProfile(localStorage, user?.id ?? null);
+  const { client, transferStatus, user } = useAuth();
+  const [profile, setProfile] = useState<FounderProfile | null>(() => loadProfile(localStorage, user?.id ?? null));
+  const [profileLoading, setProfileLoading] = useState(Boolean(client && user && !profile));
   const [data, setData] = useState<RecommendationResponse | null>(null);
   const [reports, setReports] = useState<Record<string, AreaReportResponse>>({});
   const [error, setError] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!client || !user || profile) return;
+    let active = true;
+    setProfileLoading(true);
+    fetchAccountRecords(client, user.id, "founder_profile")
+      .then((records) => {
+        if (active) setProfile(records.map(profileFromAccountRecord).find((item): item is FounderProfile => item !== null) || null);
+      })
+      .catch(() => undefined)
+      .finally(() => { if (active) setProfileLoading(false); });
+    return () => { active = false; };
+  }, [client, user?.id, transferStatus, profile]);
 
   useEffect(() => {
     if (!profile) return;
@@ -21,7 +39,7 @@ export function RecommendationsPage() {
       if (reason.name !== "AbortError") setError(reason.message);
     });
     return () => controller.abort();
-  }, []);
+  }, [profile]);
 
   useEffect(() => {
     if (!data?.candidates.length) return;
@@ -32,15 +50,29 @@ export function RecommendationsPage() {
     return () => controller.abort();
   }, [data]);
 
+  if (!profile && profileLoading) return <RecommendationState title="저장한 결과를 불러오는 중이에요" copy="카카오 계정의 창업 조건을 확인하고 있어요." />;
   if (!profile) return <RecommendationState title="먼저 원하는 가게를 알려주세요" copy="여섯 가지 쉬운 질문에 답하면 상권 후보를 찾을 기준이 생겨요." action="#quiz" actionLabel="성향 진단 시작" />;
   if (error) return <RecommendationState title="후보를 불러오지 못했습니다" copy={error} action="#explore" actionLabel="상권 직접 탐색" />;
   if (!data) return <RecommendationState title="상권 후보를 찾는 중이에요" copy="비교 가능한 상권의 카페 수, 매출, 유동인구를 같은 기준으로 살펴보고 있어요." />;
   if (data.status === "unsupported_business") return <RecommendationState title="이 업종의 추천 데이터는 준비 중입니다" copy={data.message} action="#explore" actionLabel="상권 직접 탐색" secondary="#quiz" secondaryLabel="업종 답변 수정" />;
 
   const codes = data.candidates.map((candidate) => candidate.trade_area.code);
-  const saveAndExplore = () => {
+  const saveAndExplore = async () => {
+    setSaveError("");
     const current = loadFavorites(localStorage, user?.id ?? null);
     localStorage.setItem(FAVORITES_KEY, JSON.stringify([...new Set([...current, ...codes])]));
+    if (!user) registerAnonymousRecord(localStorage);
+    if (client && user) {
+      setSaving(true);
+      try {
+        await Promise.all(codes.map((code) => saveAccountFavorite(client, user.id, code)));
+      } catch (reason) {
+        setSaveError(reason instanceof Error ? `계정에 저장하지 못했습니다: ${reason.message}` : "계정에 저장하지 못했습니다.");
+        setSaving(false);
+        return;
+      }
+      setSaving(false);
+    }
     window.location.hash = `compare?codes=${codes.join(",")}`;
   };
 
@@ -63,7 +95,7 @@ export function RecommendationsPage() {
       </article>)}
     </section>
     <section className="recommendation-method"><div><p className="eyebrow">계산 방법</p><h2>점수보다 나온 이유를<br />확인하세요.</h2></div><div><p>카페 수, 매출, 유동인구를 비교 가능한 상권 {data.candidate_pool_size}곳 안에서 같은 기준으로 줄 세웠어요. 그다음 진단에서 고른 답을 반영했어요.</p><p>{data.diversity_rule}</p><p>조건 적합도는 창업 성공 확률이 아니에요. 어디부터 더 자세히 볼지 정하는 탐색 순서입니다.</p></div></section>
-    <section className="recommendation-cta"><div><p className="eyebrow">다음 단계</p><h2>세 후보의 14개 숫자를<br />같은 표에서 확인하세요.</h2></div><button className="primary-action" onClick={saveAndExplore}>3곳을 저장하고 비교하기 <span>→</span></button></section>
+    <section className="recommendation-cta"><div><p className="eyebrow">다음 단계</p><h2>세 후보의 14개 숫자를<br />같은 표에서 확인하세요.</h2>{saveError ? <p role="alert">{saveError}</p> : null}</div><button className="primary-action" onClick={() => void saveAndExplore()} disabled={saving}>{saving ? "계정에 저장 중" : "3곳을 저장하고 비교하기"} <span>→</span></button></section>
   </main>;
 }
 

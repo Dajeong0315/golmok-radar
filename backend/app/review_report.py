@@ -162,21 +162,26 @@ def build_captured_report(
             label=target["label"],
             review_count=len(grouped[target["label"]]),
             same_trade_area=bool(target["same_trade_area"]),
-            included_in_analysis=len(grouped[target["label"]]) >= MIN_REVIEWS_PER_PLACE,
+            included_in_analysis=bool(grouped[target["label"]]),
         )
         for target in payload.get("peers", [])
         if target.get("label") in {"A", "B", "C", "D"}
     ]
     eligible_peers = [peer for peer in peers if peer.included_in_analysis]
-    own_eligible = len(grouped["OWN"]) >= MIN_REVIEWS_PER_PLACE
+    own_eligible = bool(grouped["OWN"])
     eligible_count = int(own_eligible) + len(eligible_peers)
     total = len(grouped["OWN"]) + sum(len(grouped[peer.label]) for peer in peers)
     analyzed_total = (len(grouped["OWN"]) if own_eligible else 0) + sum(peer.review_count for peer in eligible_peers)
-    comparable = own_eligible and eligible_count >= REQUIRED_PLACES and analyzed_total >= MIN_TOTAL_REVIEWS
-    full = comparable and eligible_count == FULL_PLACES and analyzed_total >= FULL_TOTAL_REVIEWS
+    comparable = own_eligible and bool(eligible_peers)
+    robust = (len(grouped["OWN"]) >= MIN_REVIEWS_PER_PLACE
+              and sum(peer.review_count >= MIN_REVIEWS_PER_PLACE for peer in eligible_peers) >= 2
+              and analyzed_total >= MIN_TOTAL_REVIEWS)
+    full = robust and eligible_count == FULL_PLACES and all(
+        peer.review_count >= MIN_REVIEWS_PER_PLACE for peer in eligible_peers
+    ) and analyzed_total >= FULL_TOTAL_REVIEWS
     topics: list[ReviewAggregateTopic] = []
     insights = []
-    if comparable:
+    if analyzed_total:
         own_stats = analyze_reviews(grouped["OWN"], industry_code)
         nearby_stats = analyze_reviews([text for peer in eligible_peers for text in grouped[peer.label]], industry_code)
         topics = [
@@ -185,18 +190,28 @@ def build_captured_report(
         ]
         if full:
             insights = build_insights(own_stats, nearby_stats)
-    missing_places = max(0, REQUIRED_PLACES - eligible_count)
-    missing_reviews = max(0, MIN_TOTAL_REVIEWS - analyzed_total)
+    strong_place_count = int(len(grouped["OWN"]) >= MIN_REVIEWS_PER_PLACE) + sum(
+        peer.review_count >= MIN_REVIEWS_PER_PLACE for peer in eligible_peers
+    )
+    missing_places = max(0, REQUIRED_PLACES - strong_place_count)
+    strong_review_count = (len(grouped["OWN"]) if len(grouped["OWN"]) >= MIN_REVIEWS_PER_PLACE else 0) + sum(
+        peer.review_count for peer in eligible_peers if peer.review_count >= MIN_REVIEWS_PER_PLACE
+    )
+    missing_reviews = max(0, MIN_TOTAL_REVIEWS - strong_review_count)
     message = (
         f"내 가게와 주변 {industry_name} 4곳의 적격 리뷰 50건 이상을 같은 기준으로 비교했습니다."
         if full else
-        "적격 가게 3곳 이상·리뷰 30건 이상의 제한 표본 비교입니다. 리뷰가 5건 미만인 가게는 분석에서 제외했고, 운영 아이디어는 표시하지 않습니다."
-        if comparable else
-        f"표본 부족: 적격 가게 {missing_places}곳, 적격 리뷰 {missing_reviews}건이 더 필요합니다. "
-        "가게당 최소 5건, 내 가게 포함 3곳과 적격 리뷰 30건이 필요합니다."
+        f"내 가게와 주변의 공개 리뷰 {analyzed_total}건을 주제별로 집계했습니다. 충분한 표본 기준까지 가게 {missing_places}곳·리뷰 {missing_reviews}건이 더 필요해 운영 제안은 표시하지 않습니다."
+        if robust else
+        f"탐색용 소규모 표본 {analyzed_total}건입니다. "
+        + ("내 가게와 주변 모두에서 리뷰가 확인됐지만 비교 결론은 낼 수 없습니다. " if comparable else
+           "한쪽에만 리뷰가 있어 가게 간 비교는 할 수 없습니다. ")
+        + f"충분한 표본 기준까지 가게 {missing_places}곳·리뷰 {missing_reviews}건이 더 필요합니다."
+        if analyzed_total else
+        "확인된 공개 텍스트 리뷰가 없습니다. 수집된 리뷰 없이 주제나 평가를 만들 수 없습니다."
     )
     return CapturedReviewReportResponse(
-        status="available" if full else "limited" if comparable else "insufficient_sample",
+        status="available" if full else "limited" if analyzed_total else "insufficient_sample",
         area=area,
         location_status=location_status,
         area_distance_m=area_distance_m,
@@ -335,29 +350,33 @@ def build_area_review_report(
             continue
     samples = [
         ReviewPeerSample(label=label, review_count=len(grouped[label]), same_trade_area=True,
-                         included_in_analysis=len(grouped[label]) >= MIN_REVIEWS_PER_PLACE)
+                         included_in_analysis=bool(grouped[label]))
         for label in payload.get("place_labels", []) if label in grouped
     ]
     eligible = [sample for sample in samples if sample.included_in_analysis]
     analyzed = [text for sample in eligible for text in grouped[sample.label]]
-    comparable = len(eligible) >= REQUIRED_PLACES and len(analyzed) >= MIN_TOTAL_REVIEWS
-    full = comparable and len(eligible) == FULL_PLACES and len(analyzed) >= FULL_TOTAL_REVIEWS
+    strong = [sample for sample in samples if sample.review_count >= MIN_REVIEWS_PER_PLACE]
+    strong_review_count = sum(sample.review_count for sample in strong)
+    robust = len(strong) >= REQUIRED_PLACES and strong_review_count >= MIN_TOTAL_REVIEWS
+    full = robust and len(strong) == FULL_PLACES and strong_review_count >= FULL_TOTAL_REVIEWS
     topics = [
         AreaReviewTopic(topic_key=key, label=stats.label, mentions=stats.mentions,
                         positive=stats.positive, negative=stats.negative, neutral=stats.neutral)
         for key, stats in analyze_reviews(analyzed, industry_code).items()
-    ] if comparable else []
-    missing_places = max(0, REQUIRED_PLACES - len(eligible))
-    missing_reviews = max(0, MIN_TOTAL_REVIEWS - len(analyzed))
+    ] if analyzed else []
+    missing_places = max(0, REQUIRED_PLACES - len(strong))
+    missing_reviews = max(0, MIN_TOTAL_REVIEWS - strong_review_count)
     message = (
         f"{industry_name} 가게 5곳의 적격 리뷰 50건 이상을 상권 단위로 집계했습니다."
         if full else
-        f"{industry_name} 가게 {len(eligible)}곳·적격 리뷰 {len(analyzed)}건의 제한 표본입니다. 개별 가게의 성과를 뜻하지 않습니다."
-        if comparable else
-        f"표본 부족: 적격 가게 {missing_places}곳, 적격 리뷰 {missing_reviews}건이 더 필요합니다. 가게당 최소 5건, 3곳·30건이 필요합니다."
+        f"{industry_name} 가게 {len(strong)}곳·적격 리뷰 {strong_review_count}건의 제한 표본입니다. 개별 가게의 성과를 뜻하지 않습니다."
+        if robust else
+        f"탐색용 소규모 표본: {industry_name} 가게 {len(eligible)}곳의 공개 리뷰 {len(analyzed)}건을 집계했습니다. 충분한 표본 기준까지 가게 {missing_places}곳·리뷰 {missing_reviews}건이 더 필요하며, 상권 전체의 반응으로 일반화할 수 없습니다."
+        if analyzed else
+        "확인된 공개 텍스트 리뷰가 없습니다. 수집된 리뷰 없이 주제나 평가를 만들 수 없습니다."
     )
     return AreaReviewReportResponse(
-        status="available" if full else "limited" if comparable else "insufficient_sample",
+        status="available" if full else "limited" if analyzed else "insufficient_sample",
         area=area, industry_code=industry_code, industry_name=industry_name,
         place_samples=samples, total_review_count=sum(sample.review_count for sample in samples),
         analyzed_review_count=len(analyzed), eligible_place_count=len(eligible),

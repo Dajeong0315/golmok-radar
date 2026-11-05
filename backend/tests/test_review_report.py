@@ -81,8 +81,9 @@ def test_aggregate_report_has_full_limited_and_insufficient_levels_without_raw_t
     assert limited.insights == []
     payload["reviews"] = reviews[:20]
     insufficient = build_captured_report(payload, AREA, key, True)
-    assert insufficient.status == "insufficient_sample"
-    assert insufficient.topics == []
+    assert insufficient.status == "limited"
+    assert insufficient.analyzed_review_count == 20
+    assert insufficient.topics
     assert insufficient.insights == []
 
 
@@ -102,8 +103,8 @@ def test_sparse_peer_reviews_are_excluded_from_limited_comparison() -> None:
     report = build_captured_report(payload, AREA, key, False)
     assert report.status == "limited"
     assert report.total_review_count == 48
-    assert report.analyzed_review_count == 44
-    assert [peer.included_in_analysis for peer in report.peer_samples] == [True, True, False, False]
+    assert report.analyzed_review_count == 48
+    assert [peer.included_in_analysis for peer in report.peer_samples] == [True, True, True, True]
     assert report.topics
 
 
@@ -129,7 +130,8 @@ def test_capture_is_encrypted_and_reused_within_the_month(tmp_path) -> None:
     assert calls == [5]
     assert first.from_cache is False
     assert second.from_cache is True
-    assert first.status == "insufficient_sample"
+    assert first.status == "limited"
+    assert first.analyzed_review_count == 5
     stored = next(tmp_path.glob("report-*.json")).read_text(encoding="utf-8")
     assert "맛있어요" not in stored
     audit = (tmp_path / "audit.jsonl").read_text(encoding="utf-8")
@@ -222,6 +224,44 @@ def test_area_review_report_is_anonymous_encrypted_and_cached(tmp_path) -> None:
     limited = build_area_review_report(sparse, AREA, "CS300011", "일반의류", key, False)
     assert limited.status == "insufficient_sample"
     assert limited.topics == []
+
+
+def test_sparse_area_reviews_generate_exploratory_report_without_claiming_representativeness() -> None:
+    key = Fernet.generate_key().decode()
+    cipher = Fernet(key.encode())
+    payload = {
+        "place_labels": list("AB"), "captured_at": NOW.isoformat(),
+        "expires_at": "2027-02-02T00:00:00+00:00", "failed_labels": [],
+        "reviews": [
+            {"peer_label": label, "provider": "kakao", "encrypted_text": cipher.encrypt("친절하고 깨끗해요".encode()).decode()}
+            for label, count in (("A", 3), ("B", 1)) for _ in range(count)
+        ],
+    }
+    report = build_area_review_report(payload, AREA, "CS200033", "여관", key, False)
+    assert report.status == "limited"
+    assert report.analyzed_review_count == 4
+    assert report.eligible_place_count == 2
+    assert report.topics
+    assert "탐색용" in report.message
+    assert "친절하고" not in report.model_dump_json()
+
+
+def test_single_sided_shop_report_shows_observed_topics_without_comparison_claim() -> None:
+    key = Fernet.generate_key().decode()
+    cipher = Fernet(key.encode())
+    payload = {
+        "peers": [{"label": "A", "same_trade_area": True}],
+        "reviews": [{"peer_label": "OWN", "provider": "kakao",
+                     "encrypted_text": cipher.encrypt("직원이 친절해요".encode()).decode()}],
+        "failed_labels": [],
+    }
+    report = build_captured_report(payload, AREA, key, False)
+    assert report.status == "limited"
+    assert report.own_review_count == 1
+    assert report.peer_samples[0].review_count == 0
+    assert report.topics
+    assert report.insights == []
+    assert "비교는 할 수 없습니다" in report.message
 
 
 def test_area_review_shares_monthly_quota_with_own_shop_reports(tmp_path) -> None:

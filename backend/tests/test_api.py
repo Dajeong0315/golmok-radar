@@ -490,7 +490,7 @@ def test_capture_report_validates_ownership_and_returns_aggregate_only(client: T
         id=place.id, latitude=place.latitude, longitude=place.longitude, name="카페", category="음식점 > 카페",
     ))
     monkeypatch.setattr(main, "locate_area", lambda _lat, _lon: AreaLocation("1", "inside", 0))
-    monkeypatch.setattr(main, "select_peer_places", lambda *_args: [
+    monkeypatch.setattr(main, "select_peer_places", lambda *_args, **_kwargs: [
         (ReviewPlaceRef(id="456", latitude=37.5101, longitude=127.0101), True),
         (ReviewPlaceRef(id="789", latitude=37.5102, longitude=127.0102), True),
     ])
@@ -592,7 +592,7 @@ def test_area_review_report_keeps_only_verified_same_industry_places(client: Tes
         payload["candidates"] = payload["candidates"][:2]
         insufficient = client.post("/api/v1/area-review-report", json=payload)
         assert insufficient.status_code == 200
-        assert insufficient.json()["status"] == "insufficient_sample"
+        assert [place.id for place in seen["places"]] == ["1", "2"]
     finally:
         app.dependency_overrides.pop(get_review_user, None)
 
@@ -614,6 +614,46 @@ def test_own_review_rejects_mismatched_verified_kakao_category(client: TestClien
         })
         assert response.status_code == 400
         assert "분류" in response.json()["detail"]
+    finally:
+        app.dependency_overrides.pop(get_review_user, None)
+
+
+def test_own_review_skips_unverified_peer_and_uses_next_candidate(client: TestClient, monkeypatch) -> None:
+    from app import main
+    from app.schemas import CapturedReviewReportResponse
+
+    app.dependency_overrides[get_review_user] = lambda: "test-user"
+    monkeypatch.setattr(main.settings, "kakao_rest_api_key", "test-key")
+    monkeypatch.setattr(main, "locate_area", lambda _lat, _lon: AreaLocation("1", "inside", 0))
+
+    def verify(place, _key):
+        if place.id == "2":
+            raise ValueError("장소 재확인 실패")
+        return ReviewPlaceRef(id=place.id, latitude=place.latitude, longitude=place.longitude,
+                              name="카페", category="음식점 > 카페")
+
+    monkeypatch.setattr(main, "verified_kakao_place", verify)
+    seen = {}
+
+    def fake_report(**kwargs):
+        seen.update(kwargs)
+        return CapturedReviewReportResponse(
+            status="insufficient_sample", area=kwargs["area"], own_review_count=0,
+            peer_samples=[], total_review_count=0, eligible_place_count=0,
+            required_place_count=3, required_review_count=30, topics=[], insights=[],
+            failed_labels=[], captured_at=None, expires_at=None, from_cache=False,
+            source="kakao", message="표본 없음",
+        )
+
+    monkeypatch.setattr(main, "collect_or_load_report", fake_report)
+    payload = {"own": {"id": "1", "name": "카페", "latitude": 37.51, "longitude": 127.01},
+               "candidates": [{"id": str(index), "name": "카페", "latitude": 37.51,
+                               "longitude": 127.01 + index / 100000} for index in (2, 3, 4)],
+               "ownership_confirmed": True}
+    try:
+        response = client.post("/api/v1/captured-review-report", json=payload)
+        assert response.status_code == 200
+        assert [peer.id for peer, _ in seen["peers"]] == ["3", "4"]
     finally:
         app.dependency_overrides.pop(get_review_user, None)
 

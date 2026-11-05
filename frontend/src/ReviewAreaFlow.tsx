@@ -75,7 +75,7 @@ export function ReviewAreaFlow() {
   }, [selectedArea?.code, industry, mapping]);
 
   const run = async () => {
-    if (!selectedArea || !session || running || candidates.length < 3) return;
+    if (!selectedArea || !session || running || candidates.length === 0) return;
     setRunning(true);
     setError("");
     setReport(null);
@@ -119,8 +119,8 @@ export function ReviewAreaFlow() {
     {selectedArea ? <div className="review-area-card"><small>선택한 공식 상권 · {mapping?.industry_name || industry}</small><strong>{selectedArea.district_name} · {selectedArea.name}</strong><p>공식 상권 코드 {selectedArea.code} · 2025년 4분기 점포 원천 {selectedArea.data_status.store ? "있음" : "없음"}</p></div> : null}
     {selectedArea && mapping?.supported ? <div className="review-run">
       <p>{searching ? "동종 가게 후보를 확인하는 중입니다." : `카카오 장소 검색에서 동종 후보 ${candidates.length}곳을 찾았습니다. 서버가 실제 분류와 상권 포함 여부를 다시 확인한 뒤 최대 5곳만 수집합니다.`}</p>
-      {session ? <button type="button" disabled={searching || running || candidates.length < 3} onClick={() => void run()}>{running ? "공개 리뷰 표본 수집 중…" : "이 상권의 리뷰 표본 분석"}</button> : <button type="button" onClick={() => void signInWithKakao()}>카카오 로그인 후 분석하기</button>}
-      {!searching && candidates.length < 3 ? <p>동종 후보가 3곳 미만이라 수집을 시작할 수 없습니다. 다른 업종이나 상권을 선택해 주세요.</p> : null}
+      {session ? <button type="button" disabled={searching || running || candidates.length === 0} onClick={() => void run()}>{running ? "공개 리뷰 표본 수집 중…" : "이 상권의 리뷰 표본 분석"}</button> : <button type="button" onClick={() => void signInWithKakao()}>카카오 로그인 후 분석하기</button>}
+      {!searching && candidates.length === 0 ? <p>검색된 동종 가게가 없습니다. 다른 업종이나 상권을 선택해 주세요.</p> : null}
       <p>가게당 최대 20건, 한 번에 최대 5곳, 계정당 월 5회 신규 수집 제한을 적용합니다. 같은 상권·업종의 이번 달 표본이 있으면 재사용합니다.</p>
     </div> : null}
     {error ? <p className="error-banner" role="alert">{error}</p> : null}
@@ -134,7 +134,8 @@ function AreaReviewResult({ report }: { report: AreaReviewReport }) {
     <div className="review-auto-metadata"><span>카카오 공개 리뷰</span><span>상권 {report.area.code} · 2025년 4분기 업종 분류</span><span>{report.from_cache ? "이번 달 수집본 재사용" : "이번 달 신규 수집"}</span><span>분석 {report.analyzed_review_count}건 / 수집 {report.total_review_count}건</span><span>수집 {report.captured_at ? new Date(report.captured_at).toLocaleDateString("ko-KR") : "미실행"}</span><span>보관 만료 {report.expires_at ? new Date(report.expires_at).toLocaleDateString("ko-KR") : "해당 없음"}</span></div>
     <div className="review-auto-counts">{report.place_samples.map((sample) => <div key={sample.label}><small>가게 {sample.label}{sample.included_in_analysis ? "" : " · 분석 제외"}</small><strong>{sample.review_count}건</strong></div>)}</div>
     {report.failed_labels.length ? <p className="review-auto-note">수집 실패: {report.failed_labels.map((label) => `가게 ${label}`).join(", ")}. 자동 재시도는 하지 않았습니다.</p> : null}
-    {report.topics.length ? <div className="review-auto-topics">{report.topics.map((topic) => <article key={topic.topic_key}><h3>{topic.label}</h3><p>언급 {topic.mentions}회</p><small>긍정 {topic.positive} · 부정 {topic.negative} · 중립 {topic.neutral}</small></article>)}</div> : null}
-    <p className="review-auto-note">표본이 적거나 분류를 확인할 수 없는 가게는 제외합니다. 가게 이름과 리뷰 원문은 공개하지 않으며, 이 결과는 상권 전체의 대표 의견이 아닙니다.</p>
+    {report.topics.length ? <div className="review-auto-topics">{report.topics.filter((topic) => topic.mentions > 0).map((topic) => <article key={topic.topic_key}><h3>{topic.label}</h3><p>언급 {topic.mentions}회</p><small>긍정 {topic.positive} · 부정 {topic.negative} · 중립 {topic.neutral}</small></article>)}</div> : null}
+    {report.analyzed_review_count > 0 && report.topics.every((topic) => topic.mentions === 0) ? <p className="review-auto-note">수집된 글에서 현재 주제 사전과 일치하는 표현은 확인되지 않았습니다.</p> : null}
+    <p className="review-auto-note">리뷰가 있는 가게만 주제 집계에 포함합니다. 가게 이름과 리뷰 원문은 공개하지 않으며, 작은 표본은 상권 전체의 대표 의견이 아닙니다.</p>
   </section>;
 }

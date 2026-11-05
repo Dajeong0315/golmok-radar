@@ -294,10 +294,18 @@ def captured_review_report(
         selected_candidates = select_peer_places(
             verified_own, payload.candidates,
             own_location.code if own_location.status == "inside" else None,
+            limit=12,
         )
-        verified_candidates = [verified_kakao_place(place, settings.kakao_rest_api_key) for place, _ in selected_candidates]
-        if any(not category_matches(payload.industry_code, selected_industry_name, place.category or "") for place in verified_candidates):
-            raise ValueError("주변 가게의 카카오 분류가 선택 업종과 다릅니다. 다시 검색해 주세요.")
+        verified_candidates = []
+        for candidate, _ in selected_candidates:
+            if len(verified_candidates) >= 4:
+                break
+            try:
+                current = verified_kakao_place(candidate, settings.kakao_rest_api_key)
+            except ValueError:
+                continue
+            if category_matches(payload.industry_code, selected_industry_name, current.category or ""):
+                verified_candidates.append(current)
     except ValueError as error:
         raise HTTPException(400, str(error)) from error
     except Exception as error:
@@ -313,17 +321,6 @@ def captured_review_report(
     ) if area else None
     location_status = location.status if area or location.status == "unmapped" else "unmapped"
     peers = select_peer_places(verified_own, verified_candidates, area.code if location_status == "inside" and area else None)
-    if len(peers) < 2:
-        return CapturedReviewReportResponse(
-            status="insufficient_sample", area=area_summary,
-            location_status=location_status, area_distance_m=location.distance_m,
-            own_review_count=0, peer_samples=[], total_review_count=0,
-            eligible_place_count=0, required_place_count=3, required_review_count=30,
-            topics=[], insights=[], failed_labels=[], captured_at=None, expires_at=None,
-            from_cache=False, source="kakao",
-            message=f"반경 1.2km 안에 같은 업종({selected_industry_name})의 주변 후보가 2곳 미만이라 리뷰 수집을 시작하지 않았습니다.",
-            industry_code=payload.industry_code, industry_name=selected_industry_name,
-        )
     try:
         return collect_or_load_report(
             own=verified_own,
@@ -388,7 +385,7 @@ def area_review_report(
         raise HTTPException(503, "공식 상권 경계 데이터를 확인할 수 없습니다.") from error
     except Exception as error:
         raise HTTPException(503, "카카오 장소 재확인에 실패했습니다. 잠시 뒤 다시 시도해 주세요.") from error
-    if len(verified) < 3:
+    if not verified:
         return AreaReviewReportResponse(
             status="insufficient_sample", area=summary, industry_code=payload.industry_code,
             industry_name=selected_industry_name,
@@ -397,7 +394,7 @@ def area_review_report(
             total_review_count=0, analyzed_review_count=0, eligible_place_count=0,
             required_place_count=3, required_review_count=30, topics=[], failed_labels=[],
             captured_at=None, expires_at=None, from_cache=False, source="kakao",
-            message=f"{area.name} 안에서 분류가 확인된 {selected_industry_name} 가게가 3곳 미만이라 수집하지 않았습니다.",
+            message=f"{area.name} 안에서 분류가 확인된 {selected_industry_name} 가게를 찾지 못해 리뷰를 수집하지 않았습니다.",
         )
     try:
         return collect_or_load_area_review_report(

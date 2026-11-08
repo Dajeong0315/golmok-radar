@@ -4,12 +4,13 @@ import { fetchCapturedReviewReport, fetchIndustries, fetchReviewIndustryMapping,
 import { fetchAccountRecords, saveAccountRecord } from "./accountStore";
 import { useAuth } from "./auth";
 import { matchesIndustryCategory, searchKakaoPlaces, searchNearbyIndustry, selectNearbyPlaces, type KakaoPlace } from "./kakaoPlaces";
-import { initialIndustry, rememberIndustry } from "./industrySelection";
 import { ReviewPlaceMap } from "./ReviewPlaceMap";
 import type { CapturedReviewReport, IndustryOption, ReviewAreaLocation, ReviewIndustryMapping } from "./types";
 import "./reviewAutomatic.css";
 
 const SELECTED_SHOP_KEY = "golmok-radar:review-own-shop:v1";
+const OWN_INDUSTRY_KEY = "golmok-radar:industry:review-own:v1";
+const DEFAULT_INDUSTRY = "CS100010";
 
 function savedShop(): KakaoPlace | null {
   try {
@@ -18,6 +19,18 @@ function savedShop(): KakaoPlace | null {
   } catch {
     return null;
   }
+}
+
+// Dedicated storage separate from the trade-area explorer and the area review
+// flow: this section has its own industry selector, so it must not silently
+// pick up whichever industry the other selector last remembered.
+export function initialOwnIndustry(storage: Pick<Storage, "getItem"> = localStorage): string {
+  const selected = storage.getItem(OWN_INDUSTRY_KEY) || DEFAULT_INDUSTRY;
+  return /^CS\d{6}$/.test(selected) ? selected : DEFAULT_INDUSTRY;
+}
+
+export function rememberOwnIndustry(code: string, storage: Pick<Storage, "setItem"> = localStorage): void {
+  if (/^CS\d{6}$/.test(code)) storage.setItem(OWN_INDUSTRY_KEY, code);
 }
 
 export function ReviewAutomaticFlow() {
@@ -35,7 +48,7 @@ export function ReviewAutomaticFlow() {
   const [confirmed, setConfirmed] = useState(false);
   const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [error, setError] = useState("");
-  const [industry, setIndustry] = useState(initialIndustry);
+  const [industry, setIndustry] = useState(initialOwnIndustry);
   const [industries, setIndustries] = useState<IndustryOption[]>([]);
   const [mapping, setMapping] = useState<ReviewIndustryMapping | null>(null);
   const sortedMatches = mapping ? [...matches].sort((left, right) =>
@@ -166,7 +179,7 @@ export function ReviewAutomaticFlow() {
 
     <label className="review-industry-select">분석 업종 <select aria-label="리뷰 분석 업종" value={industry} onChange={(event) => {
       const code = event.target.value;
-      setIndustry(code); rememberIndustry(code); setLocationConfirmed(false); setSelected(null);
+      setIndustry(code); rememberOwnIndustry(code); setLocationConfirmed(false); setSelected(null);
       setArea(null); setNearby([]); setReport(null); setMatches([]);
       sessionStorage.removeItem(SELECTED_SHOP_KEY);
     }}>{industries.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}</select></label>

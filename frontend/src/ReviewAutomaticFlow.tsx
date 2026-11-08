@@ -65,7 +65,10 @@ export function ReviewAutomaticFlow() {
     let active = true;
     fetchAccountRecords(client, user.id, "review_report").then((records) => {
       const saved = records.find((record) => record.recordId === recordId)?.payload as CapturedReviewReport | undefined;
-      if (active && saved && ["available", "limited", "insufficient_sample", "outside_trade_area"].includes(saved.status)) setReport(saved);
+      if (active && saved && ["available", "limited", "insufficient_sample", "outside_trade_area"].includes(saved.status)) {
+        if (saved.industry_code) setIndustry(saved.industry_code);
+        setReport(saved);
+      }
     }).catch((reason: Error) => { if (active) setError(`저장된 리뷰 기록을 불러오지 못했습니다: ${reason.message}`); });
     return () => { active = false; };
   }, [client, user?.id]);

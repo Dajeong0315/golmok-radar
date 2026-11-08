@@ -386,6 +386,8 @@ def area_review_report(
     except Exception as error:
         raise HTTPException(503, "카카오 장소 재확인에 실패했습니다. 잠시 뒤 다시 시도해 주세요.") from error
     if not verified:
+        append_audit(REVIEW_CAPTURE_DIR, event="analysis_result", flow="trade_area",
+                     status="insufficient_sample", place_count=0, review_count=0)
         return AreaReviewReportResponse(
             status="insufficient_sample", area=summary, industry_code=payload.industry_code,
             industry_name=selected_industry_name,

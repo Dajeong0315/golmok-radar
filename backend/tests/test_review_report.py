@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -5,6 +6,7 @@ import pytest
 from cryptography.fernet import Fernet
 
 from app.review_capture import CaptureBatch, CapturedReview
+from app.review_metrics import summarize_report_outcomes
 from app.review_report import build_area_review_report, build_captured_report, collect_or_load_area_review_report, collect_or_load_report, purge_expired_captures, purge_expired_reports, select_peer_places
 from app.schemas import ReviewAreaSummary, ReviewPlaceRef
 from app.trade_area_geometry import AreaLocation, load_area_polygons, locate_area
@@ -136,9 +138,63 @@ def test_each_shop_report_request_collects_fresh_encrypted_sample(tmp_path) -> N
     assert "맛있어요" not in stored
     audit = (tmp_path / "audit.jsonl").read_text(encoding="utf-8")
     assert '"event": "capture"' in audit
-    assert audit.count('"place_count": 10') == 2
+    assert sum(item["place_count"] == 10 and item["event"] == "capture"
+               for item in map(json.loads, audit.splitlines())) == 2
     assert "맛있어요" not in audit
     assert "place.map.kakao.com" not in audit
+
+
+def test_partial_place_failure_keeps_available_reviews_and_records_outcome(tmp_path) -> None:
+    key = Fernet.generate_key().decode()
+    raw_text = "The staff were friendly"
+
+    class PartlyFailingCollector:
+        def __init__(self, encryption_key: str):
+            self.cipher = Fernet(encryption_key.encode())
+
+        def capture_with_failures(self, targets):
+            assert [target.peer_label for target in targets] == ["A", "B", "C"]
+            return CaptureBatch([
+                CapturedReview("kakao", "A", raw_text, self.cipher.encrypt(raw_text.encode()), NOW),
+            ], ["B"])
+
+    result = collect_or_load_area_review_report(
+        area=AREA, industry_code="CS100010", industry_name="커피-음료",
+        places=[place("101"), place("102"), place("103")], user_id="viewer",
+        encryption_key=key, directory=tmp_path, now=NOW,
+        collector_factory=PartlyFailingCollector,
+    )
+    assert result.status == "limited"
+    assert result.analyzed_review_count == 1
+    assert result.failed_labels == ["B"]
+    assert [sample.review_count for sample in result.place_samples] == [1, 0, 0]
+    assert raw_text not in result.model_dump_json()
+    assert raw_text not in next(tmp_path.glob("area-report-*.json")).read_text(encoding="utf-8")
+    audit = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [(item["event"], item["review_count"], item["failed_count"]) for item in audit] == [
+        ("capture", 1, 1), ("analysis_result", 1, 1),
+    ]
+    assert audit[1]["flow"] == "trade_area"
+    assert audit[1]["status"] == "limited"
+    assert "101" not in json.dumps(audit)
+    assert summarize_report_outcomes(tmp_path / "audit.jsonl")["generation_rate"] == 1.0
+
+
+def test_report_metric_counts_only_completed_analysis_results(tmp_path) -> None:
+    entries = [
+        {"event": "capture", "review_count": 10},
+        {"event": "analysis_result", "flow": "own_shop", "status": "available", "failed_count": 0},
+        {"event": "analysis_result", "flow": "trade_area", "status": "limited", "failed_count": 1},
+        {"event": "analysis_result", "flow": "trade_area", "status": "insufficient_sample", "failed_count": 0},
+    ]
+    path = tmp_path / "audit.jsonl"
+    path.write_text("\n".join(json.dumps(item) for item in entries), encoding="utf-8")
+    summary = summarize_report_outcomes(path)
+    assert summary["completed_requests"] == 3
+    assert summary["generated_reports"] == 2
+    assert summary["generation_rate"] == 0.6667
+    assert summary["requests_with_failed_places"] == 1
+    assert summary["flows"] == {"own_shop": 1, "trade_area": 2}
 
 
 def test_different_shops_get_separate_captures_and_reports(tmp_path) -> None:

@@ -40,7 +40,8 @@ AREA_LABELS = "ABCDEFGHIJ"
 
 
 def append_audit(directory: Path, *, event: str, place_count: int = 0, review_count: int = 0,
-                 failed_count: int = 0, removed_count: int = 0, now: datetime | None = None) -> None:
+                 failed_count: int = 0, removed_count: int = 0, now: datetime | None = None,
+                 flow: str | None = None, status: str | None = None) -> None:
     """Record counts and outcome only, without place IDs, names, URLs or review text."""
     directory.mkdir(parents=True, exist_ok=True)
     entry = {
@@ -52,6 +53,10 @@ def append_audit(directory: Path, *, event: str, place_count: int = 0, review_co
         "failed_count": failed_count,
         "removed_count": removed_count,
     }
+    if flow is not None:
+        entry["flow"] = flow
+    if status is not None:
+        entry["status"] = status
     with (directory / "audit.jsonl").open("a", encoding="utf-8") as audit:
         audit.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
@@ -308,9 +313,13 @@ def collect_or_load_report(
             temporary.replace(path)
         finally:
             temporary.unlink(missing_ok=True)
+        report = build_captured_report(captured, area, encryption_key, False, location_status, area_distance_m, industry_code, industry_name)
         append_audit(directory, event="capture", place_count=len(targets), review_count=len(batch.reviews),
                      failed_count=len(batch.failed_labels), now=now)
-        return build_captured_report(captured, area, encryption_key, False, location_status, area_distance_m, industry_code, industry_name)
+        append_audit(directory, event="analysis_result", flow="own_shop", status=report.status,
+                     place_count=len(targets), review_count=report.analyzed_review_count,
+                     failed_count=len(batch.failed_labels), now=now)
+        return report
     finally:
         if locked_report:
             report_lock.unlink(missing_ok=True)
@@ -418,9 +427,13 @@ def collect_or_load_area_review_report(
             temporary.replace(path)
         finally:
             temporary.unlink(missing_ok=True)
+        report = build_area_review_report(captured, area, industry_code, industry_name, encryption_key, False)
         append_audit(directory, event="capture", place_count=len(targets), review_count=len(batch.reviews),
                      failed_count=len(batch.failed_labels), now=now)
-        return build_area_review_report(captured, area, industry_code, industry_name, encryption_key, False)
+        append_audit(directory, event="analysis_result", flow="trade_area", status=report.status,
+                     place_count=len(targets), review_count=report.analyzed_review_count,
+                     failed_count=len(batch.failed_labels), now=now)
+        return report
     finally:
         if locked_report:
             report_lock.unlink(missing_ok=True)

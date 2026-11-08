@@ -1,5 +1,7 @@
 from cryptography.fernet import Fernet
 import pytest
+from playwright.sync_api import Error as PlaywrightError
+from types import SimpleNamespace
 
 from app.review_capture import (
     MAX_PLACES_PER_RUN,
@@ -44,3 +46,40 @@ def test_distinct_visible_review_nodes_keep_identical_text() -> None:
 
     collector = PublicReviewBrowserCollector(Fernet.generate_key().decode())
     assert collector._read_public_review_text(Page(), "kakao") == ["좋아요", "좋아요"]
+
+
+def test_one_page_failure_does_not_stop_later_places(monkeypatch) -> None:
+    class Page:
+        def goto(self, url, **_kwargs):
+            if url.endswith("/2"):
+                raise PlaywrightError("simulated navigation failure")
+            return SimpleNamespace(status=200)
+
+    class Browser:
+        closed = False
+
+        def new_page(self):
+            return Page()
+
+        def close(self):
+            self.closed = True
+
+    browser = Browser()
+
+    class Context:
+        def __enter__(self):
+            return SimpleNamespace(chromium=SimpleNamespace(launch=lambda **_kwargs: browser))
+
+        def __exit__(self, *_args):
+            return None
+
+    monkeypatch.setattr("playwright.sync_api.sync_playwright", lambda: Context())
+    monkeypatch.setattr(PublicReviewBrowserCollector, "_open_review_section", lambda *_args: None)
+    monkeypatch.setattr(PublicReviewBrowserCollector, "_read_public_review_text", lambda *_args: ["친절해요"])
+    collector = PublicReviewBrowserCollector(Fernet.generate_key().decode())
+    targets = [CaptureTarget("kakao", f"https://place.map.kakao.com/{index}", label)
+               for index, label in enumerate("ABC", start=1)]
+    batch = collector.capture_with_failures(targets)
+    assert [review.peer_label for review in batch.reviews] == ["A", "C"]
+    assert batch.failed_labels == ["B"]
+    assert browser.closed

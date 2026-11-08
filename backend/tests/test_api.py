@@ -576,6 +576,8 @@ def test_area_review_report_keeps_only_verified_same_industry_places(client: Tes
         )
 
     monkeypatch.setattr(main, "collect_or_load_area_review_report", fake_report)
+    outcomes = []
+    monkeypatch.setattr(main, "append_audit", lambda _directory, **fields: outcomes.append(fields))
     payload = {"trade_area_code": "1", "industry_code": "CS200004", "candidates": [
         {"id": str(index), "name": f"가게 {index}", "latitude": 37.51 + index / 10000,
          "longitude": 127.01 + index / 10000} for index in range(1, 5)
@@ -593,6 +595,14 @@ def test_area_review_report_keeps_only_verified_same_industry_places(client: Tes
         insufficient = client.post("/api/v1/area-review-report", json=payload)
         assert insufficient.status_code == 200
         assert [place.id for place in seen["places"]] == ["1", "2"]
+        payload["candidates"] = [
+            {"id": "4", "name": "other category", "latitude": 37.5104, "longitude": 127.0104},
+        ]
+        empty = client.post("/api/v1/area-review-report", json=payload)
+        assert empty.status_code == 200
+        assert empty.json()["status"] == "insufficient_sample"
+        assert outcomes == [{"event": "analysis_result", "flow": "trade_area",
+                             "status": "insufficient_sample", "place_count": 0, "review_count": 0}]
     finally:
         app.dependency_overrides.pop(get_review_user, None)
 

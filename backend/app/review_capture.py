@@ -17,8 +17,8 @@ from .review_analysis import sanitize_review_text
 
 
 Provider = Literal["naver", "kakao"]
-MAX_PLACES_PER_RUN = 5
-MAX_REVIEWS_PER_PLACE = 20
+MAX_PLACES_PER_RUN = 10
+MAX_REVIEWS_PER_PLACE = 40
 MAX_REVIEWS_PER_RUN = MAX_PLACES_PER_RUN * MAX_REVIEWS_PER_PLACE
 
 
@@ -154,7 +154,7 @@ class PublicReviewBrowserCollector:
             if locator.count() == 0:
                 continue
             texts = [text.strip() for text in locator.all_text_contents()]
-            unique = list(dict.fromkeys(text for text in texts if text))
-            if unique:
-                return unique
+            visible = [text for text in texts if text]
+            if visible:
+                return visible
         return []

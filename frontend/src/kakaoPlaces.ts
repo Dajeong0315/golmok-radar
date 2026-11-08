@@ -147,7 +147,7 @@ export async function searchNearbyIndustry(
       found.push(...batch);
       if (batch.length < 15) break;
     }
-    if (found.filter((place) => matchesIndustryCategory(place.category, terms, excludedTerms)).length >= 5) break;
+    if (found.filter((place) => matchesIndustryCategory(place.category, terms, excludedTerms)).length >= 10) break;
   }
   return [...new Map(found.map((place) => [place.id, place])).values()]
     .filter((place) => matchesIndustryCategory(place.category, terms, excludedTerms));

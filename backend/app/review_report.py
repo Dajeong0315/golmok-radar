@@ -33,9 +33,10 @@ MIN_TOTAL_REVIEWS = 30
 REQUIRED_PLACES = 3
 FULL_TOTAL_REVIEWS = 50
 FULL_PLACES = 5
-MAX_NEW_RUNS_PER_USER_MONTH = 5
 RETENTION_DAYS = 90
 MAX_PEER_DISTANCE_M = 1200
+PEER_LABELS = "ABCDEFGHI"
+AREA_LABELS = "ABCDEFGHIJ"
 
 
 def append_audit(directory: Path, *, event: str, place_count: int = 0, review_count: int = 0,
@@ -148,7 +149,7 @@ def build_captured_report(
     industry_name: str = "커피-음료",
 ) -> CapturedReviewReportResponse:
     cipher = cipher_from_key(encryption_key)
-    grouped: dict[str, list[str]] = {"OWN": [], "A": [], "B": [], "C": [], "D": []}
+    grouped: dict[str, list[str]] = {"OWN": [], **{label: [] for label in PEER_LABELS}}
     for review in payload.get("reviews", []):
         label = review.get("peer_label")
         if label not in grouped or review.get("provider") != "kakao":
@@ -165,7 +166,7 @@ def build_captured_report(
             included_in_analysis=bool(grouped[target["label"]]),
         )
         for target in payload.get("peers", [])
-        if target.get("label") in {"A", "B", "C", "D"}
+        if target.get("label") in PEER_LABELS
     ]
     eligible_peers = [peer for peer in peers if peer.included_in_analysis]
     own_eligible = bool(grouped["OWN"])
@@ -173,12 +174,16 @@ def build_captured_report(
     total = len(grouped["OWN"]) + sum(len(grouped[peer.label]) for peer in peers)
     analyzed_total = (len(grouped["OWN"]) if own_eligible else 0) + sum(peer.review_count for peer in eligible_peers)
     comparable = own_eligible and bool(eligible_peers)
-    robust = (len(grouped["OWN"]) >= MIN_REVIEWS_PER_PLACE
-              and sum(peer.review_count >= MIN_REVIEWS_PER_PLACE for peer in eligible_peers) >= 2
-              and analyzed_total >= MIN_TOTAL_REVIEWS)
-    full = robust and eligible_count == FULL_PLACES and all(
+    strong_place_count = int(len(grouped["OWN"]) >= MIN_REVIEWS_PER_PLACE) + sum(
         peer.review_count >= MIN_REVIEWS_PER_PLACE for peer in eligible_peers
-    ) and analyzed_total >= FULL_TOTAL_REVIEWS
+    )
+    strong_review_count = (len(grouped["OWN"]) if len(grouped["OWN"]) >= MIN_REVIEWS_PER_PLACE else 0) + sum(
+        peer.review_count for peer in eligible_peers if peer.review_count >= MIN_REVIEWS_PER_PLACE
+    )
+    robust = (len(grouped["OWN"]) >= MIN_REVIEWS_PER_PLACE
+              and strong_place_count >= REQUIRED_PLACES
+              and strong_review_count >= MIN_TOTAL_REVIEWS)
+    full = robust and strong_place_count >= FULL_PLACES and strong_review_count >= FULL_TOTAL_REVIEWS
     topics: list[ReviewAggregateTopic] = []
     insights = []
     if analyzed_total:
@@ -190,18 +195,12 @@ def build_captured_report(
         ]
         if full:
             insights = build_insights(own_stats, nearby_stats)
-    strong_place_count = int(len(grouped["OWN"]) >= MIN_REVIEWS_PER_PLACE) + sum(
-        peer.review_count >= MIN_REVIEWS_PER_PLACE for peer in eligible_peers
-    )
     missing_places = max(0, REQUIRED_PLACES - strong_place_count)
-    strong_review_count = (len(grouped["OWN"]) if len(grouped["OWN"]) >= MIN_REVIEWS_PER_PLACE else 0) + sum(
-        peer.review_count for peer in eligible_peers if peer.review_count >= MIN_REVIEWS_PER_PLACE
-    )
     missing_reviews = max(0, MIN_TOTAL_REVIEWS - strong_review_count)
     message = (
-        f"내 가게와 주변 {industry_name} 4곳의 적격 리뷰 50건 이상을 같은 기준으로 비교했습니다."
+        f"내 가게와 주변 {industry_name} {len(eligible_peers)}곳의 적격 리뷰 50건 이상을 같은 기준으로 비교했습니다."
         if full else
-        f"내 가게와 주변의 공개 리뷰 {analyzed_total}건을 주제별로 집계했습니다. 충분한 표본 기준까지 가게 {missing_places}곳·리뷰 {missing_reviews}건이 더 필요해 운영 제안은 표시하지 않습니다."
+        f"내 가게와 주변의 공개 리뷰 {analyzed_total}건을 주제별로 집계했습니다. 충분한 제한 표본이지만 전체 비교 기준에는 미달해 운영 제안은 표시하지 않습니다."
         if robust else
         f"탐색용 소규모 표본 {analyzed_total}건입니다. "
         + ("내 가게와 주변 모두에서 리뷰가 확인됐지만 비교 결론은 낼 수 없습니다. " if comparable else
@@ -257,11 +256,8 @@ def collect_or_load_report(
     purge_expired_captures(directory, now)
     area_code = area.code if area else "outside"
     path = _report_path(directory, area_code, own.id, month, industry_code)
-    cached = _read_report(path, now)
-    if cached is not None:
-        return build_captured_report(cached, area, encryption_key, True, location_status, area_distance_m, industry_code, industry_name)
     user_hash = _user_hash(user_id)
-    user_lock = directory / f"quota-{month}-{user_hash}.lock"
+    user_lock = directory / f"user-{user_hash}.lock"
     report_lock = path.with_suffix(".lock")
     try:
         descriptor = os.open(user_lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
@@ -276,29 +272,16 @@ def collect_or_load_report(
             raise RuntimeError("이 가게의 리뷰 수집이 이미 진행 중입니다.") from error
         os.close(descriptor)
         locked_report = True
-        cached = _read_report(path, now)
-        if cached is not None:
-            return build_captured_report(cached, area, encryption_key, True, location_status, area_distance_m, industry_code, industry_name)
-        runs = 0
-        for previous in list(directory.glob(f"report-{month}-*.json")) + list(directory.glob(f"area-report-{month}-*.json")):
-            try:
-                if json.loads(previous.read_text(encoding="utf-8")).get("requested_by_hash") == user_hash:
-                    runs += 1
-            except (OSError, ValueError):
-                continue
-        if runs >= MAX_NEW_RUNS_PER_USER_MONTH:
-            raise RuntimeError("이번 달 계정별 신규 리뷰 수집 횟수를 모두 사용했습니다.")
         targets = [CaptureTarget("kakao", f"https://place.map.kakao.com/{own.id}", "OWN")]
         targets.extend(
             CaptureTarget("kakao", f"https://place.map.kakao.com/{place.id}", label)
-            for (place, _), label in zip(peers, "ABCD")
+            for (place, _), label in zip(peers[:9], PEER_LABELS)
         )
         batch: CaptureBatch = collector_factory(encryption_key).capture_with_failures(targets)
         captured = {
             "schema_version": 1,
             "captured_at": now.isoformat(),
             "expires_at": (now + timedelta(days=RETENTION_DAYS)).isoformat(),
-            "requested_by_hash": user_hash,
             "area_code": area_code,
             "industry_code": industry_code,
             "location_status": location_status,
@@ -306,7 +289,7 @@ def collect_or_load_report(
             "own_place_id": own.id,
             "peers": [
                 {"label": label, "place_id": place.id, "same_trade_area": same_area}
-                for (place, same_area), label in zip(peers, "ABCD")
+                for (place, same_area), label in zip(peers[:9], PEER_LABELS)
             ],
             "failed_labels": batch.failed_labels,
             "reviews": [
@@ -339,7 +322,7 @@ def build_area_review_report(
     encryption_key: str, from_cache: bool,
 ) -> AreaReviewReportResponse:
     cipher = cipher_from_key(encryption_key)
-    grouped: dict[str, list[str]] = {label: [] for label in "ABCDE"}
+    grouped: dict[str, list[str]] = {label: [] for label in AREA_LABELS}
     for review in payload.get("reviews", []):
         label = review.get("peer_label")
         if label not in grouped or review.get("provider") != "kakao":
@@ -358,7 +341,7 @@ def build_area_review_report(
     strong = [sample for sample in samples if sample.review_count >= MIN_REVIEWS_PER_PLACE]
     strong_review_count = sum(sample.review_count for sample in strong)
     robust = len(strong) >= REQUIRED_PLACES and strong_review_count >= MIN_TOTAL_REVIEWS
-    full = robust and len(strong) == FULL_PLACES and strong_review_count >= FULL_TOTAL_REVIEWS
+    full = robust and len(strong) >= FULL_PLACES and strong_review_count >= FULL_TOTAL_REVIEWS
     topics = [
         AreaReviewTopic(topic_key=key, label=stats.label, mentions=stats.mentions,
                         positive=stats.positive, negative=stats.negative, neutral=stats.neutral)
@@ -367,7 +350,7 @@ def build_area_review_report(
     missing_places = max(0, REQUIRED_PLACES - len(strong))
     missing_reviews = max(0, MIN_TOTAL_REVIEWS - strong_review_count)
     message = (
-        f"{industry_name} 가게 5곳의 적격 리뷰 50건 이상을 상권 단위로 집계했습니다."
+        f"{industry_name} 가게 {len(strong)}곳의 적격 리뷰 50건 이상을 상권 단위로 집계했습니다."
         if full else
         f"{industry_name} 가게 {len(strong)}곳·적격 리뷰 {strong_review_count}건의 제한 표본입니다. 개별 가게의 성과를 뜻하지 않습니다."
         if robust else
@@ -400,11 +383,8 @@ def collect_or_load_area_review_report(
     purge_expired_captures(directory, now)
     digest = hashlib.sha256(f"{area.code}:{industry_code}:{month}".encode()).hexdigest()[:24]
     path = directory / f"area-report-{month}-{digest}.json"
-    cached = _read_report(path, now)
-    if cached is not None:
-        return build_area_review_report(cached, area, industry_code, industry_name, encryption_key, True)
     user_hash = _user_hash(user_id)
-    user_lock = directory / f"quota-{month}-{user_hash}.lock"
+    user_lock = directory / f"user-{user_hash}.lock"
     report_lock = path.with_suffix(".lock")
     try:
         descriptor = os.open(user_lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
@@ -419,27 +399,15 @@ def collect_or_load_area_review_report(
             raise RuntimeError("이 상권의 리뷰 수집이 이미 진행 중입니다.") from error
         os.close(descriptor)
         locked_report = True
-        cached = _read_report(path, now)
-        if cached is not None:
-            return build_area_review_report(cached, area, industry_code, industry_name, encryption_key, True)
-        runs = 0
-        for previous in list(directory.glob(f"report-{month}-*.json")) + list(directory.glob(f"area-report-{month}-*.json")):
-            try:
-                if json.loads(previous.read_text(encoding="utf-8")).get("requested_by_hash") == user_hash:
-                    runs += 1
-            except (OSError, ValueError):
-                continue
-        if runs >= MAX_NEW_RUNS_PER_USER_MONTH:
-            raise RuntimeError("이번 달 계정별 신규 리뷰 수집 횟수를 모두 사용했습니다.")
         targets = [CaptureTarget("kakao", f"https://place.map.kakao.com/{place.id}", label)
-                   for place, label in zip(places[:5], "ABCDE")]
+                   for place, label in zip(places[:10], AREA_LABELS)]
         batch: CaptureBatch = collector_factory(encryption_key).capture_with_failures(targets)
         captured = {
             "schema_version": 1, "captured_at": now.isoformat(),
             "expires_at": (now + timedelta(days=RETENTION_DAYS)).isoformat(),
-            "requested_by_hash": user_hash, "area_code": area.code,
+            "area_code": area.code,
             "industry_code": industry_code, "place_labels": [target.peer_label for target in targets],
-            "place_ids": [place.id for place in places[:5]], "failed_labels": batch.failed_labels,
+            "place_ids": [place.id for place in places[:10]], "failed_labels": batch.failed_labels,
             "reviews": [{"provider": review.provider, "peer_label": review.peer_label,
                          "encrypted_text": review.encrypted_text.decode("utf-8"),
                          "fetched_at": review.fetched_at.isoformat()} for review in batch.reviews],

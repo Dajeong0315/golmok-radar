@@ -27,7 +27,7 @@ def escape_configparser_value(value: str) -> str:
 def make_engine(database_url: str | None = None):
     url = normalize_database_url(database_url or get_settings().database_url)
     connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
-    return create_engine(url, connect_args=connect_args)
+    return create_engine(url, connect_args=connect_args, pool_pre_ping=True)
 
 
 engine = make_engine()

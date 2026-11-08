@@ -294,11 +294,11 @@ def captured_review_report(
         selected_candidates = select_peer_places(
             verified_own, payload.candidates,
             own_location.code if own_location.status == "inside" else None,
-            limit=12,
+            limit=24,
         )
         verified_candidates = []
         for candidate, _ in selected_candidates:
-            if len(verified_candidates) >= 4:
+            if len(verified_candidates) >= 9:
                 break
             try:
                 current = verified_kakao_place(candidate, settings.kakao_rest_api_key)
@@ -320,7 +320,7 @@ def captured_review_report(
         district_name=area.district_name, area_type_name=area.area_type_name,
     ) if area else None
     location_status = location.status if area or location.status == "unmapped" else "unmapped"
-    peers = select_peer_places(verified_own, verified_candidates, area.code if location_status == "inside" and area else None)
+    peers = select_peer_places(verified_own, verified_candidates, area.code if location_status == "inside" and area else None, limit=9)
     try:
         return collect_or_load_report(
             own=verified_own,
@@ -364,12 +364,12 @@ def area_review_report(
     try:
         attempts = 0
         for place in nearby:
-            if len(verified) >= 5:
+            if len(verified) >= 10:
                 break
             location = locate_area(place.latitude, place.longitude)
             if location.status != "inside" or location.code != area.code:
                 continue
-            if attempts >= 12:
+            if attempts >= 24:
                 break
             attempts += 1
             try:
@@ -389,8 +389,7 @@ def area_review_report(
         return AreaReviewReportResponse(
             status="insufficient_sample", area=summary, industry_code=payload.industry_code,
             industry_name=selected_industry_name,
-            place_samples=[ReviewPeerSample(label=label, review_count=0, same_trade_area=True)
-                           for label, _ in zip("ABCDE", verified)],
+            place_samples=[],
             total_review_count=0, analyzed_review_count=0, eligible_place_count=0,
             required_place_count=3, required_review_count=30, topics=[], failed_labels=[],
             captured_at=None, expires_at=None, from_cache=False, source="kakao",

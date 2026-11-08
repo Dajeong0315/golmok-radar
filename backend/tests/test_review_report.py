@@ -1,6 +1,4 @@
 from datetime import datetime, timezone
-import hashlib
-import json
 from pathlib import Path
 
 import pytest
@@ -108,7 +106,7 @@ def test_sparse_peer_reviews_are_excluded_from_limited_comparison() -> None:
     assert report.topics
 
 
-def test_capture_is_encrypted_and_reused_within_the_month(tmp_path) -> None:
+def test_each_shop_report_request_collects_fresh_encrypted_sample(tmp_path) -> None:
     key = Fernet.generate_key().decode()
     calls: list[int] = []
 
@@ -123,20 +121,22 @@ def test_capture_is_encrypted_and_reused_within_the_month(tmp_path) -> None:
                 for target in targets
             ], [])
 
-    peers = [(place(str(index)), True) for index in range(2, 6)]
+    peers = [(place(str(index)), True) for index in range(2, 11)]
     inputs = dict(own=place("1"), peers=peers, area=AREA, user_id="owner", encryption_key=key, directory=tmp_path, now=NOW, collector_factory=FakeCollector)
     first = collect_or_load_report(**inputs)
     second = collect_or_load_report(**inputs)
-    assert calls == [5]
+    assert calls == [10, 10]
     assert first.from_cache is False
-    assert second.from_cache is True
+    assert second.from_cache is False
     assert first.status == "limited"
-    assert first.analyzed_review_count == 5
+    assert first.analyzed_review_count == 10
+    assert [peer.label for peer in second.peer_samples] == list("ABCDEFGHI")
+    assert len(list(tmp_path.glob("report-*.json"))) == 1
     stored = next(tmp_path.glob("report-*.json")).read_text(encoding="utf-8")
     assert "맛있어요" not in stored
     audit = (tmp_path / "audit.jsonl").read_text(encoding="utf-8")
     assert '"event": "capture"' in audit
-    assert '"place_count": 5' in audit
+    assert audit.count('"place_count": 10') == 2
     assert "맛있어요" not in audit
     assert "place.map.kakao.com" not in audit
 
@@ -164,7 +164,7 @@ def test_different_shops_get_separate_captures_and_reports(tmp_path) -> None:
             directory=tmp_path, now=NOW, collector_factory=FakeCollector,
         )
         assert report.status == "available"
-    assert captured_own_ids == ["101", "202"]
+    assert captured_own_ids == ["101", "202", "101"]
     assert len(list(tmp_path.glob("report-*.json"))) == 2
 
 
@@ -179,7 +179,7 @@ def test_expired_encrypted_files_are_removed(tmp_path) -> None:
     assert not capture.exists()
 
 
-def test_area_review_report_is_anonymous_encrypted_and_cached(tmp_path) -> None:
+def test_area_review_report_collects_ten_places_each_request(tmp_path) -> None:
     key = Fernet.generate_key().decode()
     calls = []
 
@@ -196,15 +196,17 @@ def test_area_review_report_is_anonymous_encrypted_and_cached(tmp_path) -> None:
             ], [])
 
     inputs = dict(area=AREA, industry_code="CS300011", industry_name="일반의류",
-                  places=[place(str(index)) for index in range(1, 6)], user_id="viewer",
+                  places=[place(str(index)) for index in range(1, 11)], user_id="viewer",
                   encryption_key=key, directory=tmp_path, now=NOW, collector_factory=FakeCollector)
     first = collect_or_load_area_review_report(**inputs)
     second = collect_or_load_area_review_report(**inputs)
-    assert calls == [5]
+    assert calls == [10, 10]
     assert first.status == "available"
     assert first.topics[0].topic_key == "product"
-    assert second.from_cache
-    assert [sample.label for sample in first.place_samples] == list("ABCDE")
+    assert not second.from_cache
+    assert [sample.label for sample in first.place_samples] == list("ABCDEFGHIJ")
+    assert first.total_review_count == 100
+    assert len(list(tmp_path.glob("area-report-*.json"))) == 1
     assert "상품 품질이 좋아요" not in first.model_dump_json()
     stored = next(tmp_path.glob("area-report-*.json")).read_text(encoding="utf-8")
     assert "상품 품질이 좋아요" not in stored
@@ -264,21 +266,28 @@ def test_single_sided_shop_report_shows_observed_topics_without_comparison_claim
     assert "비교는 할 수 없습니다" in report.message
 
 
-def test_area_review_shares_monthly_quota_with_own_shop_reports(tmp_path) -> None:
-    user_hash = hashlib.sha256("viewer".encode()).hexdigest()[:24]
-    for index in range(5):
-        (tmp_path / f"report-202611-{index}.json").write_text(json.dumps({
-            "requested_by_hash": user_hash, "expires_at": "2027-02-02T00:00:00+00:00",
-        }), encoding="utf-8")
+def test_repeated_requests_are_not_blocked_by_old_monthly_quota(tmp_path) -> None:
+    key = Fernet.generate_key().decode()
+    calls = []
 
-    class UnexpectedCollector:
-        def __init__(self, _key):
-            raise AssertionError("Quota must stop capture before the collector starts")
+    class FakeCollector:
+        def __init__(self, encryption_key):
+            self.cipher = Fernet(encryption_key.encode())
 
-    with pytest.raises(RuntimeError, match="횟수"):
-        collect_or_load_area_review_report(
+        def capture_with_failures(self, targets):
+            calls.append(len(targets))
+            return CaptureBatch([
+                CapturedReview("kakao", target.peer_label, "친절해요",
+                               self.cipher.encrypt("친절해요".encode()), NOW)
+                for target in targets
+            ], [])
+
+    for _ in range(6):
+        report = collect_or_load_area_review_report(
             area=AREA, industry_code="CS100010", industry_name="커피-음료",
-            places=[place("1"), place("2"), place("3")], user_id="viewer",
-            encryption_key=Fernet.generate_key().decode(), directory=tmp_path,
-            now=NOW, collector_factory=UnexpectedCollector,
+            places=[place("1")], user_id="viewer", encryption_key=key,
+            directory=tmp_path, now=NOW, collector_factory=FakeCollector,
         )
+        assert report.from_cache is False
+    assert calls == [1] * 6
+    assert len(list(tmp_path.glob("area-report-*.json"))) == 1

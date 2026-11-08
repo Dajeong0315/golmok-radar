@@ -134,12 +134,11 @@ export function ReviewAutomaticFlow() {
       setReport(result);
       if (client && user) {
         const now = new Date().toISOString();
-        const month = (result.captured_at || now).slice(0, 7);
         try {
           await saveAccountRecord(client, user.id, {
-            recordId: `review:${industry}:${selected.id}:${month}`,
+            recordId: crypto.randomUUID(),
             kind: "review_report",
-            title: `${selected.name} · ${mapping?.industry_name || industry} 리뷰 비교`,
+            title: `${selected.name} · ${mapping?.industry_name || industry} 리뷰 비교 · ${new Date(result.captured_at || now).toLocaleString("ko-KR")}`,
             payload: result,
             schemaVersion: 1,
             createdAt: result.captured_at || now,
@@ -159,7 +158,7 @@ export function ReviewAutomaticFlow() {
   return <section className="review-auto" aria-labelledby="review-auto-title">
     <div className="review-section-heading">
       <div><p className="eyebrow">내 가게로 시작</p><h2 id="review-auto-title">가게를 고르면 상권과 주변 반응을 연결합니다</h2></div>
-      <p>공식 업종을 고르고 카카오 장소 검색에서 내 가게를 선택하세요. 같은 업종의 주변 가게를 최대 4곳까지 익명 비교군으로 묶습니다.</p>
+      <p>공식 업종을 고르고 카카오 장소 검색에서 내 가게를 선택하세요. 같은 업종의 주변 가게를 최대 9곳까지 익명 비교군으로 묶습니다.</p>
     </div>
 
     <label className="review-industry-select">분석 업종 <select aria-label="리뷰 분석 업종" value={industry} onChange={(event) => {
@@ -188,9 +187,9 @@ export function ReviewAutomaticFlow() {
 
     {selected && area ? <div className="review-run">
       <label><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /> 이 가게를 운영하거나 관리하며, 이 가게의 리뷰를 분석할 권한이 있습니다.</label>
-      {session ? <button type="button" disabled={!confirmed || running || locating} onClick={() => void runReport()}>{running ? "최대 5곳의 공개 리뷰 수집 중…" : nearby.length ? "주변 리뷰 수집하고 비교하기" : "내 가게 리뷰 표본 확인하기"}</button> : <button type="button" onClick={() => void signInWithKakao()}>카카오 로그인 후 비교하기</button>}
+      {session ? <button type="button" disabled={!confirmed || running || locating} onClick={() => void runReport()}>{running ? "최대 10곳의 공개 리뷰 수집 중…" : nearby.length ? "주변 리뷰 수집하고 비교하기" : "내 가게 리뷰 표본 확인하기"}</button> : <button type="button" onClick={() => void signInWithKakao()}>카카오 로그인 후 비교하기</button>}
       {!locating && nearby.length === 0 ? <p className="review-auto-note">주변 동종 후보가 없어 내 가게 리뷰만 확인합니다. 가게 간 비교는 제공하지 않습니다.</p> : null}
-      <p>가게당 최대 20건, 한 번에 최대 5곳만 수집합니다. 같은 가게의 이번 달 표본이 있으면 재사용합니다. 공식 상권 밖에서는 반경 기준 동종 가게를 비교합니다.</p>
+      <p>요청할 때마다 새로 수집합니다. 내 가게 포함 최대 10곳, 가게당 공개 화면에서 확인되는 텍스트 리뷰 최대 40건을 사용합니다. 공식 상권 밖에서는 반경 기준 동종 가게를 비교합니다.</p>
     </div> : null}
     {error ? <p className="error-banner" role="alert">{error}</p> : null}
     {report ? <ReviewCapturedResult report={report} /> : null}
@@ -200,7 +199,7 @@ export function ReviewAutomaticFlow() {
 function ReviewCapturedResult({ report }: { report: CapturedReviewReport }) {
   return <section className="review-auto-report" aria-live="polite">
     <div className="review-section-heading"><div><p className="eyebrow">자동 리뷰 리포트 · {report.industry_name || "커피-음료"}</p><h2>{report.status === "available" ? "내 가게와 주변 동종 가게의 반응" : report.status === "limited" ? "수집된 리뷰의 주제별 반응" : "공개 텍스트 리뷰를 확인하지 못했습니다"}</h2></div><p>{report.message}</p></div>
-    <div className="review-auto-metadata"><span>카카오 공개 리뷰</span><span>{report.location_status === "inside" || !report.location_status ? "공식 상권 안" : "공식 상권 밖 · 반경 비교"}</span><span>{report.from_cache ? "이번 달 수집본 재사용" : "이번 달 신규 수집"}</span><span>분석에 사용 {report.analyzed_review_count ?? report.total_review_count}건 / 수집 {report.total_review_count}건</span><span>수집 {report.captured_at ? new Date(report.captured_at).toLocaleDateString("ko-KR") : "미실행"}</span><span>보관 만료 {report.expires_at ? new Date(report.expires_at).toLocaleDateString("ko-KR") : "해당 없음"}</span></div>
+    <div className="review-auto-metadata"><span>카카오 공개 리뷰</span><span>{report.location_status === "inside" || !report.location_status ? "공식 상권 안" : "공식 상권 밖 · 반경 비교"}</span><span>{!report.captured_at ? "수집 미실행" : report.from_cache ? "이전 보관본" : "이번 요청 신규 수집"}</span><span>분석에 사용 {report.analyzed_review_count ?? report.total_review_count}건 / 수집 {report.total_review_count}건</span><span>수집 {report.captured_at ? new Date(report.captured_at).toLocaleString("ko-KR") : "미실행"}</span><span>보관 만료 {report.expires_at ? new Date(report.expires_at).toLocaleDateString("ko-KR") : "해당 없음"}</span></div>
     <div className="review-auto-counts"><div><small>내 가게</small><strong>{report.own_review_count}건</strong></div>{report.peer_samples.map((peer) => <div key={peer.label}><small>주변 {peer.label}{peer.same_trade_area ? " · 같은 상권" : " · 반경 주변"}{peer.included_in_analysis === false ? " · 분석 제외" : ""}</small><strong>{peer.review_count}건</strong></div>)}</div>
     {report.failed_labels.length ? <p className="review-auto-note">수집 실패: {report.failed_labels.map((label) => label === "OWN" ? "내 가게" : `주변 ${label}`).join(", ")}. 차단을 우회하거나 자동 재시도하지 않았습니다.</p> : null}
     {report.status === "available" || report.status === "limited" ? <><div className="review-auto-topics">{report.topics.filter((topic) => topic.own.mentions > 0 || topic.nearby.mentions > 0).map((topic) => <article key={topic.topic_key}><h3>{topic.label}</h3><p>내 가게 {report.own_review_count ? `${topic.own.mentions}회` : "표본 없음"} · 주변 {report.peer_samples.some((peer) => peer.review_count > 0) ? `${topic.nearby.mentions}회` : "표본 없음"}</p><small>부정 언급: 내 가게 {topic.own.negative}회 / 주변 {topic.nearby.negative}회</small></article>)}</div>{report.topics.every((topic) => topic.own.mentions === 0 && topic.nearby.mentions === 0) ? <p className="review-auto-note">수집된 글에서 현재 주제 사전과 일치하는 표현은 확인되지 않았습니다.</p> : null}{report.insights.length ? <div className="review-auto-insights"><h3>운영 점검 아이디어</h3>{report.insights.map((insight) => <article key={insight.topic_key}><strong>{insight.observation}</strong><p>{insight.action_idea}</p></article>)}</div> : null}</> : null}

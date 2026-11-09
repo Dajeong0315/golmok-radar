@@ -51,7 +51,7 @@ export function ComparisonPage({ codes, industry }: Props) {
 
         <section className="comparison-section" aria-labelledby="comparison-title">
           <div className="comparison-title-row">
-            <div><p className="eyebrow">2–4 AREAS</p><h2 id="comparison-title">{data.trade_areas.length}개 상권 비교</h2></div>
+            <div><p className="eyebrow">같은 분기 비교</p><h2 id="comparison-title">{data.trade_areas.length}개 상권 비교</h2></div>
             <span className="quarter-badge">{data.industry_name} · {data.quarter_label}</span>
           </div>
           <div className="comparison-scroll" tabIndex={0} aria-label="상권 지표 비교표">

@@ -14,7 +14,7 @@
 .review-shop-search > div { display: flex; gap: 10px; }
 .review-shop-search input { flex: 1; min-width: 0; padding: 15px 17px; border: 1px solid #b7c8d9; border-radius: 12px; background: white; font: inherit; }
 .review-shop-search button,
-.review-run > button { padding: 13px 22px; border: 0; border-radius: 12px; background: #1769d2; color: white; font: inherit; font-weight: 700; cursor: pointer; }
+.review-run > button { padding: 13px 22px; border: 0; border-radius: 12px; background: var(--route); color: white; font: inherit; font-weight: 700; cursor: pointer; }
 .review-shop-search button:disabled,
 .review-run > button:disabled { opacity: .55; cursor: not-allowed; }
 .review-shop-results { max-height: 310px; overflow-y: auto; margin: 10px 0 0; padding: 0; border: 1px solid #dbe5ee; border-radius: 14px; background: white; list-style: none; }
@@ -22,16 +22,16 @@
 .review-shop-results button { display: flex; flex-direction: column; width: 100%; gap: 4px; padding: 14px 17px; border: 0; background: transparent; text-align: left; cursor: pointer; }
 .review-shop-results button:hover,
 .review-shop-results button:focus-visible { background: #eef6ff; }
-.review-shop-results button.is-selected { background: #e3f0ff; outline: 2px solid #1769d2; outline-offset: -2px; }
+.review-shop-results button.is-selected { background: #e3f0ff; outline: 2px solid var(--route); outline-offset: -2px; }
 .review-shop-results small { color: #617080; }
 .review-shop-picker.has-preview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; margin-top: 14px; }
 .review-shop-picker.has-preview .review-shop-results { margin: 0; max-height: 450px; }
 .review-place-preview { min-width: 0; padding: 16px; border: 1px solid #b9cee4; border-radius: 14px; background: white; }
 .review-place-preview h3 { margin: 5px 0; font-size: 1.2rem; }
 .review-place-preview p { margin: 5px 0; color: #5b6978; font-size: .9rem; }
-.review-place-preview small { color: #1769d2; font-weight: 700; }
+.review-place-preview small { color: var(--route); font-weight: 700; }
 .review-place-map { width: 100%; height: 300px; margin: 14px 0; border-radius: 10px; background: #edf3f8; }
-.review-place-preview > button { width: 100%; min-height: 46px; margin-top: 12px; border: 0; border-radius: 10px; color: white; background: #1769d2; font: inherit; font-weight: 700; cursor: pointer; }
+.review-place-preview > button { width: 100%; min-height: 46px; margin-top: 12px; border: 0; border-radius: 10px; color: white; background: var(--route); font: inherit; font-weight: 700; cursor: pointer; }
 .review-place-preview > button:disabled { opacity: .55; cursor: not-allowed; }
 .review-shop-results span,
 .review-selected-shop span { color: #5b6978; font-size: .9rem; }
@@ -42,8 +42,8 @@
 .review-selected-shop strong,
 .review-area-card strong { display: block; margin: 5px 0; font-size: 1.18rem; }
 .review-selected-shop small,
-.review-area-card small { color: #1769d2; font-weight: 700; }
-.review-selected-shop button { border: 0; background: none; color: #1769d2; font: inherit; cursor: pointer; }
+.review-area-card small { color: var(--route); font-weight: 700; }
+.review-selected-shop button { border: 0; background: none; color: var(--route); font: inherit; cursor: pointer; }
 .review-area-card p { margin: 3px 0 0; color: #5b6978; }
 .review-run { display: grid; gap: 14px; margin-top: 24px; }
 .review-run label { display: flex; align-items: flex-start; gap: 9px; line-height: 1.5; }
@@ -72,7 +72,7 @@
 .review-area-query input { width: 100%; box-sizing: border-box; padding: 13px 15px; border: 1px solid #b7c8d9; border-radius: 10px; background: white; font: inherit; }
 .review-area-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; max-height: 250px; overflow-y: auto; }
 .review-area-options button { display: flex; min-width: 0; flex-direction: column; gap: 3px; padding: 11px 13px; border: 1px solid #dbe5ee; border-radius: 10px; background: white; text-align: left; cursor: pointer; }
-.review-area-options button[aria-selected="true"] { border-color: #1769d2; background: #e8f3ff; }
+.review-area-options button[aria-selected="true"] { border-color: var(--route); background: #e8f3ff; }
 .review-area-options small { color: #5b6978; }
 
 @media (max-width: 600px) {

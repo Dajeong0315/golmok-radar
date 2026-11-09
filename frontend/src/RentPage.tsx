@@ -65,7 +65,7 @@ export function RentPage({ code }: { code: string }) {
 
     <section className="rent-market-section">
       <div className="rent-market-heading">
-        <div><p className="eyebrow">OFFICIAL AREA BENCHMARK</p><h2>지역 평균부터 확인하기</h2><p>한국부동산원이 조사하는 서울 상권 중 실제 후보지와 가까운 곳을 직접 골라 비교합니다.</p></div>
+        <div><p className="eyebrow">공식 임대 통계</p><h2>지역 평균부터 확인하기</h2><p>한국부동산원이 조사하는 서울 상권 중 실제 후보지와 가까운 곳을 직접 골라 비교합니다.</p></div>
         <label className="rent-market-select"><span>가까운 공식 조사상권</span><select value={selectedMarketCode} onChange={(event) => setSelectedMarketCode(event.target.value)}><option value="">서울 전체 평균</option>{marketList?.markets.map((market) => <option key={market.region_code} value={market.region_code}>{market.group} · {market.name}</option>)}</select><small>{marketList?.notice || "공식 조사상권을 불러오고 있습니다."}</small></label>
       </div>
 
@@ -86,7 +86,7 @@ export function RentPage({ code }: { code: string }) {
     </section>
 
     <section className="rent-layout">
-      <div className="rent-form"><div className="section-heading"><div><p className="eyebrow">ACTUAL LISTING</p><h2>실제 매물 조건 넣기</h2></div><p>금액 단위는 만원입니다.</p></div>
+      <div className="rent-form"><div className="section-heading"><div><p className="eyebrow">직접 찾은 매물</p><h2>실제 매물 조건 넣기</h2></div><p>금액 단위는 만원입니다.</p></div>
         <div className="rent-fields">
           <label><span>매물에 적힌 보증금</span><div><input type="number" min="0" value={form.deposit} onChange={(event) => update("deposit", event.target.value)} /><b>만원</b></div></label>
           <label><span>매물에 적힌 월세</span><div><input type="number" min="0" value={form.monthlyRent} onChange={(event) => update("monthlyRent", event.target.value)} /><b>만원/월</b></div></label>
@@ -96,12 +96,12 @@ export function RentPage({ code }: { code: string }) {
         </div>
         <p className="rent-form__note">보증금은 처음 필요한 자금으로만 표시하며 월 고정비에 더하지 않습니다. 권리금, 공사비, 인건비, 공과금은 별도로 확인해야 합니다.</p>
       </div>
-      <aside className="rent-result"><p className="eyebrow">COST SNAPSHOT</p><h2>이 매물의 월 공간비</h2><strong>{result.monthlyOccupancyCost.toLocaleString("ko-KR")}원</strong><dl><div><dt>연간 월세+관리비</dt><dd>{result.annualOccupancyCost.toLocaleString("ko-KR")}원</dd></div><div><dt>약 1평당 월 비용</dt><dd>{result.monthlyCostPerPyeong === null ? "면적 필요" : `${result.monthlyCostPerPyeong.toLocaleString("ko-KR")}원`}</dd></div><div><dt>예상매출 대비 공간비</dt><dd>{result.occupancyCostRatio === null ? "예상매출 필요" : `${result.occupancyCostRatio}%`}</dd></div><div><dt>별도 초기 보증금</dt><dd>{(form.deposit * 10_000).toLocaleString("ko-KR")}원</dd></div></dl><p>매출 대비 비율은 입력값을 사용한 단순 계산이며 적정성 판단이나 수익 보장이 아닙니다.</p></aside>
+      <aside className="rent-result"><p className="eyebrow">비용 요약</p><h2>이 매물의 월 공간비</h2><strong>{result.monthlyOccupancyCost.toLocaleString("ko-KR")}원</strong><dl><div><dt>연간 월세+관리비</dt><dd>{result.annualOccupancyCost.toLocaleString("ko-KR")}원</dd></div><div><dt>약 1평당 월 비용</dt><dd>{result.monthlyCostPerPyeong === null ? "면적 필요" : `${result.monthlyCostPerPyeong.toLocaleString("ko-KR")}원`}</dd></div><div><dt>예상매출 대비 공간비</dt><dd>{result.occupancyCostRatio === null ? "예상매출 필요" : `${result.occupancyCostRatio}%`}</dd></div><div><dt>별도 초기 보증금</dt><dd>{(form.deposit * 10_000).toLocaleString("ko-KR")}원</dd></div></dl><p>매출 대비 비율은 입력값을 사용한 단순 계산이며 적정성 판단이나 수익 보장이 아닙니다.</p></aside>
     </section>
 
     <section className="rent-sources">
-      <div><p className="eyebrow">DATA SOURCE</p><h2>공식 임대 통계</h2><span className="source-status">R-ONE 분기 표본통계</span><p>소규모상가는 일반건축물대장상 상가 용도이면서 2층 이하, 연면적 330㎡ 이하인 건물을 조사합니다. 개별 매물 가격이 아니라 시장의 방향과 지역 차이를 확인하는 자료입니다.</p><a href={benchmark?.source_url} target="_blank" rel="noreferrer">한국부동산원 원문 통계 보기 →</a></div>
-      <div><p className="eyebrow">LIVE LISTINGS</p><h2>최신 개별 매물</h2><span className="source-status source-status--muted">정식 매물 API 확인 중</span><p>공개 매물 API가 확인되지 않아 매물을 복제하거나 화면을 크롤링하지 않습니다. 최신 보증금·월세·권리금은 부동산 사이트나 공인중개사에서 확인한 뒤 위 계산기에 입력해 주세요.</p><a href="https://new.land.naver.com/" target="_blank" rel="noreferrer">네이버 부동산에서 직접 확인 →</a></div>
+      <div><p className="eyebrow">데이터 출처</p><h2>공식 임대 통계</h2><span className="source-status">R-ONE 분기 표본통계</span><p>소규모상가는 일반건축물대장상 상가 용도이면서 2층 이하, 연면적 330㎡ 이하인 건물을 조사합니다. 개별 매물 가격이 아니라 시장의 방향과 지역 차이를 확인하는 자료입니다.</p><a href={benchmark?.source_url} target="_blank" rel="noreferrer">한국부동산원 원문 통계 보기 →</a></div>
+      <div><p className="eyebrow">실시간 매물</p><h2>최신 개별 매물</h2><span className="source-status source-status--muted">정식 매물 API 확인 중</span><p>공개 매물 API가 확인되지 않아 매물을 복제하거나 화면을 크롤링하지 않습니다. 최신 보증금·월세·권리금은 부동산 사이트나 공인중개사에서 확인한 뒤 위 계산기에 입력해 주세요.</p><a href="https://new.land.naver.com/" target="_blank" rel="noreferrer">네이버 부동산에서 직접 확인 →</a></div>
     </section>
     <section className="pipeline-next"><div><p className="eyebrow">다음 단계</p><h2>상권과 비용을 봤다면<br />확인할 지원·자금 후보를 살펴보세요.</h2></div><a href={`#funding?code=${code}`}>지원·자금 후보 확인 →</a></section>
   </main>;

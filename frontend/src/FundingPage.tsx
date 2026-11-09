@@ -51,7 +51,7 @@ export function FundingPage({ code }: { code: string }) {
       </header>
       <main>
         <section className="funding-hero">
-          <p className="eyebrow">STEP 5 · SUPPORT</p>
+          <p className="eyebrow">공식 지원 정보</p>
           <h1>지원사업과 자금 후보를<br />공식 조건부터 확인하세요.</h1>
           <p>{area ? `${area.district_name} ${area.name}에서 준비하는 조건을 서울 지역 기준으로 살펴봅니다. ` : "서울에서 준비하는 조건을 기준으로 살펴봅니다. "}민감한 신용·부채 정보는 받지 않고 승인 가능성도 예측하지 않습니다.</p>
         </section>
@@ -112,8 +112,8 @@ export function FundingPage({ code }: { code: string }) {
           <div className="funding-safety-note"><strong>지역 필터를 이렇게 적용했어요</strong><p>현재 후보가 서울이므로 KDB의 지방소재 지역경제활성화 자금은 제외했습니다. 은행 상품을 서로 금리순으로 비교하거나 신청을 대신하지 않으며, 대출 전에는 상환 계획과 상품설명서를 반드시 확인해야 합니다.</p></div>
         </section>
         <section className="official-links">
-          <div><p className="eyebrow">OFFICIAL 01</p><h2>K-Startup</h2><p>창업지원포털에서 모집 중인 지원사업 공고를 직접 검색합니다.</p><a href="https://www.k-startup.go.kr/" target="_blank" rel="noreferrer">공식 포털 열기 →</a></div>
-          <div><p className="eyebrow">OFFICIAL 02</p><h2>소상공인 정책자금</h2><p>대출상품 추천이 아니라 소상공인시장진흥공단의 공식 신청·안내 경로입니다.</p><a href="https://ols.semas.or.kr/" target="_blank" rel="noreferrer">공식 사이트 열기 →</a></div>
+          <div><p className="eyebrow">창업진흥원</p><h2>K-Startup</h2><p>창업지원포털에서 모집 중인 지원사업 공고를 직접 검색합니다.</p><a href="https://www.k-startup.go.kr/" target="_blank" rel="noreferrer">공식 포털 열기 →</a></div>
+          <div><p className="eyebrow">소상공인시장진흥공단</p><h2>소상공인 정책자금</h2><p>대출상품 추천이 아니라 소상공인시장진흥공단의 공식 신청·안내 경로입니다.</p><a href="https://ols.semas.or.kr/" target="_blank" rel="noreferrer">공식 사이트 열기 →</a></div>
         </section>
         <section className="funding-next"><div><p className="eyebrow">다음 단계</p><h2>개업 전 흐름은 여기까지입니다.</h2><p>계약 여부는 직접 결정하고, 개업 후 리뷰 기능은 별도의 운영 개선 단계에서만 이용합니다.</p></div><a href="#reviews">운영 개선 단계 보기 →</a></section>
       </main>

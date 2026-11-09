@@ -91,7 +91,7 @@ export function PropertyWorksheetPage() {
 
   return <main className="worksheet-page">
     <header className="site-header recommendation-header"><a className="brand" href="#home"><span className="brand-mark">G</span><span>골목 레이더</span></a><TopNavigation active="worksheet" /><a className="back-link" href="#explore">상권 탐색</a></header>
-    <section className="worksheet-hero"><p className="eyebrow">PROPERTY CHECK WORKSHEET</p><h1>통계 다음은,<br />직접 본 <em>매물</em>을 확인하세요.</h1><p>{user ? "직접 입력한 매물 기록을 카카오 계정과 이 브라우저에 저장합니다." : "직접 입력한 매물 기록은 현재 브라우저에 저장됩니다. 카카오 로그인 시 다른 기기에서도 복구할 수 있습니다."} 계약 여부나 영업 가능성을 판단하지 않습니다.</p>{syncMessage ? <p className="account-sync-message" role="status">{syncMessage}</p> : null}</section>
+    <section className="worksheet-hero"><p className="eyebrow">매물 검증</p><h1>통계 다음은,<br />직접 본 매물을 확인하세요.</h1><p>{user ? "직접 입력한 매물 기록을 카카오 계정과 이 브라우저에 저장합니다." : "직접 입력한 매물 기록은 현재 브라우저에 저장됩니다. 카카오 로그인 시 다른 기기에서도 복구할 수 있습니다."} 계약 여부나 영업 가능성을 판단하지 않습니다.</p>{syncMessage ? <p className="account-sync-message" role="status">{syncMessage}</p> : null}</section>
 
     <section className="worksheet-boundary" aria-label="데이터 구분"><article><strong>서울시 상권 통계</strong><span>상권 코드·기준분기·업종 기준</span></article><article><strong>R-ONE 임대 벤치마크</strong><span>공식 조사상권의 분기 표본 통계</span></article><article><strong>사용자 입력 매물</strong><span>입력일·확인 상태가 있는 개별 후보 기록</span></article></section>
 

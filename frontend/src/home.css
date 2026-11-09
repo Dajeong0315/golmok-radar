@@ -1,74 +1,150 @@
-.home-page { background: #fff; }
+/* 소개형 홈 — 골목 지도 위의 공식 상권. 전역 토큰은 styles.css 마지막 레이어에 있습니다. */
+.home-page { background: var(--paper); }
 .home-header .top-navigation { justify-content: flex-end; }
-.home-hero { text-align: center; padding: 100px 24px 0; background: radial-gradient(ellipse at 50% 100%, #dceeff, transparent 66%), #fafcff; }
-.home-hero h1 { margin: auto; max-width: 1000px; font-size: clamp(42px, 6.4vw, 80px); line-height: 1.16; letter-spacing: -.06em; }
-.home-lead { font-size: clamp(17px, 1.7vw, 21px); color: #616b77; line-height: 1.8; margin: 28px auto; }
-.home-actions { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 24px; }
-.home-page .primary-action { text-decoration: none; display: inline-flex; align-items: center; gap: 20px; }
-.home-secondary { color: #0066c9; text-decoration: none; font-size: 15px; font-weight: 650; }
-.home-caption { font-size: 12px; color: #697686; margin: 22px 0 54px; }
-.home-journey { display: flex; align-items: center; justify-content: center; gap: 36px; padding: 28px; max-width: 850px; margin: auto; border: 1px solid #dae5f1; border-bottom: 0; background: #ffffffd9; border-radius: 24px 24px 0 0; color: #0071e3; }
-.home-journey b { margin-left: 12px; color: #28364a; font-size: 16px; }
-.home-journey i { color: #aebdcd; font-style: normal; }
-.home-section { max-width: 1120px; margin: auto; padding: 90px 36px; }
-.home-section h2 { font-size: clamp(30px, 4vw, 45px); letter-spacing: -.05em; line-height: 1.3; margin: 0 0 24px; }
-.home-section h3 { font-size: 21px; letter-spacing: -.035em; margin: 16px 0 10px; }
-.home-section p { color: #66717e; line-height: 1.8; }
-.home-value-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; margin-top: 44px; }
-.home-value-grid article { border-top: 1px solid #dfe7ee; padding-top: 24px; }
-.home-value-grid p { font-size: 15px; }
-.home-symbol { display: inline-grid; place-items: center; border-radius: 14px; width: 48px; height: 48px; background: #eaf4ff; color: #0071e3; font-weight: 700; }
-.home-workflow { display: grid; grid-template-columns: 1fr 1.2fr; gap: 70px; border-top: 1px solid #e6ecf2; scroll-margin-top: 100px; }
-.home-workflow ol { padding: 0; margin: 0; list-style: none; }
-.home-workflow li { display: flex; gap: 22px; padding-bottom: 30px; margin-bottom: 30px; border-bottom: 1px solid #e6ecf2; }
-.home-workflow li:last-child { margin: 0; padding: 0; border: 0; }
-.home-workflow h3 { margin-top: 0; }
-.home-workflow p { margin: 8px 0 14px; font-size: 15px; }
-.home-workflow a { color: #0066c9; font-size: 14px; font-weight: 650; text-decoration: none; }
-.home-step-number { color: #0071e3; font-size: 14px; padding-top: 4px; }
-.home-example { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 70px; border-top: 1px solid #e6ecf2; }
-.home-section-copy { max-width: 400px; margin-bottom: 28px; }
-.home-example-card { background: #f5f8fc; border: 1px solid #e3eaf2; border-radius: 24px; padding: 32px; }
-.home-example-tag { background: #e2efff; color: #0064c4; padding: 6px 9px; border-radius: 6px; font-size: 11px; }
-.home-example-card h3 { font-size: 30px; margin-top: 24px; }
-.home-example-card p, .home-example-card small { font-size: 12px; color: #657180; }
+
+.home-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+  gap: clamp(32px, 5vw, 72px);
+  align-items: center;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: clamp(48px, 7vw, 96px) clamp(20px, 5vw, 56px) clamp(56px, 7vw, 88px);
+}
+.home-hero__scope { margin: 0 0 22px; color: var(--route); font-size: 14px; font-weight: 600; }
+.home-hero h1 { max-width: 11em; font-size: clamp(44px, 6vw, 76px); line-height: 1.14; }
+.home-lead { max-width: 30em; margin: 28px 0 32px; color: var(--ink-soft); font-size: clamp(17px, 1.6vw, 19px); line-height: 1.75; }
+.home-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 14px 28px; }
+.home-page .primary-action { min-width: 0; text-decoration: none; }
+.home-text-link { color: var(--ink); font-size: 15px; font-weight: 600; text-decoration: underline; text-decoration-color: var(--lane); text-decoration-thickness: 3px; text-underline-offset: 6px; }
+.home-text-link:hover { text-decoration-color: var(--ink); }
+.home-caption { margin: 22px 0 0; color: var(--ink-soft); font-size: 13px; }
+
+/* 히어로 지도 — 페이지에서 유일하게 크게 쓰는 시각 요소 */
+.alley-map { margin: 0; }
+.alley-map svg { display: block; width: 100%; height: auto; border-radius: 14px; box-shadow: 0 0 0 1px var(--line); }
+.alley-map__land { fill: #E4E9E0; }
+.alley-map__blocks rect { fill: #D8DFD3; }
+.alley-map__alleys path { fill: none; stroke: #FBFCFA; stroke-width: 7; stroke-linecap: round; }
+.alley-map__roads path { fill: none; stroke: #FBFCFA; stroke-width: 20; stroke-linecap: round; }
+.alley-map__roads { filter: drop-shadow(0 0 1px #B9C2B5); }
+.alley-map__radar circle { fill: none; stroke: var(--route); stroke-width: 1.25; opacity: .38; }
+.alley-map__radar circle:nth-child(2) { opacity: .26; }
+.alley-map__radar circle:nth-child(3) { opacity: .16; }
+.alley-map__sweep { fill: var(--route); opacity: .1; transform-origin: 236px 208px; }
+.alley-map__areas path { fill: var(--lane); fill-opacity: .55; stroke: var(--ink); stroke-width: 2; stroke-dasharray: 7 5; stroke-linejoin: round; }
+.alley-map__tags rect { fill: var(--ink); }
+.alley-map__tags text { fill: #fff; font-family: var(--font-body); font-size: 12.5px; font-weight: 600; text-anchor: middle; }
+.alley-map figcaption { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; color: var(--ink-soft); font-size: 13px; line-height: 1.6; }
+.legend-swatch { flex: 0 0 auto; width: 16px; height: 12px; margin-top: 4px; border: 1.5px dashed var(--ink); border-radius: 2px; background: rgba(242, 193, 46, .55); }
+
+/* 첫 방문 때 한 번만: 상권 경계가 그려지고 레이더가 한 바퀴 돕니다. */
+@media (prefers-reduced-motion: no-preference) {
+  .alley-map__areas path { animation: area-draw 900ms cubic-bezier(.3, .7, .2, 1) both; }
+  .alley-map__areas .area-a { animation-delay: 150ms; }
+  .alley-map__areas .area-b { animation-delay: 380ms; }
+  .alley-map__areas .area-c { animation-delay: 610ms; }
+  .alley-map__tags g { animation: tag-in 400ms ease-out both; animation-delay: 900ms; }
+  .alley-map__sweep { animation: radar-sweep 1800ms cubic-bezier(.4, 0, .2, 1) 300ms both; }
+}
+@keyframes area-draw { from { fill-opacity: 0; stroke-dashoffset: 120; opacity: 0; } to { fill-opacity: .55; stroke-dashoffset: 0; opacity: 1; } }
+@keyframes tag-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes radar-sweep { from { transform: rotate(-120deg); opacity: 0; } 20% { opacity: .14; } to { transform: rotate(240deg); opacity: .1; } }
+
+/* 본문 섹션 */
+.home-section { max-width: 1240px; margin: 0 auto; padding: clamp(64px, 8vw, 104px) clamp(20px, 5vw, 56px); border-top: 1px solid var(--line); }
+.home-section h2 { margin: 0; font-size: clamp(28px, 3.4vw, 40px); line-height: 1.3; }
+.home-section h3 { margin: 0 0 8px; font-size: 20px; line-height: 1.4; }
+.home-section p { color: var(--ink-soft); line-height: 1.75; }
+.home-section-copy { max-width: 26em; margin: 18px 0 26px; }
+
+.home-values { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 2fr); gap: clamp(32px, 5vw, 72px); }
+.home-value-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(20px, 3vw, 40px); }
+.home-value-grid p { margin: 0; font-size: 15px; }
+.home-glyph { width: 40px; height: 40px; margin-bottom: 18px; fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.home-glyph .fill-ink { fill: var(--ink); stroke: none; }
+.home-glyph .fill-lane { fill: var(--lane); fill-opacity: .7; stroke-dasharray: 3 2.5; }
+.home-glyph .dashed { stroke-dasharray: 4 4; }
+
+.home-workflow { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: clamp(32px, 6vw, 88px); scroll-margin-top: 90px; }
+.home-route { position: relative; margin: 0; padding: 0; list-style: none; }
+.home-route::before { content: ""; position: absolute; top: 18px; bottom: 40px; left: 17px; width: 3px; border-radius: 2px; background: var(--ink); }
+.home-route li { position: relative; display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 22px; padding-bottom: 36px; }
+.home-route li:last-child { padding-bottom: 0; }
+.home-route__stop { position: relative; z-index: 1; display: grid; place-items: center; width: 37px; height: 37px; border: 3px solid var(--ink); border-radius: 50%; color: var(--ink); background: var(--surface); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.home-route li:first-child .home-route__stop { background: var(--lane); }
+.home-route h3 { margin-top: 5px; }
+.home-route p { margin: 0 0 10px; font-size: 15px; }
+.home-route a { color: var(--route); font-size: 15px; font-weight: 600; text-underline-offset: 4px; }
+
+.home-example { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(32px, 6vw, 88px); align-items: center; }
+.home-example-card { position: relative; padding: clamp(24px, 3vw, 36px); border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.home-example-card__shape { position: absolute; top: 24px; right: 24px; width: 72px; height: auto; }
+.home-example-card__shape path { fill: var(--lane); fill-opacity: .55; stroke: var(--ink); stroke-width: 1.6; stroke-dasharray: 5 4; stroke-linejoin: round; }
+.home-example-tag { margin: 0; color: var(--ink-soft); font-size: 13px; }
+.home-example-card h3 { margin: 18px 0 4px; font-family: var(--font-display); font-size: 34px; font-weight: 400; }
+.home-example-meta { margin: 0; font-size: 14px; }
 .home-example-card dl { margin: 24px 0; }
-.home-example-card dl div { border-top: 1px solid #dce4ed; padding: 14px 0; }
-.home-example-card dt { font-size: 12px; color: #657180; }
-.home-example-card dd { margin: 5px 0 0; font-size: 15px; font-weight: 650; }
-.home-trust { text-align: center; border-top: 1px solid #e6ecf2; }
-.home-trust p { font-size: 15px; }
-.home-start { text-align: center; background: #eff6ff; border-radius: 28px; margin-bottom: 70px; }
-.home-start h2 { font-size: clamp(26px, 3vw, 36px); }
-.home-start .primary-action { margin-top: 16px; }
-.home-start .home-secondary { display: block; margin-top: 22px; }
-.home-footer { padding: 30px 36px; max-width: 1120px; margin: auto; color: #74808c; font-size: 12px; border-top: 1px solid #e6ecf2; }
+.home-example-card dl div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; padding: 13px 0; border-top: 1px solid var(--line); }
+.home-example-card dt { color: var(--ink-soft); font-size: 14px; }
+.home-example-card dd { margin: 0; font-size: 14px; font-weight: 600; text-align: right; }
+.home-example-card small { display: block; color: var(--ink-soft); font-size: 13px; line-height: 1.6; }
+
+.home-trust { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: clamp(32px, 6vw, 88px); }
+.home-trust > div > p { max-width: 34em; margin: 0; font-size: 16px; }
+.home-trust__specimen { width: 100%; max-width: 560px; margin: 24px 0; border-collapse: collapse; background: var(--surface); font-size: 14px; }
+.home-trust__specimen caption { padding-bottom: 8px; color: var(--ink-soft); font-size: 13px; text-align: left; }
+.home-trust__specimen th, .home-trust__specimen td { padding: 12px 14px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+.home-trust__specimen thead th { color: var(--ink-soft); background: var(--paper-deep); font-weight: 600; }
+.home-trust__specimen tbody th { font-weight: 600; }
+.home-trust__specimen td { color: var(--ink-soft); }
+.home-trust__specimen .is-unavailable { color: var(--warn-ink); background: var(--warn-tint); font-weight: 600; }
+.home-trust__specimen .is-unavailable small { display: block; margin-top: 3px; font-weight: 400; }
+
+.home-start { display: flex; justify-content: space-between; align-items: center; gap: 32px; flex-wrap: wrap; padding: clamp(48px, 6vw, 72px) max(clamp(20px, 5vw, 56px), calc((100vw - 1240px) / 2 + 56px)); color: #fff; background: var(--ink); }
+.home-start h2 { margin: 0; font-size: clamp(26px, 3vw, 36px); line-height: 1.3; }
+.home-start p { margin: 10px 0 0; color: #BAC4BE; line-height: 1.7; }
+.home-start__actions { display: flex; align-items: center; flex-wrap: wrap; gap: 14px 26px; }
+.home-start .primary-action { color: var(--ink); background: var(--lane); }
+.home-start .primary-action:hover { background: #FFD449; }
+.home-start .home-text-link { color: #fff; }
+.home-start .home-text-link:hover { text-decoration-color: #fff; }
+
+.home-footer { display: grid; grid-template-columns: auto 1fr; gap: 6px 32px; align-items: center; max-width: 1240px; margin: 0 auto; padding: 32px clamp(20px, 5vw, 56px) 40px; color: var(--ink-soft); font-size: 13px; }
+.home-footer .brand { grid-row: span 2; }
+.home-footer p { margin: 0; }
 .mobile-break { display: none; }
-.tools-menu { position: relative; align-self: center; font-size: 12px; }
-.tools-menu summary { cursor: pointer; padding: 9px 11px; color: #596268; font-weight: 750; }
-.tools-menu > div { position: absolute; z-index: 30; top: 100%; right: 0; width: 160px; padding: 8px; background: white; border: 1px solid #dfe7ee; border-radius: 12px; box-shadow: 0 10px 30px #22334415; }
+
+/* 공용 헤더 도구 메뉴와 탐색 소개 (다른 화면에서도 사용) */
+.tools-menu { position: relative; align-self: center; font-size: 14px; }
+.tools-menu summary { cursor: pointer; padding: 9px 11px; color: var(--ink-soft); font-weight: 600; list-style: none; }
+.tools-menu summary::-webkit-details-marker { display: none; }
+.tools-menu summary::after { content: ""; display: inline-block; width: 6px; height: 6px; margin: 0 0 3px 8px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); }
+.tools-menu[open] summary { color: var(--ink); }
+.tools-menu > div { position: absolute; z-index: 30; top: calc(100% + 6px); right: 0; width: 176px; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 28px rgba(30, 38, 34, .12); }
 .tools-menu a { display: block; }
 .explore-intro { max-width: 1380px; margin: auto; padding: 48px clamp(20px, 5vw, 72px) 24px; }
-.explore-intro h1 { font-size: clamp(30px, 4vw, 48px); line-height: 1.25; }
-.explore-intro > p:last-child { color: #66717e; font-size: 15px; line-height: 1.8; }
+.explore-intro h1 { font-size: clamp(32px, 4vw, 52px); line-height: 1.2; }
+.explore-intro > p:last-child { color: var(--ink-soft); font-size: 16px; line-height: 1.75; }
 #explorer-title, #favorites-title { scroll-margin-top: 160px; }
-.home-page a:focus-visible, .tools-menu summary:focus-visible { outline: 3px solid #0071e3; outline-offset: 4px; }
+
+@media (max-width: 900px) {
+  .home-hero { grid-template-columns: 1fr; }
+  .home-hero h1 { max-width: none; }
+  .home-values, .home-workflow, .home-example, .home-trust { grid-template-columns: 1fr; }
+}
 @media (max-width: 700px) {
   .site-header { height: auto; }
   .site-header .top-navigation { display: flex; flex-wrap: wrap; justify-content: flex-start; }
   .home-header { flex-wrap: wrap; gap: 8px; }
   .home-header .top-navigation { justify-content: flex-start; flex-wrap: wrap; width: 100%; }
-  .home-hero { padding: 54px 20px 0; }
-  .home-hero h1 { font-size: clamp(35px, 8vw, 50px); }
-  .home-actions { flex-direction: column; gap: 18px; }
-  .home-journey { gap: 10px; padding: 22px 12px; font-size: 10px; }
-  .home-journey b { margin-left: 4px; font-size: 12px; }
-  .home-section { padding: 55px 24px; }
-  .home-value-grid, .home-workflow, .home-example { grid-template-columns: 1fr; gap: 28px; }
-  .home-value-grid { margin-top: 28px; }
-  .home-example-card { padding: 24px; }
-  .home-start { margin: 0 16px 40px; }
-  .home-start h2 { font-size: 28px; }
-  .home-footer { padding: 24px; }
+  .home-hero { padding-top: 40px; }
+  .home-hero h1 { font-size: clamp(38px, 11vw, 52px); }
+  .home-actions { align-items: flex-start; flex-direction: column; }
+  .home-value-grid { grid-template-columns: 1fr; gap: 28px; }
+  .home-start { flex-direction: column; align-items: flex-start; }
+  .home-start__actions { align-items: flex-start; flex-direction: column; }
+  .home-footer { grid-template-columns: 1fr; }
+  .home-footer .brand { grid-row: auto; margin-bottom: 8px; }
   .mobile-break { display: block; }
 }

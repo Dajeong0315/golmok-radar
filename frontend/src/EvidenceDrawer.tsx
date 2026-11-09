@@ -26,7 +26,7 @@ export function EvidenceDrawer({ comparisonId, metricKey, onClose }: Props) {
       {!evidence && !error ? <p className="drawer-loading">근거 데이터를 불러오는 중입니다.</p> : null}
       {error ? <p className="error-banner">{error}</p> : null}
       {evidence ? <>
-        <p className="eyebrow">DATA EVIDENCE</p>
+        <p className="eyebrow">지표 근거</p>
         <h2 id="evidence-title">{evidence.label}</h2>
         <dl className="evidence-meta">
           <div><dt>제공기관</dt><dd>{evidence.provider}</dd></div>

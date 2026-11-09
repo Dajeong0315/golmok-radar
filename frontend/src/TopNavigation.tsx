@@ -22,7 +22,7 @@ export function TopNavigation({ active }: { active?: NavigationKey }) {
     </details> : null}
     {configured ? <span className="account-control">
       {user ? <><span className="account-control__status">{transferStatus === "saving" ? "기록 저장 중" : transferStatus === "failed" ? "기록 저장 실패" : transferStatus === "complete" ? "기록 저장 완료" : "카카오 로그인됨"}</span>{transferStatus === "failed" ? <button onClick={() => void retryTransfer()}>다시 저장</button> : null}<button onClick={() => void signOut()}>로그아웃</button></> : <span><button disabled={loading} onClick={() => void signInWithKakao()}>카카오로 저장하기</button><small className="account-control__hint">남아 있는 이용 기록을 이 계정에 저장합니다.</small></span>}
-      {error ? <small role="alert">로그인 오류: {error}</small> : null}
+      {error ? <small className="account-control__error" role="alert">로그인 오류: {error}</small> : null}
     </span> : null}
   </nav>;
 }

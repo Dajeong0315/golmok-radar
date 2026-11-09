@@ -46,6 +46,6 @@ export function HomePage() {
       <section className="home-section home-trust"><p className="eyebrow">골목 레이더의 약속</p><h2>판단의 근거를 더하고,<br />결정은 당신에게.</h2><p>공식 데이터의 기준분기와 출처를 밝히고,<br />없는 수치는 0 대신 ‘비교 불가’로 표시합니다.</p><p>상권 통계는 개별 가게의 매출이나 창업 성공을 보장하지 않아요.<br />현장과 계약 조건은 직접 확인하고 전문가의 도움을 받으세요.</p></section>
       <section className="home-section home-start"><h2>첫걸음, 가볍게 시작해 볼까요?</h2><p>관심 상권과 매물 기록은 카카오 로그인으로 계정에 저장할 수 있어요.</p><a className="primary-action" href="#quiz">내 창업 조건 정리하기 <span aria-hidden="true">→</span></a><a className="home-secondary" href="#explore">상권부터 둘러보기</a></section>
     </main>
-    <footer className="home-footer"><a className="brand" href="#home">골목 레이더</a><p>서울 공식 상권 · 같은 기준의 비교 · 모든 수치의 근거</p><p>개업 후 리뷰 분석은 준비 중입니다.</p></footer>
+    <footer className="home-footer"><a className="brand" href="#home">골목 레이더</a><p>서울 공식 상권 · 같은 기준의 비교 · 모든 수치의 근거</p><p>개업 후에는 공개 리뷰 표본으로 내 가게와 주변 반응을 비교해 볼 수 있어요.</p></footer>
   </div>;
 }

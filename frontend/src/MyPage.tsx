@@ -56,7 +56,7 @@ export function MyPage() {
   }, [favorites.join(",")]);
 
   if (loading) return <main className="mypage-state">계정 정보를 확인하는 중입니다.</main>;
-  if (!configured || !user) return <main className="mypage-state"><header className="site-header"><a className="brand" href="#home">골목 레이더</a><TopNavigation /></header><section><p className="eyebrow">MY RECORDS</p><h1>내 기록은 로그인 후에<br />안전하게 관리할 수 있어요.</h1><p>테스트 결과, 관심 상권, 매물 워크시트는 카카오 로그인 후 내 계정에서만 확인합니다.</p>{configured ? <button className="primary-action" onClick={() => void signInWithKakao()}>카카오로 로그인하기</button> : <p>현재 로그인 설정을 준비 중입니다.</p>}</section></main>;
+  if (!configured || !user) return <main className="mypage-state"><header className="site-header"><a className="brand" href="#home"><span className="brand-mark">G</span><span>골목 레이더</span></a><TopNavigation /></header><section><p className="eyebrow">MY RECORDS</p><h1>내 기록은 로그인 후에<br />안전하게 관리할 수 있어요.</h1><p>테스트 결과, 관심 상권, 매물 워크시트는 카카오 로그인 후 내 계정에서만 확인합니다.</p>{configured ? <button className="primary-action" onClick={() => void signInWithKakao()}>카카오로 로그인하기</button> : <p>현재 로그인 설정을 준비 중입니다.</p>}</section></main>;
 
   const renameRecord = async (record: AccountRecord) => {
     const title = window.prompt("기록 이름", record.title)?.trim();
@@ -96,7 +96,7 @@ export function MyPage() {
   const visibleFavorites = loadedUserId === user.id ? favorites : [];
   const visibleWorksheets = loadedUserId === user.id ? worksheets : [];
   return <main className="mypage">
-    <header className="site-header"><a className="brand" href="#home">골목 레이더</a><TopNavigation /></header>
+    <header className="site-header"><a className="brand" href="#home"><span className="brand-mark">G</span><span>골목 레이더</span></a><TopNavigation /></header>
     <section className="mypage-hero"><p className="eyebrow">MY RECORDS</p><h1>{user.user_metadata?.nickname || "나"}의 준비 기록</h1><p>저장한 시점의 결과와 입력값을 관리할 수 있어요.</p><div><a href="#explore">상권 탐색하기</a></div></section>
     {message ? <p className="selection-notice">{message}</p> : null}
     <section className="mypage-section"><div className="section-heading"><div><p className="eyebrow">테스트 결과</p><h2>내 창업 조건</h2></div><a className="primary-action mypage-retest" href="#quiz?restart=1">테스트 다시 해보기</a></div>{profileRecords.length ? <div className="mypage-grid">{profileRecords.map((record) => <article key={record.recordId}><small>{new Date(record.updatedAt).toLocaleDateString("ko-KR")}</small><a className="mypage-card-title" href={`#quiz?record=${encodeURIComponent(record.recordId)}`}>{record.title}</a><div className="mypage-card-actions"><button onClick={() => void renameRecord(record)}>이름 변경</button><button onClick={() => void deleteRecord(record)}>삭제</button></div></article>)}</div> : <p className="empty-favorites">아직 계정에 저장된 테스트 결과가 없습니다. 로그인 전 결과는 다음 로그인 때 자동 저장됩니다.</p>}</section>

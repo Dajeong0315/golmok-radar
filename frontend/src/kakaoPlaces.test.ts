@@ -20,8 +20,9 @@ describe("nearby place selection", () => {
     expect(selectNearbyPlaces([place("1"), place("2"), place("3"), place("4")], "1", 2).map((item) => item.id)).toEqual(["2", "3"]);
   });
 
-  it("matches the selected industry leaf and excludes lookalike subcategories", () => {
+  it("matches the selected industry category path and excludes lookalike subcategories", () => {
     expect(matchesIndustryCategory("교육 > 컴퓨터학원", ["컴퓨터학원"])).toBe(true);
+    expect(matchesIndustryCategory("음식점 > 카페 > 커피전문점 > 브랜드명", ["카페", "커피전문점"])).toBe(true);
     expect(matchesIndustryCategory("병원 > 치과의원", ["의원"], ["치과", "한의원"])).toBe(false);
     expect(matchesIndustryCategory("음식점 > 카페", ["한식"])).toBe(false);
   });

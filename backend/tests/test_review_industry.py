@@ -8,6 +8,7 @@ from app.schemas import ReviewPlaceRef
 
 def test_official_and_kakao_categories_use_explicit_or_conservative_matches() -> None:
     assert category_matches("CS100010", "커피-음료", "음식점 > 카페 > 디저트카페")
+    assert category_matches("CS100010", "커피-음료", "음식점 > 카페 > 커피전문점 > 브랜드명")
     assert not category_matches("CS100010", "커피-음료", "음식점 > 한식")
     assert category_matches("CS200004", "컴퓨터학원", "교육 > 컴퓨터학원")
     assert not category_matches("CS200006", "일반의원", "병원 > 치과의원")

@@ -112,8 +112,12 @@ export async function searchNearbyCafes(latitude: number, longitude: number): Pr
 }
 
 export function matchesIndustryCategory(category: string, terms: string[], excludedTerms: string[] = []): boolean {
-  const leaf = category.split(">").at(-1)?.replace(/\s+/g, "") || "";
-  return Boolean(leaf) && !excludedTerms.some((term) => leaf.includes(term)) && terms.some((term) => leaf.includes(term));
+  // Kakao often appends a brand as the leaf (for example, 카페 > 커피전문점 > 브랜드명).
+  // Validate the full category path so a valid parent classification is not rejected.
+  const normalizedCategory = category.replace(/\s+/g, "");
+  return Boolean(normalizedCategory)
+    && !excludedTerms.some((term) => normalizedCategory.includes(term.replace(/\s+/g, "")))
+    && terms.some((term) => normalizedCategory.includes(term.replace(/\s+/g, "")));
 }
 
 export async function searchNearbyIndustry(

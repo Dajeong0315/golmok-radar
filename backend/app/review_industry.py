@@ -45,13 +45,13 @@ def category_terms(industry_code: str, industry_name: str) -> tuple[str, ...]:
 
 
 def category_matches(industry_code: str, industry_name: str, category: str) -> bool:
-    leaf = re.sub(r"\s+", "", category.split(">")[-1])
+    category_path = re.sub(r"\s+", "", category)
     terms = category_terms(industry_code, industry_name)
-    if not leaf or not terms:
+    if not category_path or not terms:
         return False
-    if any(term in leaf for term in EXCLUSIONS.get(industry_code, ())):
+    if any(term in category_path for term in EXCLUSIONS.get(industry_code, ())):
         return False
-    return any(term in leaf for term in terms)
+    return any(term in category_path for term in terms)
 
 
 def verified_kakao_place(place: ReviewPlaceRef, rest_api_key: str) -> ReviewPlaceRef:

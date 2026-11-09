@@ -97,6 +97,8 @@ export function FounderQuizPage({ restart = false, recordId = null }: { restart?
     if (!user) registerAnonymousRecord(localStorage);
     if (client && user) void saveAccountRecord(client, user.id, { recordId: crypto.randomUUID(), kind: "founder_profile", title: "창업 성향 테스트 결과", payload: completed, schemaVersion: PROFILE_VERSION, createdAt: completed.completedAt, updatedAt: completed.completedAt }).catch(() => undefined);
     setMode("result");
+    // A restart URL must not remain after completion: reloading it would start another blank test.
+    if (restart) window.location.hash = "quiz";
   };
 
   const startAgain = () => {

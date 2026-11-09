@@ -3,7 +3,7 @@ import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
 
 import { getSupabaseClient } from "./supabase";
 import { consumeAuthReturnHash, rememberAuthReturnHash } from "./authReturn";
-import { assignAnonymousTransfer, captureAnonymousTransfer, claimAccountLocalCache, clearTransferredAnonymousRecords, pendingAnonymousTransfer, transferReturnHash } from "./anonymousSession";
+import { assignAnonymousTransfer, captureAnonymousTransfer, claimAccountLocalCache, clearTransferredAnonymousRecords, pendingAnonymousTransfer, releaseAccountLocalCache, transferReturnHash } from "./anonymousSession";
 import { transferAnonymousRecords } from "./accountStore";
 
 type AuthState = {
@@ -35,21 +35,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [transferStatus, setTransferStatus] = useState<AuthState["transferStatus"]>("idle");
   const activeUserId = useRef<string | null>(null);
+  const transferringUserId = useRef<string | null>(null);
 
   async function transferPendingRecords(userId: string): Promise<void> {
-    if (!client) return;
-    const snapshot = pendingAnonymousTransfer(localStorage, userId);
-    if (!snapshot) return;
+    if (!client || transferringUserId.current === userId || !pendingAnonymousTransfer(localStorage, userId)) return;
+    transferringUserId.current = userId;
     setTransferStatus("saving");
     try {
-      await transferAnonymousRecords(client, userId, snapshot);
-      if (activeUserId.current !== userId) return;
-      clearTransferredAnonymousRecords(localStorage, userId);
-      setTransferStatus("complete");
+      let snapshot = pendingAnonymousTransfer(localStorage, userId);
+      while (snapshot && activeUserId.current === userId) {
+        await transferAnonymousRecords(client, userId, snapshot);
+        if (activeUserId.current !== userId) return;
+        clearTransferredAnonymousRecords(localStorage, userId);
+        snapshot = pendingAnonymousTransfer(localStorage, userId);
+      }
+      if (activeUserId.current === userId) setTransferStatus("complete");
     } catch (transferError) {
       if (activeUserId.current !== userId) return;
       setTransferStatus("failed");
       setError(transferError instanceof Error ? `기록 저장에 실패했습니다: ${transferError.message}` : "기록 저장에 실패했습니다.");
+    } finally {
+      transferringUserId.current = null;
     }
   }
 
@@ -60,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!active) return;
       setSession(data.session);
       const nextUserId = data.session?.user?.id || null;
+      const previousUserId = activeUserId.current;
       if (activeUserId.current !== nextUserId) setTransferStatus("idle");
       activeUserId.current = nextUserId;
       if (data.session?.user) {
@@ -67,12 +74,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         claimAccountLocalCache(localStorage, data.session.user.id);
         restoreAuthReturnHash(sessionStorage, data.session.user.id);
         void transferPendingRecords(data.session.user.id);
+      } else if (!sessionError && !previousUserId) {
+        releaseAccountLocalCache(localStorage);
       }
       setError(sessionError?.message || null);
       setLoading(false);
     });
-    const { data } = client.auth.onAuthStateChange((_event, nextSession) => {
+    const { data } = client.auth.onAuthStateChange((event, nextSession) => {
       if (!active) return;
+      if (event === "SIGNED_OUT") releaseAccountLocalCache(localStorage);
       setSession(nextSession);
       const nextUserId = nextSession?.user?.id || null;
       if (activeUserId.current !== nextUserId) setTransferStatus("idle");

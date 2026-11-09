@@ -4,6 +4,7 @@ import { PROPERTY_WORKSHEETS_KEY } from "./propertyWorksheet";
 
 export const ANONYMOUS_SESSION_KEY = "golmok-radar:anonymous-session:v1";
 export const ANONYMOUS_TRANSFER_KEY = "golmok-radar:anonymous-transfer:v1";
+const ACCOUNT_TRANSFER_PREFIX = "golmok-radar:account-transfer:v1:";
 export const ANONYMOUS_RETENTION_MS = 60 * 60 * 1000;
 export const LOGIN_PROTECTION_MS = 15 * 60 * 1000;
 
@@ -35,8 +36,32 @@ export type AnonymousStatus = {
 
 type StoragePort = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
+function accountTransferKey(userId: string): string {
+  return `${ACCOUNT_TRANSFER_PREFIX}${userId}`;
+}
+
+function accountTransfers(storage: StoragePort, userId: string): AnonymousTransferSnapshot[] {
+  const stored = parse<AnonymousTransferSnapshot | AnonymousTransferSnapshot[]>(storage, accountTransferKey(userId));
+  const snapshots = Array.isArray(stored) ? stored : stored ? [stored] : [];
+  return snapshots.filter((snapshot) => validTransfer(snapshot) && snapshot.userId === userId);
+}
+
+function appendAccountTransfer(storage: StoragePort, snapshot: AnonymousTransferSnapshot & { userId: string }): void {
+  const snapshots = accountTransfers(storage, snapshot.userId);
+  if (snapshots.some((existing) => existing.batchId === snapshot.batchId)) return;
+  storage.setItem(accountTransferKey(snapshot.userId), JSON.stringify([...snapshots, snapshot]));
+}
+
+function moveAssignedTransfer(storage: StoragePort): void {
+  const transfer = parse<AnonymousTransferSnapshot>(storage, ANONYMOUS_TRANSFER_KEY);
+  if (!validTransfer(transfer) || !transfer.userId) return;
+  appendAccountTransfer(storage, transfer as AnonymousTransferSnapshot & { userId: string });
+  storage.removeItem(ANONYMOUS_TRANSFER_KEY);
+}
+
 /** Keep a previous account's browser cache out of the newly signed-in account. */
 export function claimAccountLocalCache(storage: StoragePort, userId: string): void {
+  moveAssignedTransfer(storage);
   const previousOwner = storage.getItem(SYNC_OWNER_KEY);
   if (previousOwner && previousOwner !== userId) {
     RECORD_KEYS.forEach((key) => storage.removeItem(key));
@@ -47,11 +72,23 @@ export function claimAccountLocalCache(storage: StoragePort, userId: string): vo
   storage.setItem(SYNC_OWNER_KEY, userId);
 }
 
+/** End the account's browser session without treating its cached records as guest data. */
+export function releaseAccountLocalCache(storage: StoragePort): void {
+  moveAssignedTransfer(storage);
+  if (!storage.getItem(SYNC_OWNER_KEY)) return;
+  RECORD_KEYS.forEach((key) => storage.removeItem(key));
+  storage.removeItem(ANONYMOUS_SESSION_KEY);
+  storage.removeItem(SYNC_OWNER_KEY);
+  announce();
+}
+
 /** Remove this account's cached records after a confirmed server deletion. */
 export function clearAccountRecordCache(storage: StoragePort, userId: string): void {
   if (storage.getItem(SYNC_OWNER_KEY) !== userId) return;
+  moveAssignedTransfer(storage);
   RECORD_KEYS.forEach((key) => storage.removeItem(key));
   storage.removeItem(ANONYMOUS_SESSION_KEY);
+  storage.removeItem(accountTransferKey(userId));
   const transfer = parse<AnonymousTransferSnapshot>(storage, ANONYMOUS_TRANSFER_KEY);
   if (!validTransfer(transfer) || !transfer.userId || transfer.userId === userId) storage.removeItem(ANONYMOUS_TRANSFER_KEY);
   announce();
@@ -169,17 +206,20 @@ export function assignAnonymousTransfer(storage: StoragePort, userId: string, no
     snapshot = captureAnonymousTransfer(storage, snapshot.returnHash, now);
     if (!snapshot) return;
   }
-  storage.setItem(ANONYMOUS_TRANSFER_KEY, JSON.stringify({ ...snapshot, userId }));
+  appendAccountTransfer(storage, { ...snapshot, userId });
+  storage.removeItem(ANONYMOUS_TRANSFER_KEY);
   announce();
 }
 
 export function transferReturnHash(storage: StoragePort, userId: string): string | null {
-  const snapshot = parse<AnonymousTransferSnapshot>(storage, ANONYMOUS_TRANSFER_KEY);
-  return validTransfer(snapshot) && snapshot.userId === userId && snapshot.returnHash.startsWith("#") ? snapshot.returnHash : null;
+  const snapshots = accountTransfers(storage, userId);
+  const snapshot = snapshots[snapshots.length - 1] || pendingAnonymousTransfer(storage, userId);
+  return snapshot?.returnHash.startsWith("#") ? snapshot.returnHash : null;
 }
 
 export function pendingAnonymousTransfer(storage: StoragePort, userId: string): AnonymousTransferSnapshot | null {
-  const snapshot = parse<AnonymousTransferSnapshot>(storage, ANONYMOUS_TRANSFER_KEY);
+  const snapshot = accountTransfers(storage, userId)[0]
+    || parse<AnonymousTransferSnapshot>(storage, ANONYMOUS_TRANSFER_KEY);
   return validTransfer(snapshot) && snapshot.userId === userId ? snapshot : null;
 }
 
@@ -191,7 +231,11 @@ export function clearTransferredAnonymousRecords(storage: StoragePort, userId: s
     if (snapshot.records[key] !== undefined && storage.getItem(key) === snapshot.records[key]) storage.removeItem(key);
   });
   storage.removeItem(ANONYMOUS_SESSION_KEY);
-  storage.removeItem(ANONYMOUS_TRANSFER_KEY);
+  const remaining = accountTransfers(storage, userId).filter((candidate) => candidate.batchId !== snapshot.batchId);
+  if (remaining.length) storage.setItem(accountTransferKey(userId), JSON.stringify(remaining));
+  else storage.removeItem(accountTransferKey(userId));
+  const legacy = parse<AnonymousTransferSnapshot>(storage, ANONYMOUS_TRANSFER_KEY);
+  if (validTransfer(legacy) && legacy.userId === userId && legacy.batchId === snapshot.batchId) storage.removeItem(ANONYMOUS_TRANSFER_KEY);
   announce();
 }
 

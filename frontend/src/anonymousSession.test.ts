@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ANONYMOUS_RETENTION_MS, ANONYMOUS_SESSION_KEY, ANONYMOUS_TRANSFER_KEY, LOGIN_PROTECTION_MS, assignAnonymousTransfer, captureAnonymousTransfer, claimAccountLocalCache, clearAccountRecordCache, clearTransferredAnonymousRecords, expireAnonymousSession, touchAnonymousActivity, transferReturnHash } from "./anonymousSession";
+import { ANONYMOUS_RETENTION_MS, ANONYMOUS_SESSION_KEY, ANONYMOUS_TRANSFER_KEY, LOGIN_PROTECTION_MS, assignAnonymousTransfer, captureAnonymousTransfer, claimAccountLocalCache, clearAccountRecordCache, clearTransferredAnonymousRecords, expireAnonymousSession, pendingAnonymousTransfer, registerAnonymousRecord, releaseAccountLocalCache, touchAnonymousActivity, transferReturnHash } from "./anonymousSession";
 import { FAVORITES_KEY, SYNC_OWNER_KEY } from "./favorites";
 import { PROFILE_HISTORY_KEY } from "./founderProfile";
 
@@ -60,9 +60,10 @@ describe("anonymous session retention", () => {
     expect(snapshot?.records[FAVORITES_KEY]).toBe('["3120052"]');
     expect(expireAnonymousSession(local, ANONYMOUS_RETENTION_MS + 1)).toMatchObject({ state: "protected" });
     assignAnonymousTransfer(local, "user-a", ANONYMOUS_RETENTION_MS + 1);
-    expect(JSON.parse(local.getItem(ANONYMOUS_TRANSFER_KEY) || "{}").userId).toBe("user-a");
+    expect(pendingAnonymousTransfer(local, "user-a")?.userId).toBe("user-a");
     expect(transferReturnHash(local, "user-a")).toBe("#explore");
-    expect(expireAnonymousSession(local, ANONYMOUS_RETENTION_MS + 20 * 60_000)).toMatchObject({ state: "protected" });
+    claimAccountLocalCache(local, "user-a");
+    expect(expireAnonymousSession(local, ANONYMOUS_RETENTION_MS + 20 * 60_000)).toMatchObject({ state: "empty" });
   });
 
   it("does not upload an expired anonymous record when OAuth returns after protection", () => {
@@ -82,7 +83,7 @@ describe("anonymous session retention", () => {
     captureAnonymousTransfer(local, "#explore", 1);
     local.setItem(FAVORITES_KEY, '["old","new"]');
     assignAnonymousTransfer(local, "user-a", LOGIN_PROTECTION_MS + 2);
-    const snapshot = JSON.parse(local.getItem(ANONYMOUS_TRANSFER_KEY) || "{}");
+    const snapshot = pendingAnonymousTransfer(local, "user-a")!;
     expect(snapshot.userId).toBe("user-a");
     expect(snapshot.records[FAVORITES_KEY]).toBe('["old","new"]');
   });
@@ -118,6 +119,59 @@ describe("anonymous session retention", () => {
     local.setItem(SYNC_OWNER_KEY, "user-a");
     expect(expireAnonymousSession(local, 0)).toMatchObject({ state: "empty" });
     expect(captureAnonymousTransfer(local, "#explore", 0)).toBeNull();
+  });
+
+  it("clears an old account cache and lets the signed-out visitor create guest records", () => {
+    const local = storage();
+    local.setItem(SYNC_OWNER_KEY, "user-a");
+    local.setItem(FAVORITES_KEY, '["private-a"]');
+    releaseAccountLocalCache(local);
+    expect(local.getItem(SYNC_OWNER_KEY)).toBeNull();
+    expect(local.getItem(FAVORITES_KEY)).toBeNull();
+    local.setItem(FAVORITES_KEY, '["guest"]');
+    registerAnonymousRecord(local, 0);
+    expect(expireAnonymousSession(local, 1)).toMatchObject({ state: "active", hasRecords: true });
+    expect(captureAnonymousTransfer(local, "#explore", 2)?.records[FAVORITES_KEY]).toBe('["guest"]');
+  });
+
+  it("keeps a failed account transfer private while a new guest starts", () => {
+    const local = storage();
+    local.setItem(FAVORITES_KEY, '["original-guest"]');
+    expireAnonymousSession(local, 0);
+    captureAnonymousTransfer(local, "#explore", 1);
+    assignAnonymousTransfer(local, "user-a", 2);
+    claimAccountLocalCache(local, "user-a");
+    releaseAccountLocalCache(local);
+    expect(pendingAnonymousTransfer(local, "user-a")?.records[FAVORITES_KEY]).toBe('["original-guest"]');
+    expect(pendingAnonymousTransfer(local, "user-b")).toBeNull();
+    local.setItem(FAVORITES_KEY, '["new-guest"]');
+    registerAnonymousRecord(local, 3);
+    expect(expireAnonymousSession(local, 4).state).toBe("active");
+    expect(captureAnonymousTransfer(local, "#quiz", 5)?.records[FAVORITES_KEY]).toBe('["new-guest"]');
+    expect(pendingAnonymousTransfer(local, "user-a")?.records[FAVORITES_KEY]).toBe('["original-guest"]');
+  });
+
+  it("keeps both pending batches when a guest returns to the same account", () => {
+    const local = storage();
+    local.setItem(FAVORITES_KEY, '["first-guest"]');
+    expireAnonymousSession(local, 0);
+    captureAnonymousTransfer(local, "#explore", 1);
+    assignAnonymousTransfer(local, "user-a", 2);
+    claimAccountLocalCache(local, "user-a");
+    releaseAccountLocalCache(local);
+
+    local.setItem(FAVORITES_KEY, '["second-guest"]');
+    registerAnonymousRecord(local, 3);
+    captureAnonymousTransfer(local, "#quiz", 4);
+    assignAnonymousTransfer(local, "user-a", 5);
+    claimAccountLocalCache(local, "user-a");
+
+    expect(pendingAnonymousTransfer(local, "user-a")?.records[FAVORITES_KEY]).toBe('["first-guest"]');
+    expect(transferReturnHash(local, "user-a")).toBe("#quiz");
+    clearTransferredAnonymousRecords(local, "user-a");
+    expect(pendingAnonymousTransfer(local, "user-a")?.records[FAVORITES_KEY]).toBe('["second-guest"]');
+    clearTransferredAnonymousRecords(local, "user-a");
+    expect(pendingAnonymousTransfer(local, "user-a")).toBeNull();
   });
 
   it("clears a previous account cache before assigning it to a different account", () => {

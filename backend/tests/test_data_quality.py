@@ -180,7 +180,7 @@ def test_end_to_end_trial_load_and_sample_comparison(tmp_path: Path, fake_area) 
     # 매출 원천이 없는 업종은 점포 지표만 대조하고 매출을 만들지 않는다.
     store_only = next(item for item in report.sample_checks if item["industry"] == "CS100001")
     assert store_only["checked"] == ["store_count"]
-    assert {item.kind for item in report.files} == {"store", "sales", "population"}
+    assert {item.kind for item in report.files} == {"store:zip", "sales:zip", "population"}
     json_path, md_path = dq.write_report(report, tmp_path / "out")
     assert "통과" in md_path.read_text(encoding="utf-8") and json_path.exists()
 

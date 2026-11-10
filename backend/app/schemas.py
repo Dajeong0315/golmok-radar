@@ -25,6 +25,20 @@ class IndustryOption(BaseModel):
     has_sales_source: bool
 
 
+class QuarterOption(BaseModel):
+    code: str
+    label: str
+    store_rows: int
+    sales_rows: int
+    population_rows: int
+
+
+class QuarterListResponse(BaseModel):
+    default_quarter: str
+    quarters: list[QuarterOption]
+    notice: str
+
+
 class MetricAreaValue(BaseModel):
     trade_area_code: str
     status: str

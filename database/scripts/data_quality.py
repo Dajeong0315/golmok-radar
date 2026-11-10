@@ -41,8 +41,8 @@ from database.scripts.raw_sources import (  # noqa: E402
     FileManifest,
     detect_format,
     iter_csv,
-    iter_zip_csv,
     normalize,
+    resolve_quarter_file,
 )
 
 DEFAULT_OUTPUT = ROOT / "database" / "processed" / "data_quality"
@@ -307,11 +307,6 @@ def find_files(raw: Path, pattern: str) -> list[Path]:
     return sorted(path for path in raw.glob(pattern) if path.is_file())
 
 
-def year_file(raw: Path, folder: str, quarter: str) -> Path | None:
-    matches = find_files(raw, f"{folder}/*_{quarter[:4]}년.zip")
-    return matches[0] if len(matches) == 1 else None
-
-
 def load_area_codes(report: QualityReport, raw: Path) -> tuple[set[str] | None, list]:
     from database.scripts.validate_phase1 import DISTRICTS, read_dbf_from_zip
 
@@ -336,11 +331,13 @@ def load_area_codes(report: QualityReport, raw: Path) -> tuple[set[str] | None, 
 
 def readers_for(raw: Path, quarter: str, report: QualityReport) -> dict[str, SourceReader | None]:
     readers: dict[str, SourceReader | None] = {}
-    for kind, folder in (("store", "store"), ("sales", "sales")):
-        path = year_file(raw, folder, quarter)
-        if path is not None:
-            report.files.append(FileManifest.of(kind, path, ROOT))
-            readers[kind] = (lambda p=path: iter_zip_csv(p))
+    for kind in ("store", "sales"):
+        source = resolve_quarter_file(raw, kind, quarter)
+        if source is not None:
+            report.files.append(FileManifest.of(f"{kind}:{source.origin}", source.path, ROOT))
+            if source.meta_path:
+                report.files.append(FileManifest.of(f"{kind}_meta", source.meta_path, ROOT))
+            readers[kind] = source.reader
         else:
             readers[kind] = None
     population = find_files(raw, "population/*.csv")
@@ -564,13 +561,9 @@ def main(argv: list[str] | None = None) -> int:
         if report.errors:
             print("검사 오류가 있어 반영하지 않았습니다.", file=sys.stderr)
         else:
-            from database.scripts.load_data import QUARTER, load
+            from database.scripts.load_data import load
 
-            if args.quarter != QUARTER:
-                print(f"현재 적재 스크립트는 기준분기 {QUARTER}만 반영합니다.", file=sys.stderr)
-                report.applied = {"status": "skipped", "reason": f"load_data.py 기준분기 {QUARTER}"}
-            else:
-                report.applied = {"status": "applied", "counts": load(args.database_url)}
+            report.applied = {"status": "applied", "quarter": args.quarter, "counts": load(args.database_url, args.quarter)}
     json_path, md_path = write_report(report, args.output)
     data = report.to_dict()
     print(f"판정: {'통과' if data['passed'] else '실패'} — 오류 {data['error_count']}건, 경고 {data['warning_count']}건")

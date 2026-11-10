@@ -179,13 +179,16 @@ quarter_code + trade_area_code + industry_code
 
 모든 응답은 JSON을 사용합니다. API는 계산 실패를 0으로 바꾸지 않습니다.
 
+기준분기 규칙 (Phase 40): `quarter`를 생략하면 DB에 점포 원천이 적재된 가장 최근 분기를 씁니다(`DEFAULT_QUARTER` 환경 변수로 고정 가능). 적재되지 않았거나 형식이 틀린 분기는 400을 반환합니다. 한 응답의 모든 값은 같은 분기 원천에서만 나오며, 새 분기에 행이 없는 상권·업종·유동인구를 이전 분기 값으로 채우지 않습니다. `comparison_id`는 분기를 포함하므로 저장한 비교는 저장 당시 분기로 다시 열립니다. 근거 보기의 출처는 분기별 Open API 출처(`store:20262` 등)가 있으면 그것을, 없으면 연도별 ZIP 출처를 표시합니다.
+
 | 메서드·경로 | 목적 | 성공 응답 핵심 |
 | --- | --- | --- |
-| `GET /api/v1/industries?quarter=20254` | 검증·적재 완료 업종 목록 조회 | 업종 코드, 업종명 |
-| `GET /api/v1/trade-areas?industry={code}` | 탐색 가능한 상권 목록 조회 | `trade_area_code`, `name`, `district`, `area_type`, `latitude`, `longitude`, 업종별 `data_status` |
+| `GET /api/v1/quarters` | 적재된 기준분기 목록과 기본 분기 조회 (Phase 40) | `default_quarter`, 분기별 코드·이름·점포/매출/유동인구 행 수 |
+| `GET /api/v1/industries[?quarter={code}]` | 검증·적재 완료 업종 목록 조회 | 업종 코드, 업종명 |
+| `GET /api/v1/trade-areas?industry={code}[&quarter={code}]` | 탐색 가능한 상권 목록 조회 | `trade_area_code`, `name`, `district`, `area_type`, `latitude`, `longitude`, 업종별 `data_status` |
 | `GET /api/v1/trade-areas/{code}` | 상권 기본 정보 조회 | 상권 코드, 이름, 구, 구분, 지도 정보 |
 | `GET /api/v1/trade-areas/{code}/map-insight?industry={code}` | 지도 선택 근거 조회 | 같은 기준분기의 상권 단위 유동·선택 업종 매출·시간대 비중·동일 자치구 상대 위치와 결측 사유 |
-| `GET /api/v1/comparisons?codes={code1},{code2}[,{code3},{code4}]&quarter=20254` | 2~4개 상권 비교 | 기준분기, 선택 상권 배열, 지표 배열 |
+| `GET /api/v1/comparisons?codes={code1},{code2}[,{code3},{code4}][&quarter={code}]` | 2~4개 상권 비교 | 기준분기, 선택 상권 배열, 지표 배열 |
 | `GET /api/v1/comparisons/{comparison_id}/evidence/{metric_key}` | 지표 근거 조회 | 출처, 원천값, 필터, 계산식, 상태 |
 | `GET /api/v1/field-checklist` | 현장 확인 질문 조회 | 질문 배열, 분류, 안내 문구 |
 

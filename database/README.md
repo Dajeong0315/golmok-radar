@@ -4,8 +4,8 @@
 
 | 폴더 | 내용 |
 |---|---|
-| `raw/store/` | 서울시 상권분석서비스(점포-상권) 원본 zip |
-| `raw/sales/` | 서울시 상권분석서비스(추정매출-상권) 원본 zip |
+| `raw/store/` | 서울시 상권분석서비스(점포-상권) 원본 zip, 분기별 Open API CSV(`*_<분기>_OpenAPI.csv`) |
+| `raw/sales/` | 서울시 상권분석서비스(추정매출-상권) 원본 zip, 분기별 Open API CSV(`*_<분기>_OpenAPI.csv`) |
 | `raw/population/` | 서울시 상권분석서비스(길단위인구-상권) 원본 파일 |
 | `raw/area/` | 서울시 상권분석서비스(영역-상권) 원본 zip |
 | `raw/rone/` | 한국부동산원 R-ONE 소규모상가 임대료·공실률·임대가격지수 원문 JSON |
@@ -37,4 +37,4 @@
 .\.venv\Scripts\python.exe database\scripts\data_quality.py --quarter 20254 --apply
 ```
 
-`--apply`는 기존 `load_data.py`의 적재를 그대로 호출하고, 대상 DB는 `backend/.env`의 `DATABASE_URL`을 씁니다. 테스트 DB에 먼저 반영할 때만 `--database-url sqlite:///경로.db`처럼 지정하고, 운영 연결 문자열은 명령줄·문서에 남기지 않습니다. 현재 `load_data.py`는 기준분기 20254만 적재하므로 다른 분기의 `--apply`는 건너뜁니다(Phase 40에서 확장).
+`--apply`는 기존 `load_data.py`의 적재를 그대로 호출하고, 대상 DB는 `backend/.env`의 `DATABASE_URL`을 씁니다. 테스트 DB에 먼저 반영할 때만 `--database-url sqlite:///경로.db`처럼 지정하고, 운영 연결 문자열은 명령줄·문서에 남기지 않습니다.

@@ -320,3 +320,16 @@ export type AreaReviewReport = {
   message: string;
 };
 
+export interface QuarterOption {
+  code: string;
+  label: string;
+  store_rows: number;
+  sales_rows: number;
+  population_rows: number;
+}
+
+export interface QuarterListResponse {
+  default_quarter: string;
+  quarters: QuarterOption[];
+  notice: string;
+}

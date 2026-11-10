@@ -18,6 +18,24 @@
 - 이 파일로 만든 검증용 SQLite의 행 수는 상권 1,650·점포 75,985·매출 21,333으로 Phase 29 운영 적재 결과와 같아, 2026-10-29에 받은 파일과 같은 판으로 판단했습니다.
 - 유동인구(`OA-15568`)는 파일 내려받기가 없고 개인 인증키가 필요한 Open API(`VwsmTrdarFlpopQq`)로만 제공되어 이 환경에서는 받지 않았습니다.
 
+### 2026-11-10 새 분기 공개 확인 (Phase 40)
+
+- 연도별 ZIP: 점포·추정매출 모두 `_2025년.zip`까지 있습니다(2026년 ZIP 없음). 데이터셋 갱신일은 2026.09.11입니다.
+- Open API(`http://openapi.seoul.go.kr:8088/sample/json/<서비스>/1/1/<분기>`, 공식 샘플 키) 전체 건수:
+
+| 분기 | `VwsmTrdarSelngQq` 추정매출 | `VwsmTrdarStorQq` 점포 | `VwsmTrdarFlpopQq` 유동인구 |
+|---|---|---|---|
+| 20254 | 21,333 | 75,985 | 1,648 |
+| 20261 | 21,188 | 75,972 | 1,649 |
+| 20262 | 21,133 | 75,912 | 1,648 |
+| 20263 | 없음 (`INFO-200 해당하는 데이터가 없습니다.`) | — | — |
+
+- Open API 컬럼 (샘플 응답에서 확인):
+  - 점포: `STDR_YYQU_CD, TRDAR_CD, SVC_INDUTY_CD, SVC_INDUTY_CD_NM, SIMILR_INDUTY_STOR_CO, STOR_CO, FRC_STOR_CO, OPBIZ_RT, OPBIZ_STOR_CO, CLSBIZ_RT, CLSBIZ_STOR_CO` 등
+  - 추정매출: `THSMON_SELNG_AMT, THSMON_SELNG_CO, MDWK_SELNG_AMT, WKEND_SELNG_AMT, TMZON_00_06_SELNG_AMT … TMZON_21_24_SELNG_AMT` 등
+  - 유동인구: `TOT_FLPOP_CO, TMZON_00_06_FLPOP_CO … TMZON_21_24_FLPOP_CO` 등
+- 샘플 키는 최대 5행만 돌려주므로 전체 행은 개인 인증키로 `database/scripts/fetch_quarter.py`를 실행해 받아야 합니다. 받은 파일은 `database/raw/{store,sales}/<데이터셋명>_<분기>_OpenAPI.csv`와 `.meta.json`으로 저장되며, 그 분기는 ZIP 대신 이 파일로 검사·적재합니다.
+
 ### 2026-11-10 품질 검사 결과 (Phase 39)
 
 `database/scripts/data_quality.py --quarter 20254`로 위 원천을 검사했습니다. 점포 75,985행·매출 21,333행·영역 1,650곳에서 위반은 0건이고, 표본 12건의 손계산이 백엔드 계산과 일치했습니다. 유동인구 원천은 이 환경에 없어 `missing_source` 오류로 보고됩니다.

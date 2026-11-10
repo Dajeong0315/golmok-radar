@@ -9,6 +9,7 @@ import { registerAnonymousRecord } from "./anonymousSession";
 import { KakaoMap } from "./KakaoMap";
 import { TopNavigation } from "./TopNavigation";
 import { initialIndustry, rememberIndustry } from "./industrySelection";
+import { quarterFromHash, quarterLabel, resolveSelectedQuarter, useQuarters } from "./quarterSelection";
 import type { AreaMapInsightResponse, IndustryOption, TradeArea } from "./types";
 import "./styles.css";
 
@@ -18,6 +19,9 @@ export default function App() {
   const [areas, setAreas] = useState<TradeArea[]>([]);
   const [industries, setIndustries] = useState<IndustryOption[]>([]);
   const [industry, setIndustry] = useState(initialIndustry);
+  const [quarterParam, setQuarterParam] = useState(quarterFromHash);
+  const { data: quarterList } = useQuarters();
+  const quarter = resolveSelectedQuarter(quarterParam, quarterList);
   const [favorites, setFavorites] = useState<string[]>(() => loadFavorites(localStorage, user?.id ?? null));
   const [selected, setSelected] = useState<string[]>([]);
   const [district, setDistrict] = useState("전체");
@@ -32,7 +36,8 @@ export default function App() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchTradeAreas(industry, controller.signal)
+    setLoading(true);
+    fetchTradeAreas(industry, controller.signal, quarter)
       .then((data) => {
         setAreas(data);
         const cleaned = sanitizeFavorites(favorites, new Set(data.map((area) => area.code)));
@@ -43,15 +48,15 @@ export default function App() {
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [industry]);
+  }, [industry, quarter]);
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchIndustries(controller.signal)
+    fetchIndustries(controller.signal, quarter)
       .then((data) => setIndustries(data))
       .catch((reason: Error) => { if (reason.name !== "AbortError") setError(reason.message); });
     return () => controller.abort();
-  }, []);
+  }, [quarter]);
 
   useEffect(() => {
     if (!user && !mayReadLocalData(localStorage, null)) {
@@ -90,12 +95,12 @@ export default function App() {
     setMapInsight(null);
     setMapInsightLoading(true);
     setMapInsightError("");
-    fetchAreaMapInsight(focusedMapCode, industry, controller.signal)
+    fetchAreaMapInsight(focusedMapCode, industry, controller.signal, quarter)
       .then(setMapInsight)
       .catch((reason: Error) => { if (reason.name !== "AbortError") setMapInsightError(reason.message); })
       .finally(() => setMapInsightLoading(false));
     return () => controller.abort();
-  }, [focusedMapCode, industry]);
+  }, [focusedMapCode, industry, quarter]);
 
   const areaByCode = useMemo(() => new Map(areas.map((area) => [area.code, area])), [areas]);
   const districts = useMemo(() => ["전체", ...new Set(areas.map((area) => area.district_name))].sort((a, b) => a === "전체" ? -1 : b === "전체" ? 1 : a.localeCompare(b, "ko")), [areas]);
@@ -133,7 +138,7 @@ export default function App() {
 
   const goToCompare = () => {
     if (selected.length < 2) return;
-    window.location.hash = `compare?codes=${selected.join(",")}&industry=${industry}`;
+    window.location.hash = `compare?codes=${selected.join(",")}&industry=${industry}${quarter ? `&quarter=${quarter}` : ""}`;
   };
 
   return (
@@ -144,7 +149,7 @@ export default function App() {
           <span>골목 레이더</span>
         </a>
         <TopNavigation active="explore" />
-        <div className="header-context"><span>서울 · {selectedIndustry?.name || "카페"}</span><strong>2025년 4분기</strong></div>
+        <div className="header-context"><span>서울 · {selectedIndustry?.name || "카페"}</span><strong>{quarterList ? quarterLabel(quarter) : "기준분기 확인 중"}</strong></div>
       </header>
 
       <main id="explore">
@@ -160,9 +165,12 @@ export default function App() {
           </div>
 
           <div className="filters">
-            <label className="district-select"><span>업종</span><select aria-label="업종 필터" value={industry} onChange={(event) => { const code = event.target.value; setIndustry(code); rememberIndustry(code); setFocusedMapCode(""); window.history.replaceState(null, "", `#explore?industry=${code}`); }}>
+            <label className="district-select"><span>업종</span><select aria-label="업종 필터" value={industry} onChange={(event) => { const code = event.target.value; setIndustry(code); rememberIndustry(code); setFocusedMapCode(""); window.history.replaceState(null, "", `#explore?industry=${code}${quarterParam ? `&quarter=${quarterParam}` : ""}`); }}>
               {industries.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}
             </select></label>
+            {quarterList && quarterList.quarters.length > 1 ? <label className="district-select"><span>기준분기</span><select aria-label="기준분기 선택" value={quarter} onChange={(event) => { const code = event.target.value; setQuarterParam(code); setFocusedMapCode(""); setSelected([]); window.history.replaceState(null, "", `#explore?industry=${industry}&quarter=${code}`); }}>
+              {quarterList.quarters.map((item) => <option key={item.code} value={item.code}>{item.label}{item.code === quarterList.default_quarter ? " (최신)" : ""}</option>)}
+            </select></label> : null}
             <label className="district-select"><span>자치구</span><select aria-label="자치구 필터" value={district} onChange={(event) => setDistrict(event.target.value)}>{districts.map((item) => <option key={item} value={item}>{item === "전체" ? "서울 전체" : item}</option>)}</select></label>
             <label className="search-field">
               <span className="sr-only">상권 이름 검색</span>
@@ -170,7 +178,7 @@ export default function App() {
               <span>⌕</span>
             </label>
           </div>
-          <p className="filter-help">2025년 4분기 공식 점포 원천의 100개 업종을 볼 수 있습니다. 일부 업종에는 매출 원천이 없어 해당 지표가 비교 불가로 표시됩니다.</p>
+          <p className="filter-help">{quarterLabel(quarter)} 공식 점포 원천의 {industries.length || ""}개 업종을 볼 수 있습니다. 일부 업종에는 매출 원천이 없어 해당 지표가 비교 불가로 표시됩니다. 비교는 한 기준분기 안에서만 합니다.</p>
 
           {error ? <div className="error-banner">{error} API 서버의 실행 상태와 최신 코드 반영 여부를 확인해 주세요.</div> : null}
           <div className="explorer-grid">

@@ -1,3 +1,4 @@
+import { quarterLabel, useQuarters } from "./quarterSelection";
 import { TopNavigation } from "./TopNavigation";
 import "./home.css";
 
@@ -47,6 +48,8 @@ function AlleyMap() {
 }
 
 export function HomePage() {
+  const { data: quarters } = useQuarters();
+  const latestLabel = quarterLabel(quarters?.default_quarter || "");
   return <div className="home-page">
     <header className="site-header home-header">
       <a className="brand" href="#home" aria-label="골목 레이더 홈"><span className="brand-mark">G</span><span>골목 레이더</span></a>
@@ -62,7 +65,7 @@ export function HomePage() {
             <a className="primary-action" href="#quiz">내 창업 조건 정리하기</a>
             <a className="home-text-link" href="#explore">상권 바로 탐색하기</a>
           </div>
-          <p className="home-caption">로그인 없이 둘러볼 수 있어요. 기준기간은 2025년 4분기입니다.</p>
+          <p className="home-caption">로그인 없이 둘러볼 수 있어요. 기준기간은 {latestLabel}입니다.</p>
         </div>
         <AlleyMap />
       </section>
@@ -111,7 +114,7 @@ export function HomePage() {
           <h3>성수역</h3>
           <p className="home-example-meta">성동구, 발달상권, 커피-음료</p>
           <dl>
-            <div><dt>기준기간</dt><dd>2025년 4분기</dd></div>
+            <div><dt>기준기간</dt><dd>{latestLabel}</dd></div>
             <div><dt>어떤 날에 매출이 발생할까?</dt><dd>주중과 주말 매출 비중</dd></div>
             <div><dt>언제 사람들이 오갈까?</dt><dd>시간대별 유동인구 분포</dd></div>
             <div><dt>숫자는 어디서 왔을까?</dt><dd>원천값, 출처, 계산식</dd></div>

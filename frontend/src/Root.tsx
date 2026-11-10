@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 
 import App from "./App";
+import { quarterFromHash } from "./quarterSelection";
 import { parseComparisonCodes } from "./comparison";
 import { ComparisonPage } from "./ComparisonPage";
 import { FounderQuizPage } from "./FounderQuizPage";
@@ -38,7 +39,7 @@ export default function Root() {
   }, [hash]);
 
   let page;
-  if (hash.startsWith("#compare")) page = <ComparisonPage codes={parseComparisonCodes(hash)} industry={new URLSearchParams(hash.split("?")[1] || "").get("industry") || "CS100010"} />;
+  if (hash.startsWith("#compare")) page = <ComparisonPage codes={parseComparisonCodes(hash)} industry={new URLSearchParams(hash.split("?")[1] || "").get("industry") || "CS100010"} quarter={quarterFromHash(hash) || undefined} />;
   else if (hash.startsWith("#recommendations")) page = <RecommendationsPage />;
   else if (hash.startsWith("#rent")) page = <RentPage code={parseRentAreaCode(hash)} />;
   else if (hash.startsWith("#worksheet")) page = <PropertyWorksheetPage />;

@@ -1,24 +1,35 @@
-import type { AreaMapInsightResponse, AreaReportResponse, AreaReviewReport, CapturedReviewReport, ChecklistResponse, ComparisonResponse, EvidenceResponse, IndustryOption, RecommendationResponse, RentBenchmarkResponse, RentMarketListResponse, ReviewAnalysisResponse, ReviewAreaLocation, ReviewCaptureStatus, ReviewIndustryMapping, SupportProgramResponse, TradeArea } from "./types";
+import type { AreaMapInsightResponse, AreaReportResponse, AreaReviewReport, CapturedReviewReport, ChecklistResponse, ComparisonResponse, EvidenceResponse, IndustryOption, QuarterListResponse, RecommendationResponse, RentBenchmarkResponse, RentMarketListResponse, ReviewAnalysisResponse, ReviewAreaLocation, ReviewCaptureStatus, ReviewIndustryMapping, SupportProgramResponse, TradeArea } from "./types";
 
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
-export async function fetchTradeAreas(industry = "CS100010", signal?: AbortSignal): Promise<TradeArea[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/trade-areas?${new URLSearchParams({ industry })}`, { signal });
+/** 기준분기가 비어 있으면 쿼리에서 빼서 서버의 기본 분기(가장 최근 적재 분기)를 쓰게 합니다. */
+function withQuarter(params: Record<string, string>, quarter?: string): URLSearchParams {
+  return new URLSearchParams(quarter ? { ...params, quarter } : params);
+}
+
+export async function fetchQuarters(signal?: AbortSignal): Promise<QuarterListResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/quarters`, { signal });
+  if (!response.ok) throw new Error("기준분기 정보를 불러오지 못했습니다.");
+  return response.json() as Promise<QuarterListResponse>;
+}
+
+export async function fetchTradeAreas(industry = "CS100010", signal?: AbortSignal, quarter?: string): Promise<TradeArea[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/trade-areas?${withQuarter({ industry }, quarter)}`, { signal });
   if (!response.ok) {
     throw new Error("상권 정보를 불러오지 못했습니다.");
   }
   return response.json() as Promise<TradeArea[]>;
 }
 
-export async function fetchIndustries(signal?: AbortSignal): Promise<IndustryOption[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/industries?quarter=20254`, { signal });
+export async function fetchIndustries(signal?: AbortSignal, quarter?: string): Promise<IndustryOption[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/industries?${withQuarter({}, quarter)}`, { signal });
   if (!response.ok) throw new Error("업종 정보를 불러오지 못했습니다.");
   return response.json() as Promise<IndustryOption[]>;
 }
 
-export async function fetchComparison(codes: string[], industry = "CS100010", signal?: AbortSignal): Promise<ComparisonResponse> {
-  const query = new URLSearchParams({ codes: codes.join(","), quarter: "20254", industry });
+export async function fetchComparison(codes: string[], industry = "CS100010", signal?: AbortSignal, quarter?: string): Promise<ComparisonResponse> {
+  const query = withQuarter({ codes: codes.join(","), industry }, quarter);
   const response = await fetch(`${API_BASE_URL}/api/v1/comparisons?${query}`, { signal });
   if (!response.ok) {
     const body = await response.json().catch(() => null) as { detail?: string } | null;
@@ -50,14 +61,14 @@ export async function fetchRecommendations(answers: Record<string, string>, indu
   return response.json() as Promise<RecommendationResponse>;
 }
 
-export async function fetchAreaReport(code: string, industry = "CS100010", signal?: AbortSignal): Promise<AreaReportResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/trade-areas/${code}/report?${new URLSearchParams({ quarter: "20254", industry })}`, { signal });
+export async function fetchAreaReport(code: string, industry = "CS100010", signal?: AbortSignal, quarter?: string): Promise<AreaReportResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/trade-areas/${code}/report?${withQuarter({ industry }, quarter)}`, { signal });
   if (!response.ok) throw new Error("상권 리포트를 불러오지 못했습니다.");
   return response.json() as Promise<AreaReportResponse>;
 }
 
-export async function fetchAreaMapInsight(code: string, industry = "CS100010", signal?: AbortSignal): Promise<AreaMapInsightResponse> {
-  const query = new URLSearchParams({ quarter: "20254", industry });
+export async function fetchAreaMapInsight(code: string, industry = "CS100010", signal?: AbortSignal, quarter?: string): Promise<AreaMapInsightResponse> {
+  const query = withQuarter({ industry }, quarter);
   const response = await fetch(`${API_BASE_URL}/api/v1/trade-areas/${code}/map-insight?${query}`, { signal });
   if (!response.ok) throw new Error("상권 지도 근거를 불러오지 못했습니다.");
   return response.json() as Promise<AreaMapInsightResponse>;

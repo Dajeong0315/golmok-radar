@@ -13,6 +13,7 @@ ENV_FILE = BACKEND_DIR / (".env.test" if ENVIRONMENT == "test" else ".env")
 
 class Settings(BaseSettings):
     database_url: str = DEFAULT_SQLITE_URL
+    default_quarter: str | None = None  # 비우면 DB에 적재된 가장 최근 분기
     app_name: str = "골목 레이더 API"
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
     rone_api_key: str | None = None

@@ -87,6 +87,41 @@ POPULATION_FORMATS: dict[str, dict[str, str]] = {
 }
 
 
+DATASET_NAMES = {
+    "store": "서울시 상권분석서비스(점포-상권)",
+    "sales": "서울시 상권분석서비스(추정매출-상권)",
+}
+
+
+@dataclass(frozen=True)
+class QuarterFile:
+    """한 기준분기의 점포·매출 원천 위치.
+
+    `fetch_quarter.py`로 받은 분기별 Open API CSV가 있으면 그것을, 없으면 연도별 ZIP을 쓴다.
+    """
+
+    kind: str
+    origin: str  # "openapi" | "zip"
+    path: Path
+    meta_path: Path | None = None
+
+    def reader(self) -> tuple[list[str], Iterator[dict[str, str]]]:
+        return iter_csv(self.path) if self.origin == "openapi" else iter_zip_csv(self.path)
+
+
+def api_csv_path(raw: Path, kind: str, quarter: str) -> Path:
+    return raw / kind / f"{DATASET_NAMES[kind]}_{quarter}_OpenAPI.csv"
+
+
+def resolve_quarter_file(raw: Path, kind: str, quarter: str) -> QuarterFile | None:
+    api = api_csv_path(raw, kind, quarter)
+    if api.is_file():
+        meta = api.with_suffix(".meta.json")
+        return QuarterFile(kind, "openapi", api, meta if meta.is_file() else None)
+    matches = sorted(path for path in (raw / kind).glob(f"*_{quarter[:4]}년.zip") if path.is_file())
+    return QuarterFile(kind, "zip", matches[0]) if len(matches) == 1 else None
+
+
 @dataclass(frozen=True)
 class FileManifest:
     kind: str

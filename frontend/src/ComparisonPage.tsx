@@ -6,9 +6,9 @@ import { EvidenceDrawer } from "./EvidenceDrawer";
 import type { ChecklistResponse, ComparisonResponse } from "./types";
 import { TopNavigation } from "./TopNavigation";
 
-type Props = { codes: string[]; industry: string };
+type Props = { codes: string[]; industry: string; quarter?: string };
 
-export function ComparisonPage({ codes, industry }: Props) {
+export function ComparisonPage({ codes, industry, quarter }: Props) {
   const [data, setData] = useState<ComparisonResponse | null>(null);
   const [checklist, setChecklist] = useState<ChecklistResponse | null>(null);
   const [evidenceKey, setEvidenceKey] = useState<string | null>(null);
@@ -17,11 +17,11 @@ export function ComparisonPage({ codes, industry }: Props) {
   useEffect(() => {
     if (codes.length < 2) return;
     const controller = new AbortController();
-    fetchComparison(codes, industry, controller.signal).then(setData).catch((reason: Error) => {
+    fetchComparison(codes, industry, controller.signal, quarter).then(setData).catch((reason: Error) => {
       if (reason.name !== "AbortError") setError(reason.message);
     });
     return () => controller.abort();
-  }, [codes.join(","), industry]);
+  }, [codes.join(","), industry, quarter]);
 
   useEffect(() => {
     const controller = new AbortController();

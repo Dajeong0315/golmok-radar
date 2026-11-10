@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { buildQuiz, guessFeedback, type QuizQuestion } from "./comparisonQuiz";
+import { buildQuiz, guessFeedback, type QuizQuestion } from "./quizQuestions";
 import type { ComparisonResponse } from "./types";
 
 /** 비교표를 보기 전에 원할 때만 여는 맞히기 문제. 결과는 저장하지 않습니다. */

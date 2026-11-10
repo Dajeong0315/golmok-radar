@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import { fetchChecklist, fetchComparison, fetchComparisonExport } from "./api";
 import { formatMetricValue, METRIC_GROUPS } from "./comparison";
+import { buildCardModel, cardFileName, drawCard } from "./comparisonCard";
+import { ComparisonQuiz } from "./ComparisonQuiz";
 import { ComparisonReportPrint } from "./ComparisonReportPrint";
 import { EvidenceDrawer } from "./EvidenceDrawer";
 import type { ChecklistResponse, ComparisonExportResponse, ComparisonResponse } from "./types";
@@ -47,6 +49,30 @@ export function ComparisonPage({ codes, industry, quarter }: Props) {
       .catch(() => setPrintState("error"));
   };
 
+  const [cardState, setCardState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const saveCard = async () => {
+    if (!data) return;
+    setCardState("saving");
+    try {
+      await document.fonts?.ready;
+      const canvas = document.createElement("canvas");
+      drawCard(canvas, buildCardModel(data));
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+      if (!blob) throw new Error("이미지를 만들지 못했습니다.");
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = cardFileName(new Date());
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setCardState("saved");
+    } catch {
+      setCardState("error");
+    }
+  };
+
   const metrics = useMemo(() => new Map(data?.metrics.map((metric) => [metric.metric_key, metric]) || []), [data]);
 
   if (codes.length < 2) return <CompareState title="비교할 상권이 부족합니다" copy="관심 목록에서 두 곳 이상을 선택해 주세요." />;
@@ -73,10 +99,14 @@ export function ComparisonPage({ codes, industry, quarter }: Props) {
             <div className="comparison-actions">
               <span className="quarter-badge">{data.industry_name} · {data.quarter_label}</span>
               <button type="button" className="report-save-button" onClick={savePdf} disabled={printState === "loading"}>{printState === "loading" ? "리포트 준비 중…" : "리포트 저장 (PDF)"}</button>
+              <button type="button" className="card-save-button" onClick={() => void saveCard()} disabled={cardState === "saving"}>{cardState === "saving" ? "이미지 만드는 중…" : "비교 카드 이미지 저장"}</button>
             </div>
           </div>
           {printState === "ready" ? <p className="report-save-help" role="status">인쇄 창의 대상에서 ‘PDF로 저장’을 고르세요. 지표마다 출처·기준분기·계산식이 함께 저장됩니다.</p> : null}
           {printState === "error" ? <p className="report-save-help error" role="alert">리포트 내용을 불러오지 못했습니다. 잠시 뒤 다시 시도해 주세요.</p> : null}
+          {cardState === "saved" ? <p className="report-save-help" role="status">비교 카드 이미지를 이 기기에 저장했습니다. 지표 네 개를 나란히 놓은 그림이며 추천이나 순위가 아닙니다.</p> : null}
+          {cardState === "error" ? <p className="report-save-help error" role="alert">이 브라우저에서 이미지를 만들지 못했습니다. 리포트 저장(PDF)을 이용해 주세요.</p> : null}
+          <ComparisonQuiz data={data} />
           <div className="comparison-scroll" tabIndex={0} aria-label="상권 지표 비교표">
             <table className="comparison-table">
               <thead><tr><th scope="col">지표</th>{data.trade_areas.map((area, index) => (

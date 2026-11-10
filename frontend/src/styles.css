@@ -2473,3 +2473,28 @@ td, dd, .time-slot strong, .map-insight__metrics strong, .rent-market-summary st
   .mypage-tools { grid-template-columns: 1fr; padding: 0 16px; }
   .mypage-export { width: 100%; }
 }
+
+/* Phase 44 — 숫자 맞혀 보기·비교 카드 */
+.card-save-button { min-height: 44px; padding: 0 18px; border: 1px solid var(--route); border-radius: 6px; color: var(--route); background: var(--surface); font: inherit; font-weight: 700; cursor: pointer; }
+.card-save-button:hover { background: var(--route-tint); }
+.card-save-button:disabled { opacity: .6; cursor: progress; }
+.compare-quiz { margin: 0 0 28px; padding: 20px 24px; border: 1px dashed var(--lane); border-radius: 8px; background: var(--surface); }
+.compare-quiz__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.compare-quiz__head h3 { margin: 4px 0 0; font-size: 22px; }
+.compare-quiz__toggle { min-height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--lane-tint); font: inherit; font-weight: 700; cursor: pointer; }
+.compare-quiz__list { display: grid; gap: 18px; margin: 18px 0 0; padding-left: 22px; }
+.compare-quiz__prompt { margin: 0 0 8px; font-weight: 700; }
+.compare-quiz form { display: flex; gap: 8px; }
+.compare-quiz input { width: 160px; min-height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+.compare-quiz form button, .compare-quiz__options button { min-height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font: inherit; cursor: pointer; }
+.compare-quiz__options { display: flex; flex-wrap: wrap; gap: 8px; }
+.compare-quiz__options button[aria-pressed="true"] { border-color: var(--ink); }
+.compare-quiz__options button.is-answer { border-color: var(--route); color: var(--route); background: var(--route-tint); font-weight: 700; }
+.compare-quiz__feedback { margin: 8px 0 0; color: var(--ink-soft); }
+.compare-quiz__summary { margin: 16px 0 0; font-weight: 600; }
+@media (max-width: 720px) {
+  .card-save-button { width: 100%; }
+  .compare-quiz { padding: 16px; }
+  .compare-quiz input { width: 100%; }
+}
+@media print { .compare-quiz { display: none; } }

@@ -46,7 +46,9 @@ export default function App() {
       .catch((reason: Error) => {
         if (reason.name !== "AbortError") setError(reason.message);
       })
-      .finally(() => setLoading(false));
+      // 업종·기준분기가 바뀌어 취소된 요청은 로딩 표시를 끄지 않습니다. 끄면 새 요청이 끝나기 전에
+      // 목록이 0곳으로 보입니다(첫 화면에서 기준분기 목록을 받은 직후 다시 요청하는 경우 포함).
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [industry, quarter]);
 

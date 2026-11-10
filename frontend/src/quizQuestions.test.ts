@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildCardModel, cardFileName, CARD_METRICS, formatCardValue } from "./comparisonCard";
-import { buildQuiz, guessFeedback } from "./comparisonQuiz";
+import { buildQuiz, guessFeedback } from "./quizQuestions";
 import type { ComparisonMetric, ComparisonResponse, TradeArea } from "./types";
 
 const area = (code: string, name: string): TradeArea => ({

@@ -1,4 +1,4 @@
-import type { AreaMapInsightResponse, AreaReportResponse, AreaReviewReport, CapturedReviewReport, ChecklistResponse, ComparisonResponse, EvidenceResponse, IndustryOption, QuarterListResponse, RecommendationResponse, RentBenchmarkResponse, RentMarketListResponse, ReviewAnalysisResponse, ReviewAreaLocation, ReviewCaptureStatus, ReviewIndustryMapping, SupportProgramResponse, TradeArea } from "./types";
+import type { AreaMapInsightResponse, AreaReportResponse, AreaReviewReport, CapturedReviewReport, ChecklistResponse, ComparisonExportResponse, ComparisonResponse, EvidenceResponse, IndustryOption, QuarterListResponse, RecommendationResponse, RentBenchmarkResponse, RentMarketListResponse, ReviewAnalysisResponse, ReviewAreaLocation, ReviewCaptureStatus, ReviewIndustryMapping, SupportProgramResponse, TradeArea } from "./types";
 
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -42,6 +42,12 @@ export async function fetchEvidence(comparisonId: string, metricKey: string, sig
   const response = await fetch(`${API_BASE_URL}/api/v1/comparisons/${comparisonId}/evidence/${metricKey}`, { signal });
   if (!response.ok) throw new Error("지표 근거를 불러오지 못했습니다.");
   return response.json() as Promise<EvidenceResponse>;
+}
+
+export async function fetchComparisonExport(comparisonId: string, signal?: AbortSignal): Promise<ComparisonExportResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/comparisons/${comparisonId}/export`, { signal });
+  if (!response.ok) throw new Error("리포트 내용을 불러오지 못했습니다.");
+  return response.json() as Promise<ComparisonExportResponse>;
 }
 
 export async function fetchChecklist(signal?: AbortSignal): Promise<ChecklistResponse> {

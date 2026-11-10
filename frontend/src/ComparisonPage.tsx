@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { fetchChecklist, fetchComparison } from "./api";
+import { fetchChecklist, fetchComparison, fetchComparisonExport } from "./api";
 import { formatMetricValue, METRIC_GROUPS } from "./comparison";
+import { ComparisonReportPrint } from "./ComparisonReportPrint";
 import { EvidenceDrawer } from "./EvidenceDrawer";
-import type { ChecklistResponse, ComparisonResponse } from "./types";
+import type { ChecklistResponse, ComparisonExportResponse, ComparisonResponse } from "./types";
 import { TopNavigation } from "./TopNavigation";
 
 type Props = { codes: string[]; industry: string; quarter?: string };
@@ -13,6 +14,8 @@ export function ComparisonPage({ codes, industry, quarter }: Props) {
   const [checklist, setChecklist] = useState<ChecklistResponse | null>(null);
   const [evidenceKey, setEvidenceKey] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [printReport, setPrintReport] = useState<ComparisonExportResponse | null>(null);
+  const [printState, setPrintState] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
   useEffect(() => {
     if (codes.length < 2) return;
@@ -28,6 +31,21 @@ export function ComparisonPage({ codes, industry, quarter }: Props) {
     fetchChecklist(controller.signal).then(setChecklist).catch(() => undefined);
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (printState !== "ready" || !printReport) return;
+    // 인쇄본이 화면에 그려진 다음 인쇄 창을 엽니다. 사용자는 대상에서 'PDF로 저장'을 고릅니다.
+    const frame = requestAnimationFrame(() => window.print());
+    return () => cancelAnimationFrame(frame);
+  }, [printState, printReport]);
+
+  const savePdf = () => {
+    if (!data) return;
+    setPrintState("loading");
+    fetchComparisonExport(data.comparison_id)
+      .then((report) => { setPrintReport(report); setPrintState("ready"); })
+      .catch(() => setPrintState("error"));
+  };
 
   const metrics = useMemo(() => new Map(data?.metrics.map((metric) => [metric.metric_key, metric]) || []), [data]);
 
@@ -52,8 +70,13 @@ export function ComparisonPage({ codes, industry, quarter }: Props) {
         <section className="comparison-section" aria-labelledby="comparison-title">
           <div className="comparison-title-row">
             <div><p className="eyebrow">같은 분기 비교</p><h2 id="comparison-title">{data.trade_areas.length}개 상권 비교</h2></div>
-            <span className="quarter-badge">{data.industry_name} · {data.quarter_label}</span>
+            <div className="comparison-actions">
+              <span className="quarter-badge">{data.industry_name} · {data.quarter_label}</span>
+              <button type="button" className="report-save-button" onClick={savePdf} disabled={printState === "loading"}>{printState === "loading" ? "리포트 준비 중…" : "리포트 저장 (PDF)"}</button>
+            </div>
           </div>
+          {printState === "ready" ? <p className="report-save-help" role="status">인쇄 창의 대상에서 ‘PDF로 저장’을 고르세요. 지표마다 출처·기준분기·계산식이 함께 저장됩니다.</p> : null}
+          {printState === "error" ? <p className="report-save-help error" role="alert">리포트 내용을 불러오지 못했습니다. 잠시 뒤 다시 시도해 주세요.</p> : null}
           <div className="comparison-scroll" tabIndex={0} aria-label="상권 지표 비교표">
             <table className="comparison-table">
               <thead><tr><th scope="col">지표</th>{data.trade_areas.map((area, index) => (
@@ -93,6 +116,7 @@ export function ComparisonPage({ codes, industry, quarter }: Props) {
           </ol>
         </section> : null}
       </main>
+      {printReport ? <ComparisonReportPrint report={printReport} /> : null}
       {evidenceKey ? <EvidenceDrawer comparisonId={data.comparison_id} metricKey={evidenceKey} onClose={() => setEvidenceKey(null)} /> : null}
     </div>
   );

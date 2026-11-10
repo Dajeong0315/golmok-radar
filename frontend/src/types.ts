@@ -67,6 +67,13 @@ export type EvidenceResponse = {
   areas: EvidenceArea[];
 };
 
+export type ComparisonExportResponse = {
+  comparison: ComparisonResponse;
+  evidence: EvidenceResponse[];
+  generated_at: string;
+  limitations: string[];
+};
+
 export type ChecklistResponse = {
   notice: string;
   items: Array<{ category: string; question: string }>;

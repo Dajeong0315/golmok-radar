@@ -37,6 +37,7 @@ from .schemas import (
     AreaMapInsightResponse,
     ChecklistResponse,
     ComparisonMetric,
+    ComparisonExportResponse,
     ComparisonResponse,
     EvidenceArea,
     EvidenceResponse,
@@ -957,17 +958,7 @@ SOURCE_BY_METRIC = {
 }
 
 
-@app.get(
-    "/api/v1/comparisons/{comparison_id_value}/evidence/{metric_key}",
-    response_model=EvidenceResponse,
-)
-def get_evidence(
-    comparison_id_value: str,
-    metric_key: str,
-    session: Session = Depends(get_db),
-) -> EvidenceResponse:
-    quarter, industry, codes_text = parse_comparison_id(comparison_id_value)
-    codes, areas = validate_comparison(session, codes_text, quarter)
+def build_evidence(session: Session, quarter: str, industry: str, codes: list[str], areas: list[TradeArea], metric_key: str) -> EvidenceResponse:
     selected_industry_name = industry_name(session, industry, quarter)
     if not selected_industry_name:
         raise HTTPException(400, "해당 업종의 검증된 통계가 없습니다.")
@@ -1026,6 +1017,43 @@ def get_evidence(
                 denominator=metric.calculation.denominator if metric.calculation else None,
             )
             for code, metric in selected_metrics
+        ],
+    )
+
+
+
+
+@app.get(
+    "/api/v1/comparisons/{comparison_id_value}/evidence/{metric_key}",
+    response_model=EvidenceResponse,
+)
+def get_evidence(
+    comparison_id_value: str,
+    metric_key: str,
+    session: Session = Depends(get_db),
+) -> EvidenceResponse:
+    quarter, industry, codes_text = parse_comparison_id(comparison_id_value)
+    codes, areas = validate_comparison(session, codes_text, quarter)
+    return build_evidence(session, quarter, industry, codes, areas, metric_key)
+
+
+@app.get("/api/v1/comparisons/{comparison_id_value}/export", response_model=ComparisonExportResponse)
+def export_comparison(comparison_id_value: str, session: Session = Depends(get_db)) -> ComparisonExportResponse:
+    """비교 리포트 저장용: 비교표와 모든 지표의 근거를 한 번에 돌려준다 (Phase 42)."""
+    quarter, industry, codes_text = parse_comparison_id(comparison_id_value)
+    codes, areas = validate_comparison(session, codes_text, quarter)
+    if industry_name(session, industry, quarter) is None:
+        raise HTTPException(400, "해당 업종의 검증된 통계가 없습니다.")
+    comparison = build_comparison(session, codes, areas, quarter, industry)
+    return ComparisonExportResponse(
+        comparison=comparison,
+        evidence=[build_evidence(session, quarter, industry, codes, areas, metric.metric_key) for metric in comparison.metrics],
+        generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        limitations=[
+            "이 리포트는 상권을 추천하거나 창업 성공 가능성을 판단하지 않습니다.",
+            "공공데이터는 추정 통계이며, 같은 기준분기·업종의 공식 상권 단위 값입니다. 개별 가게의 매출이나 실제 임대료가 아닙니다.",
+            "비교 불가로 표시된 값은 원천 행이 없거나 계산할 수 없는 값이며 0으로 바꾸지 않았습니다.",
+            "현장 보행 흐름, 매물 조건, 인허가·계약 사항은 직접 확인하고 필요하면 공식 기관이나 전문가에게 확인하세요.",
         ],
     )
 

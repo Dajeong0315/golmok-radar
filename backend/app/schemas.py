@@ -90,6 +90,13 @@ class EvidenceResponse(BaseModel):
     areas: list[EvidenceArea]
 
 
+class ComparisonExportResponse(BaseModel):
+    comparison: ComparisonResponse
+    evidence: list[EvidenceResponse]
+    generated_at: str
+    limitations: list[str]
+
+
 class ChecklistItem(BaseModel):
     category: str
     question: str

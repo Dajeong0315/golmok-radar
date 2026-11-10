@@ -2416,3 +2416,47 @@ td, dd, .time-slot strong, .map-insight__metrics strong, .rent-market-summary st
 @media (prefers-contrast: more) {
   :root { --line: #8A948D; --ink-soft: #2F3833; }
 }
+
+/* Phase 42 — 비교 리포트 저장 (인쇄·PDF 전용) */
+.comparison-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
+.report-save-button { min-height: 44px; padding: 0 18px; border: 1px solid var(--route); border-radius: 6px; color: #fff; background: var(--route); font: inherit; font-weight: 700; cursor: pointer; }
+.report-save-button:hover { filter: brightness(1.08); }
+.report-save-button:disabled { opacity: .6; cursor: progress; }
+.report-save-help { margin: -18px 0 24px; color: var(--ink-soft); }
+.report-save-help.error { color: var(--warn-ink); }
+.print-report { display: none; }
+
+@media (max-width: 720px) {
+  .comparison-actions { justify-content: flex-start; width: 100%; }
+  .report-save-button { width: 100%; }
+}
+
+@media print {
+  @page { size: A4; margin: 14mm 12mm; }
+  #root > *:not(.compare-page), .compare-page > *:not(.print-report) { display: none !important; }
+  html, body, .compare-page { background: #fff !important; }
+  .print-report { display: block; color: #111; font: 9.5pt/1.5 var(--font-body); word-break: keep-all; }
+  .print-report h1 { margin: 2mm 0 4mm; font: 18pt/1.25 var(--font-display); }
+  .print-report h2 { margin: 7mm 0 3mm; padding-bottom: 1.5mm; border-bottom: 1.5pt solid #111; font-size: 12pt; break-after: avoid; }
+  .print-report h3 { margin: 0 0 1mm; font-size: 10pt; }
+  .print-report__header > p { margin: 0; color: #444; font-size: 9pt; }
+  .print-report__header dl { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1mm 6mm; margin: 0 0 3mm; }
+  .print-report__header dl div { display: flex; gap: 3mm; }
+  .print-report__header dt { color: #555; min-width: 16mm; }
+  .print-report__header dd { margin: 0; font-weight: 600; }
+  .print-report__areas { margin: 0; padding-left: 0; list-style: none; }
+  .print-report table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .print-report th, .print-report td { padding: 1.2mm 1.5mm; border: .5pt solid #999; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+  .print-report thead th { background: #eee; }
+  .print-report small { display: block; color: #555; font-size: 8pt; }
+  .print-report__group th { background: #222; color: #fff; }
+  .print-report tr { break-inside: avoid; }
+  .print-report__evidence { margin: 0 0 4mm; break-inside: avoid; }
+  .print-report__evidence p { margin: 0 0 1mm; color: #333; }
+  .print-report__evidence table { font-size: 8.5pt; }
+  .print-report__evidence th:nth-child(1) { width: 25%; }
+  .print-report__evidence th:nth-child(2) { width: 12%; }
+  .print-report__evidence th:nth-child(3), .print-report__evidence th:nth-child(4) { width: 17%; }
+  .print-report__filter span { display: block; overflow-wrap: normal; white-space: nowrap; font-size: 7.5pt; }
+  .print-report__limits ul { margin: 0; padding-left: 5mm; }
+}

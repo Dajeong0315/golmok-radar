@@ -191,6 +191,7 @@ quarter_code + trade_area_code + industry_code
 | `GET /api/v1/trade-areas/{code}/map-insight?industry={code}` | 지도 선택 근거 조회 | 같은 기준분기의 상권 단위 유동·선택 업종 매출·시간대 비중·동일 자치구 상대 위치와 결측 사유 |
 | `GET /api/v1/comparisons?codes={code1},{code2}[,{code3},{code4}][&quarter={code}]` | 2~4개 상권 비교 | 기준분기, 선택 상권 배열, 지표 배열 |
 | `GET /api/v1/comparisons/{comparison_id}/evidence/{metric_key}` | 지표 근거 조회 | 출처, 원천값, 필터, 계산식, 상태 |
+| `GET /api/v1/comparisons/{comparison_id}/export` | 비교 리포트 저장용 묶음 (Phase 42) | 비교 응답 전체, 모든 지표의 근거 배열, 생성 시각(UTC), 읽을 때 주의할 점. 화면은 이 값으로 인쇄 전용 리포트를 만들고 브라우저의 ‘PDF로 저장’을 쓴다. 공개 링크는 만들지 않는다 |
 | `GET /api/v1/field-checklist` | 현장 확인 질문 조회 | 질문 배열, 분류, 안내 문구 |
 
 ### 7.1 비교 응답의 지표 구조

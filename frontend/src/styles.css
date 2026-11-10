@@ -2498,3 +2498,11 @@ td, dd, .time-slot strong, .map-insight__metrics strong, .rent-market-summary st
   .compare-quiz input { width: 100%; }
 }
 @media print { .compare-quiz { display: none; } }
+
+/* 통계 있는 상권만 보기 */
+.stats-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: -4px 0 16px; color: var(--ink-soft); font-size: 14px; }
+.stats-filter label { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); font-weight: 600; cursor: pointer; }
+.stats-filter input { width: 18px; height: 18px; accent-color: var(--route); }
+.stats-filter details { flex-basis: 100%; }
+.stats-filter summary { width: fit-content; color: var(--route); font-weight: 600; cursor: pointer; }
+.stats-filter details p { max-width: 760px; margin: 6px 0 0; line-height: 1.6; }

@@ -10,6 +10,7 @@ import { KakaoMap } from "./KakaoMap";
 import { TopNavigation } from "./TopNavigation";
 import { initialIndustry, rememberIndustry } from "./industrySelection";
 import { quarterFromHash, quarterLabel, resolveSelectedQuarter, useQuarters } from "./quarterSelection";
+import { filterExplorerAreas, statusBadge } from "./areaFilters";
 import type { AreaMapInsightResponse, IndustryOption, TradeArea } from "./types";
 import "./styles.css";
 
@@ -26,6 +27,7 @@ export default function App() {
   const [selected, setSelected] = useState<string[]>([]);
   const [district, setDistrict] = useState("전체");
   const [query, setQuery] = useState("");
+  const [onlyWithStats, setOnlyWithStats] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -107,14 +109,11 @@ export default function App() {
   const areaByCode = useMemo(() => new Map(areas.map((area) => [area.code, area])), [areas]);
   const districts = useMemo(() => ["전체", ...new Set(areas.map((area) => area.district_name))].sort((a, b) => a === "전체" ? -1 : b === "전체" ? 1 : a.localeCompare(b, "ko")), [areas]);
   const favoriteCodes = useMemo(() => new Set(favorites), [favorites]);
-  const filteredAreas = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    return areas.filter((area) => {
-      const districtMatch = district === "전체" || area.district_name === district;
-      const queryMatch = !normalized || `${area.district_name} ${area.name} ${area.area_type_name}`.toLowerCase().includes(normalized);
-      return districtMatch && queryMatch;
-    });
-  }, [areas, district, query]);
+  const filteredAreas = useMemo(() => filterExplorerAreas(areas, { district, query, onlyWithStats }), [areas, district, query, onlyWithStats]);
+  const hiddenWithoutStats = useMemo(
+    () => onlyWithStats ? filterExplorerAreas(areas, { district, query, onlyWithStats: false }).length - filteredAreas.length : 0,
+    [areas, district, query, onlyWithStats, filteredAreas.length],
+  );
   const focusedMapArea = areas.find((area) => area.code === focusedMapCode);
   const mapAreas = focusedMapArea ? [focusedMapArea] : filteredAreas;
   const displayedAreas = district === "전체" && !query.trim() ? filteredAreas.slice(0, 80) : filteredAreas;
@@ -181,6 +180,14 @@ export default function App() {
             </label>
           </div>
           <p className="filter-help">{quarterLabel(quarter)} 공식 점포 원천의 {industries.length || ""}개 업종을 볼 수 있습니다. 일부 업종에는 매출 원천이 없어 해당 지표가 비교 불가로 표시됩니다. 비교는 한 기준분기 안에서만 합니다.</p>
+          <div className="stats-filter">
+            <label><input type="checkbox" checked={onlyWithStats} onChange={(event) => setOnlyWithStats(event.target.checked)} /> <span>{selectedIndustry?.name || "선택 업종"} 통계가 있는 상권만 보기</span></label>
+            {onlyWithStats && hiddenWithoutStats > 0 ? <small>통계 없는 상권 {hiddenWithoutStats.toLocaleString("ko-KR")}곳을 숨겼어요.</small> : null}
+            <details>
+              <summary>‘통계 없음’은 무슨 뜻인가요?</summary>
+              <p>서울시 상권분석서비스 공식 원천에 그 상권·업종(유동인구는 그 상권)의 행이 없다는 뜻이에요. 실제 가게가 0개라는 뜻은 아니며, 골목 레이더는 없는 값을 0이나 다른 상권 값으로 채우지 않아요. 같은 업종이라도 상권마다 통계가 있는 곳과 없는 곳이 있어요.</p>
+            </details>
+          </div>
 
           {error ? <div className="error-banner">{error} API 서버의 실행 상태와 최신 코드 반영 여부를 확인해 주세요.</div> : null}
           <div className="explorer-grid">
@@ -188,7 +195,7 @@ export default function App() {
             <div className="area-panel">
               <div className="area-panel__header"><strong>상권 목록</strong><span>{filteredAreas.length}곳</span></div>
               {loading ? <p className="panel-state">상권 데이터를 불러오는 중입니다.</p> : null}
-              {!loading && !filteredAreas.length ? <p className="panel-state">조건에 맞는 상권이 없습니다.</p> : null}
+              {!loading && !filteredAreas.length ? <p className="panel-state">{hiddenWithoutStats > 0 ? "이 조건에서는 통계가 있는 상권이 없어요. ‘통계가 있는 상권만 보기’를 끄면 모든 상권을 볼 수 있어요." : "조건에 맞는 상권이 없습니다."}</p> : null}
               {!loading && displayedAreas.length < filteredAreas.length ? <p className="panel-state panel-hint">먼저 80곳만 보여드려요. 자치구를 고르거나 이름을 검색하면 원하는 상권을 빠르게 찾을 수 있어요.</p> : null}
               <div className="area-list">
                 {displayedAreas.map((area) => (
@@ -198,9 +205,10 @@ export default function App() {
                       <span className="area-meta">{area.district_name} · {area.area_type_name}</span>
                       <h3>{area.name}</h3>
                       <div className="data-badges">
-                        <span className={area.data_status.store ? "ok" : "missing"}>점포 {area.data_status.store ? "통계 있음" : "원천 없음"}</span>
-                        <span className={area.data_status.sales ? "ok" : "missing"}>매출 {area.data_status.sales ? "통계 있음" : "원천 없음"}</span>
-                        <span className={area.data_status.population ? "ok" : "missing"}>유동 {area.data_status.population ? "통계 있음" : "원천 없음"}</span>
+                        {(["store", "sales", "population"] as const).map((kind) => {
+                          const badge = statusBadge(kind, area.data_status[kind]);
+                          return <span key={kind} className={area.data_status[kind] ? "ok" : "missing"} title={badge.title}>{badge.text}</span>;
+                        })}
                       </div>
                     </div>
                   </article>

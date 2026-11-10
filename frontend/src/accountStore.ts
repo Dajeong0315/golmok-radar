@@ -65,7 +65,31 @@ export type AccountRecord = {
   createdAt: string;
   updatedAt: string;
   sourceBatchId?: string;
+  /** Phase 43 태그. DB에 태그 컬럼이 없으면 undefined이며 저장할 때 보내지 않습니다. */
+  tags?: string[];
 };
+
+export const MAX_TAGS = 5;
+export const MAX_TAG_LENGTH = 20;
+
+/** 쉼표로 나눈 입력을 태그 목록으로 정리합니다. 앞뒤 공백·중복·빈 값을 없애고 개수와 길이를 제한합니다. */
+export function normalizeTags(value: unknown): string[] {
+  const items = Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : [];
+  const tags: string[] = [];
+  for (const item of items) {
+    if (typeof item !== "string") continue;
+    const tag = item.trim().replace(/\s+/g, " ").slice(0, MAX_TAG_LENGTH);
+    if (tag && !tags.includes(tag)) tags.push(tag);
+    if (tags.length === MAX_TAGS) break;
+  }
+  return tags;
+}
+
+/** 태그 컬럼이 아직 없는 DB(마이그레이션 0009 적용 전)에서 나는 오류인지 확인합니다. */
+export function isMissingTagsColumn(error: { message?: string; code?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === "42703" || error.code === "PGRST204" || /\btags\b/.test(error.message || "");
+}
 
 export function profileFromAccountRecord(record: AccountRecord): FounderProfile | null {
   if (record.kind !== "founder_profile" || !record.payload || typeof record.payload !== "object") return null;
@@ -83,12 +107,23 @@ function uniqueCodes(value: unknown): string[] {
   return Array.isArray(value) ? [...new Set(value.filter((item): item is string => typeof item === "string"))] : [];
 }
 
+type RecordRow = {
+  record_id?: unknown; kind?: unknown; title?: unknown; payload?: unknown; schema_version?: unknown;
+  created_at?: unknown; updated_at?: unknown; source_batch_id?: unknown; tags?: unknown;
+};
+
+const RECORD_COLUMNS = "record_id, kind, title, payload, schema_version, created_at, updated_at, source_batch_id";
+
 export async function fetchAccountRecords(client: SupabaseClient, userId: string, kind?: AccountRecord["kind"]): Promise<AccountRecord[]> {
-  let query = client.from("user_records").select("record_id, kind, title, payload, schema_version, created_at, updated_at, source_batch_id").eq("user_id", userId).order("updated_at", { ascending: false });
-  if (kind) query = query.eq("kind", kind);
-  const { data, error } = await query;
+  const select = async (columns: string) => {
+    let query = client.from("user_records").select(columns).eq("user_id", userId).order("updated_at", { ascending: false });
+    if (kind) query = query.eq("kind", kind);
+    return query;
+  };
+  let { data, error } = await select(`${RECORD_COLUMNS}, tags`);
+  if (isMissingTagsColumn(error)) ({ data, error } = await select(RECORD_COLUMNS));
   raise(error);
-  return (data || []).flatMap((row) => {
+  return ((data || []) as unknown as RecordRow[]).flatMap((row) => {
     if (!row || typeof row.record_id !== "string" || typeof row.kind !== "string" || typeof row.title !== "string") return [];
     return [{
       recordId: row.record_id,
@@ -99,6 +134,7 @@ export async function fetchAccountRecords(client: SupabaseClient, userId: string
       createdAt: String(row.created_at || ""),
       updatedAt: String(row.updated_at || ""),
       sourceBatchId: typeof row.source_batch_id === "string" ? row.source_batch_id : undefined,
+      tags: "tags" in row ? normalizeTags(row.tags) : undefined,
     }];
   });
 }
@@ -114,6 +150,7 @@ export async function saveAccountRecord(client: SupabaseClient, userId: string, 
     source_batch_id: record.sourceBatchId || null,
     created_at: record.createdAt,
     updated_at: record.updatedAt,
+    ...(record.tags ? { tags: normalizeTags(record.tags) } : {}),
   }, { onConflict: "record_id" });
   raise(error);
 }

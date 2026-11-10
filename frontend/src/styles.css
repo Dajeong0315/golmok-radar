@@ -2460,3 +2460,16 @@ td, dd, .time-slot strong, .map-insight__metrics strong, .rent-market-summary st
   .print-report__filter span { display: block; overflow-wrap: normal; white-space: nowrap; font-size: 7.5pt; }
   .print-report__limits ul { margin: 0; padding-left: 5mm; }
 }
+
+/* Phase 43 — 내 기록 찾기·태그·내보내기 */
+.mypage-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; max-width: 1180px; margin: 0 auto 8px; padding: 0 32px; }
+.mypage-tools .search-field, .mypage-tools .district-select { margin: 0; }
+.mypage-export { min-height: 48px; padding: 0 18px; border: 1px solid var(--route); border-radius: 6px; color: var(--route); background: var(--surface); font: inherit; font-weight: 700; cursor: pointer; }
+.mypage-export:hover { background: var(--route-tint); }
+.mypage-tools__note { grid-column: 1 / -1; margin: 0; color: var(--ink-soft); font-size: 14px; }
+.mypage-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; padding: 0; list-style: none; }
+.mypage-tags li { padding: 2px 8px; border-radius: 999px; color: var(--route); background: var(--route-tint); font-size: 13px; font-weight: 600; }
+@media (max-width: 720px) {
+  .mypage-tools { grid-template-columns: 1fr; padding: 0 16px; }
+  .mypage-export { width: 100%; }
+}

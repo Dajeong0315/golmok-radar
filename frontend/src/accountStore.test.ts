@@ -39,9 +39,9 @@ describe("account worksheet merge", () => {
     expect(calls.every((call) => call.value.user_id === "user-a")).toBe(true);
   });
 
-  it("uploads each distinct completed test result from the anonymous history", async () => {
-    const ids: string[] = [];
-    const client = { from: () => ({ upsert: async (value: { record_id: string }) => { ids.push(value.record_id); return { error: null }; } }) } as never;
+  it("uploads each distinct completed test result with unique idempotent source IDs", async () => {
+    const records: Array<{ record_id: string; source_batch_id: string }> = [];
+    const client = { from: () => ({ upsert: async (value: { record_id: string; source_batch_id: string }) => { records.push(value); return { error: null }; } }) } as never;
     const answers = { business: "cafe", demand: "office", risk: "lean", operation: "solo", strength: "numbers", competition: "avoid" };
     const first = { version: PROFILE_VERSION, completedAt: "2026-11-01T00:00:00Z", answers };
     const second = { version: PROFILE_VERSION, completedAt: "2026-11-02T00:00:00Z", answers: { ...answers, demand: "neighborhood" } };
@@ -50,7 +50,8 @@ describe("account worksheet merge", () => {
       returnHash: "#quiz", userId: "user-a",
       records: { [PROFILE_HISTORY_KEY]: JSON.stringify([second, first]), [PROFILE_KEY]: JSON.stringify(second) },
     });
-    expect(ids).toEqual(["batch-two:founder-profile", "batch-two:founder-profile:1"]);
+    expect(records.map((record) => record.record_id)).toEqual(["batch-two:founder-profile", "batch-two:founder-profile:1"]);
+    expect(records.map((record) => record.source_batch_id)).toEqual(["batch-two", "batch-two:founder-profile:1"]);
   });
 
   it("retries a failed transfer with stable IDs instead of duplicating saved records", async () => {

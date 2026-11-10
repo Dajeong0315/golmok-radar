@@ -186,7 +186,13 @@ export async function transferAnonymousRecords(client: SupabaseClient, userId: s
       recordId: `${snapshot.batchId}:founder-profile${index ? `:${index}` : ""}`,
       kind: "founder_profile", title: "창업 성향 테스트 결과",
       payload: { version: PROFILE_VERSION, completedAt, answers },
-      schemaVersion: PROFILE_VERSION, createdAt: completedAt, updatedAt: completedAt, sourceBatchId: snapshot.batchId,
+      schemaVersion: PROFILE_VERSION,
+      createdAt: completedAt,
+      updatedAt: completedAt,
+      // The database permits one record of each kind per source batch. Preserve
+      // the original batch on the first result and give later result-history
+      // entries deterministic child source IDs so retrying remains idempotent.
+      sourceBatchId: index ? `${snapshot.batchId}:founder-profile:${index}` : snapshot.batchId,
     });
   });
   if (Object.keys(draft).length) records.push({

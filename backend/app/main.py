@@ -983,6 +983,8 @@ def get_evidence(
     source_key = SOURCE_BY_METRIC.get(metric_key)
     if metric_key.startswith("population_"):
         source_key = "population"
+    elif metric_key.startswith("sales_") and metric_key.endswith("_ratio"):
+        source_key = "sales"
     if not source_key:
         raise HTTPException(404, "지표 출처를 찾을 수 없습니다.")
     # Open API로 받은 분기는 분기별 출처(`store:20262`)를, 연도별 ZIP은 기존 키를 쓴다.

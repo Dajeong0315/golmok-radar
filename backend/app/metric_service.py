@@ -10,6 +10,7 @@ from .calculations import (
     CalculationResult,
     average_payment,
     time_slot_ratio,
+    time_slot_sales_ratio,
     weekday_sales_ratio,
     weekend_sales_ratio,
 )
@@ -132,6 +133,19 @@ def build_area_metrics(
             ),
         ),
     ]
+
+    for slot in ("00_06", "06_11", "11_14", "14_17", "17_21", "21_24"):
+        metrics.append(
+            calculated_metric(
+                f"sales_{slot}_ratio",
+                f"{slot.replace('_', '~')}시 매출 비중",
+                "%",
+                time_slot_sales_ratio(
+                    getattr(sales, f"sales_{slot}") if sales else None,
+                    sales.sales_amount if sales else None,
+                ),
+            )
+        )
 
     time_slots = (
         [

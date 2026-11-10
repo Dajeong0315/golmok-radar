@@ -104,6 +104,32 @@ const inspection = await workbook.inspect({
 });
 console.log(inspection.ndjson);
 
+// Phase 41: 시간대 매출 비중 손계산 사례 (2026-11-10 추가, backend/tests/test_metric_workbook.py가 F열을 대조)
+const slotSheet = workbook.worksheets.add("시간대 매출");
+slotSheet.showGridLines = false;
+slotSheet.getRange("A2:G2").merge();
+slotSheet.getRange("A2").values = [["시간대 매출 비중 손계산 기준 (Phase 41)"]];
+slotSheet.getRange("A3:G3").merge();
+slotSheet.getRange("A3").values = [["시간대 매출 금액 ÷ 전체 매출 금액 × 100, 소수 첫째 자리 ROUND_HALF_UP. 분모 0·원천값 누락은 비교 불가"]];
+slotSheet.getRange("A5:G5").values = [["유형", "지표", "분자", "분모", "엑셀 계산 결과", "pytest 기대값", "판정"]];
+slotSheet.getRange("A6:D13").values = [
+  ["정상", "11~14시 매출 비중 (%)", 350, 1000],
+  ["경계", "06~11시 매출 비중 (%)", 1, 3],
+  ["경계", "17~21시 매출 비중 (%)", 5, 400],
+  ["경계", "00~06시 매출 비중 (%)", 0, 1000],
+  ["결측", "21~24시 매출 비중 (%)", 100, 0],
+  ["결측", "14~17시 매출 비중 (%)", null, 1000],
+  ["실제", "11~14시 매출 비중 (%) · 성수역 커피-음료 20254", 1163808652, 3517833204],
+  ["실제", "00~06시 매출 비중 (%) · 성수역 커피-음료 20254", 1865232, 3517833204],
+];
+slotSheet.getRange("F6:F13").values = [[35.0], [33.3], [1.3], [0.0], ["비교 불가"], ["비교 불가"], [33.1], [0.1]];
+for (let row = 6; row <= 13; row += 1) {
+  slotSheet.getRange(`E${row}`).formulas = [[`=IF(C${row}="","비교 불가",IF(D${row}=0,"비교 불가",ROUND(C${row}/D${row}*100,1)))`]];
+  slotSheet.getRange(`G${row}`).formulas = [[`=IF(E${row}=F${row},"일치","불일치")`]];
+}
+slotSheet.getRange("A15:G15").merge();
+slotSheet.getRange("A15").values = [["실제 사례 출처: 서울시 상권분석서비스(추정매출-상권)_2025년.zip, 상권 3120052, 업종 CS100010, 기준분기 20254, 당월_매출_금액과 시간대_11~14·00~06_매출_금액. 작성일 2026-11-10"]];
+
 const errors = await workbook.inspect({
   kind: "match",
   searchTerm: "#REF!|#DIV/0!|#VALUE!|#NAME\\?|#N/A|#NUM!|#NULL!|#SPILL!|#CALC!",

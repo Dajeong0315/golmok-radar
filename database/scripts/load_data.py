@@ -186,6 +186,7 @@ def collect_rows(quarter: str = QUARTER) -> tuple[list[TradeArea], list[StoreMet
                 sales_count=as_int(row["sales_count"]),
                 weekday_sales_amount=as_int(row["weekday_sales_amount"]),
                 weekend_sales_amount=as_int(row["weekend_sales_amount"]),
+                **{f"sales_{slot}": as_int(row[f"sales_{slot}"]) for slot in TIME_SLOTS},
             )
         )
     if not set(sales_industries).issubset(store_industries):

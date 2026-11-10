@@ -389,6 +389,7 @@ def trial_load(report: QualityReport, area_rows: list, stores: list[dict], sales
             industry_name=row["industry_name"], sales_amount=int(Decimal(row["sales_amount"])),
             sales_count=int(Decimal(row["sales_count"])), weekday_sales_amount=int(Decimal(row["weekday_sales_amount"])),
             weekend_sales_amount=int(Decimal(row["weekend_sales_amount"])),
+            **{f"sales_{slot}": int(Decimal(row[f"sales_{slot}"])) for slot in TIME_SLOTS},
         ) for row in sales)
         session.add_all(PopulationMetric(
             quarter_code=row["quarter"], trade_area_code=row["area"],
@@ -418,6 +419,8 @@ def expected_from_raw(store: dict | None, sales: dict | None) -> dict[str, objec
         expected["weekday_sales_ratio"] = ratio(int(Decimal(sales["weekday_sales_amount"])), total)
         expected["weekend_sales_ratio"] = ratio(int(Decimal(sales["weekend_sales_amount"])), total)
         expected["average_payment"] = (Decimal(total) / Decimal(count)).quantize(Decimal("1"), rounding=ROUND_HALF_UP) if count else None
+        for slot in TIME_SLOTS:
+            expected[f"sales_{slot}_ratio"] = ratio(int(Decimal(sales[f"sales_{slot}"])), total)
     return expected
 
 

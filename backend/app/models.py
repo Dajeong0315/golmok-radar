@@ -52,6 +52,13 @@ class SalesMetric(Base):
     sales_count: Mapped[int] = mapped_column(BigInteger, nullable=False)
     weekday_sales_amount: Mapped[int] = mapped_column(BigInteger, nullable=False)
     weekend_sales_amount: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    # Phase 41: 시간대별 매출 금액. 이전에 적재한 행은 다시 적재할 때까지 NULL이다.
+    sales_00_06: Mapped[int | None] = mapped_column(BigInteger)
+    sales_06_11: Mapped[int | None] = mapped_column(BigInteger)
+    sales_11_14: Mapped[int | None] = mapped_column(BigInteger)
+    sales_14_17: Mapped[int | None] = mapped_column(BigInteger)
+    sales_17_21: Mapped[int | None] = mapped_column(BigInteger)
+    sales_21_24: Mapped[int | None] = mapped_column(BigInteger)
 
     trade_area: Mapped[TradeArea] = relationship(back_populates="sales_metrics")
 

@@ -1,15 +1,18 @@
 # 골목 레이더
 
-오프라인 창업을 원하는 사람이 후보 상권, 입지 비용, 지원 제도, 개업 후 운영 개선까지 이어갈 수 있도록 돕는 첫 파이프라인입니다. 서울 25개 자치구의 공식 상권 1,650곳과 2025년 4분기 점포 원천 100개 업종을 탐색·비교합니다.
+오프라인 창업을 원하는 사람이 후보 상권, 입지 비용, 지원 제도, 개업 후 운영 개선까지 이어갈 수 있도록 돕는 첫 파이프라인입니다. 서울 25개 자치구의 공식 상권 1,650곳과 적재된 기준분기(현재 운영 2025년 4분기)의 점포 원천 100개 업종을 탐색·비교합니다.
 
 ## 현재 구현된 상권 판단 엔진
 
 - 서울 공식 상권 1,650곳 검색·25개 자치구 필터·카카오맵 표시
 - 비로그인 브라우저 `localStorage` 관심 상권 저장 및 카카오 로그인 시 계정 동기화
+- 내 기록 검색·태그와 본인 기록 JSON 내보내기
 - 저장한 상권 중 2~4곳 선택, 최대 4곳 제한
-- 2025년 4분기 공식 점포 100개 업종 중 하나를 선택해 지표 최대 14개 비교. 매출 원천은 62개 업종에만 제공
+- 공식 점포 100개 업종 중 하나를 선택해 지표 최대 20개 비교(시간대별 매출 비중 6개 포함). 매출 원천은 62개 업종에만 제공
 - 원천 행 누락 시 `0`이 아닌 `비교 불가`와 사유 표시
 - 지표별 제공기관·데이터셋·필터·계산식·분자/분모 확인
+- 비교 결과를 출처·기준분기·계산식이 붙은 리포트로 저장(브라우저 인쇄 → PDF). 공유 링크는 만들지 않음
+- 비교표를 보기 전 원천값으로 푸는 선택형 ‘숫자 맞혀 보기’와 지표 4개를 나란히 놓은 비교 카드 이미지 저장(승패·점수 없음)
 - 읽기 전용 현장 체크리스트 5개
 
 공유 리포트, 전국 확대, 창업 성공 확률·계약 판정은 범위 밖입니다. 카카오 로그인 기반 계정 기록과 관심 상권·매물 워크시트 동기화를 제공합니다. 전체 업종 확장은 `docs/plan.md`의 Phase 29~33에서 완료했습니다.
@@ -87,13 +90,46 @@ Push-Location backend
 ```powershell
 cd frontend
 Copy-Item .env.example .env
-npm install
-npm run dev -- --host 127.0.0.1
+corepack enable pnpm   # pnpm이 없을 때 한 번만
+pnpm install --frozen-lockfile
+pnpm run dev --host 127.0.0.1
 ```
 
 <http://127.0.0.1:5173>에서 확인합니다. 카카오 개발자 콘솔에서 카카오맵 API를 활성화하고, JavaScript 키의 SDK 도메인에 `http://localhost:5173`과 `http://127.0.0.1:5173`을 등록한 뒤 `frontend/.env`의 `VITE_KAKAO_MAP_KEY`에 키를 넣어야 실제 지도가 나타납니다. 키가 없거나 카카오맵 API가 비활성화되어 있으면 상권 목록과 비교 기능은 그대로 동작하고 지도 영역에는 설정 안내가 표시됩니다.
 
 2026-10-30 로컬 환경에서 카카오맵 타일, 서울 전체 위치, 자치구 선택 후 공식 상권 라벨 렌더링과 관심 상권 저장·해제를 확인했습니다. 전체 화면에서는 1,650개 라벨을 한꺼번에 그리지 않고 자치구를 고른 뒤 해당 구 라벨을 표시합니다. JavaScript 키는 Git에 추적하지 않습니다.
+
+## 새 기준분기 갱신
+
+서울시 상권분석서비스는 새 분기를 연도별 ZIP보다 Open API에 먼저 올립니다. 2026-11-10 확인 기준으로 Open API에는 2026년 2분기(20262)까지 있고, ZIP은 2025년까지입니다. `backend/.env`에 `SEOUL_OPEN_API_KEY`가 있어야 합니다.
+
+```powershell
+.\.venv\Scripts\python.exe database\scripts\fetch_quarter.py --quarter 20262 --check
+```
+
+```powershell
+.\.venv\Scripts\python.exe database\scripts\fetch_quarter.py --quarter 20262
+```
+
+```powershell
+.\.venv\Scripts\python.exe database\scripts\data_quality.py --quarter 20262
+```
+
+```powershell
+.\.venv\Scripts\python.exe database\scripts\data_quality.py --quarter 20262 --apply --database-url sqlite:///backend/data/check-20262.db
+```
+
+```powershell
+.\.venv\Scripts\python.exe database\scripts\data_quality.py --quarter 20262 --apply
+```
+
+1. `--check`로 연결과 전체 건수만 확인합니다.
+2. 점포·매출 원천을 `database/raw/store/`, `database/raw/sales/`에 `_20262_OpenAPI.csv`로 받습니다. 보고 건수와 받은 건수가 다르면 저장하지 않습니다.
+3. 품질 검사에서 오류가 0건인지 리포트(`database/processed/data_quality/`)로 확인합니다.
+4. 테스트 DB에 먼저 적재해 화면을 확인합니다.
+5. `backend/.env`의 운영 DB에 적재합니다. 해당 분기 행만 교체하고 다른 분기는 유지합니다.
+
+적재가 끝나면 API와 화면의 기본 기준분기가 가장 최근 적재 분기로 바뀌고, 탐색 화면에서 이전 분기를 고를 수 있습니다. 특정 분기로 고정하려면 `backend/.env`에 `DEFAULT_QUARTER=20254`처럼 적습니다.
 
 ## 테스트
 
@@ -111,12 +147,12 @@ Push-Location backend
 Pop-Location
 
 Push-Location frontend
-npm test -- --run
-npm run build
+pnpm test
+pnpm run build
 Pop-Location
 ```
 
-2026-11-10 기준 백엔드 pytest 99개, 프런트엔드 Vitest 71개 테스트가 있고 프런트엔드 빌드가 통과합니다. 백엔드 테스트 중 4개는 Git에서 제외한 원천 파일이 있을 때만 실행됩니다. 원천 파일이 없는 환경에서는 리뷰 API 테스트 1개도 실패하며, 이 테스트 격리 문제는 `docs/plan.md` Phase 38에서 고칩니다. 지표의 손계산 기대값은 [docs/지표_손계산_기준표.xlsx](docs/지표_손계산_기준표.xlsx)에 고정되어 있습니다.
+Phase 44(2026-11-10) 기준 백엔드 pytest 151개, 프런트엔드 Vitest 96개 테스트가 있고 프런트엔드 빌드가 통과합니다. 백엔드 테스트 중 원천 파일이 필요한 4개(적재 통합 3개, 공식 경계 1개)는 필요한 `database/raw/` 파일이 모두 있을 때만 실행되고, 없으면 빠진 파일 이름과 함께 건너뜁니다. 지표의 손계산 기대값은 [docs/지표_손계산_기준표.xlsx](docs/지표_손계산_기준표.xlsx)에 고정되어 있습니다.
 
 ## Supabase 연결
 
@@ -151,7 +187,7 @@ Pop-Location
 
 ## 알려진 한계
 
-- 공식 상권 지표의 기준분기는 현재 2025년 4분기이며 지역은 서울 25개 자치구입니다. 매출 원천이 없는 38개 업종과 개별 상권은 매출 관련 지표를 비교할 수 없습니다.
+- 운영 DB의 기준분기는 현재 2025년 4분기이며 지역은 서울 25개 자치구입니다. 2026년 1·2분기는 Open API에 공개돼 있어 위 ‘새 기준분기 갱신’ 절차로 적재할 수 있습니다. 매출 원천이 없는 38개 업종과 개별 상권은 매출 관련 지표를 비교할 수 없습니다.
 - 리뷰 분석은 카카오 장소 분류와 공식 업종명 대응이 확인된 가게의 제한 표본입니다. 동종 가게가 적거나 리뷰가 부족하면 집계가 나오지 않을 수 있습니다.
 - 로그인 없이 저장한 관심 상권·기록은 현재 브라우저에 보관하며, 유효한 기록은 카카오 로그인 시 계정으로 이관됩니다.
 - 공공데이터는 추정 통계이며 매물 상태·임대료·시간대별 보행 동선 등은 현장에서 확인해야 합니다.

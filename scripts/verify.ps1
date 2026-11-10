@@ -15,8 +15,15 @@ try {
 
 Push-Location (Join-Path $ProjectRoot "frontend")
 try {
-    npm test -- --run
-    npm run build
+    # 저장소의 잠금 파일은 pnpm-lock.yaml입니다. pnpm이 없으면 npm으로 대신 실행합니다.
+    if (Get-Command pnpm -ErrorAction SilentlyContinue) {
+        pnpm test
+        pnpm run build
+    } else {
+        Write-Warning "pnpm이 없어 npm으로 실행합니다. 'corepack enable pnpm' 후 다시 실행하면 잠금 파일과 같은 버전을 씁니다."
+        npm test
+        npm run build
+    }
 } finally {
     Pop-Location
 }

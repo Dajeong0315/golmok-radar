@@ -58,7 +58,7 @@ export function RecommendationsPage() {
   useEffect(() => {
     if (!data?.candidates.length) return;
     const controller = new AbortController();
-    Promise.all(data.candidates.map((candidate) => fetchAreaReport(candidate.trade_area.code, industry, controller.signal)))
+    Promise.all(data.candidates.map((candidate) => fetchAreaReport(candidate.trade_area.code, industry, controller.signal, data.quarter_code)))
       .then((items) => setReports(Object.fromEntries(items.map((report) => [report.trade_area.code, report]))))
       .catch((reason: Error) => { if (reason.name !== "AbortError") setError(reason.message); });
     return () => controller.abort();
@@ -91,7 +91,7 @@ export function RecommendationsPage() {
       }
       setSaving(false);
     }
-    window.location.hash = `compare?codes=${codes.join(",")}&industry=${industry}`;
+    window.location.hash = `compare?codes=${codes.join(",")}&industry=${industry}${data?.quarter_code ? `&quarter=${data.quarter_code}` : ""}`;
   };
 
   return <main className="recommendation-page">
@@ -127,7 +127,7 @@ function AreaReport({ report, comparisonCodes }: { report: AreaReportResponse; c
   return <section className="area-report" aria-label={`${report.trade_area.name} 강점과 주의점 리포트`}>
     <div className="area-report__heading"><div><p className="eyebrow">상권 한눈에 보기</p><h3>강점과 주의 신호</h3></div><span>{report.industry_name} · {report.comparison_count}개 상권 비교 · {report.quarter_label}</span></div>
     <div className="report-groups">{groups.map((group) => <div className={group.className} key={group.label}><h4>{group.label}</h4>{group.items.length ? group.items.slice(0, 3).map((item) => <article data-metric-key={item.metric_key} key={item.metric_key}><strong>{item.label}</strong><span>{item.value?.toLocaleString("ko-KR")} {item.unit} · {item.percentile} 백분위</span>{item.percentile !== null ? <div className="report-track" role="progressbar" aria-label={`${item.label} 비교 위치`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.percentile}><i style={{ width: `${item.percentile}%` }} /></div> : null}<p>{item.summary}</p></article>) : <p>뚜렷하게 높거나 낮은 신호가 없어요.</p>}</div>)}</div>
-    <footer><p>{report.notice}</p><a href={`#compare?codes=${comparisonCodes.join(",")}&industry=${report.industry_code}`}>비교표에서 수치와 근거 보기 →</a></footer>
+    <footer><p>{report.notice}</p><a href={`#compare?codes=${comparisonCodes.join(",")}&industry=${report.industry_code}&quarter=${report.quarter_code}`}>비교표에서 수치와 근거 보기 →</a></footer>
   </section>;
 }
 

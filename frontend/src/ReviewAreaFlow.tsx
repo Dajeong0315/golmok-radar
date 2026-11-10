@@ -5,9 +5,12 @@ import { fetchAccountRecords, saveAccountRecord } from "./accountStore";
 import { useAuth } from "./auth";
 import { initialIndustry, rememberIndustry } from "./industrySelection";
 import { searchNearbyIndustry, type KakaoPlace } from "./kakaoPlaces";
+import { quarterLabel, useQuarters } from "./quarterSelection";
 import type { AreaReviewReport, IndustryOption, ReviewIndustryMapping, TradeArea } from "./types";
 
 export function ReviewAreaFlow() {
+  const { data: quarters } = useQuarters();
+  const latestLabel = quarterLabel(quarters?.default_quarter || "");
   const { client, user, session, signInWithKakao } = useAuth();
   const params = new URLSearchParams(window.location.hash.split("?")[1] || "");
   const [industry, setIndustry] = useState(initialIndustry);
@@ -115,7 +118,7 @@ export function ReviewAreaFlow() {
       setAreaCode(item.code); setReport(null);
       window.history.replaceState(null, "", `#reviews?area=${item.code}&industry=${industry}`);
     }}><strong>{item.name}</strong><small>{item.district_name} · {item.area_type_name}</small></button>)}</div>
-    {selectedArea ? <div className="review-area-card"><small>선택한 공식 상권 · {mapping?.industry_name || industry}</small><strong>{selectedArea.district_name} · {selectedArea.name}</strong><p>공식 상권 코드 {selectedArea.code} · 2025년 4분기 점포 원천 {selectedArea.data_status.store ? "있음" : "없음"}</p></div> : null}
+    {selectedArea ? <div className="review-area-card"><small>선택한 공식 상권 · {mapping?.industry_name || industry}</small><strong>{selectedArea.district_name} · {selectedArea.name}</strong><p>공식 상권 코드 {selectedArea.code} · {latestLabel} 점포 원천 {selectedArea.data_status.store ? "있음" : "없음"}</p></div> : null}
     {selectedArea && mapping?.supported ? <div className="review-run">
       <p>{searching ? "동종 가게 후보를 확인하는 중입니다." : `카카오 장소 검색에서 동종 후보 ${candidates.length}곳을 찾았습니다. 서버가 실제 분류와 상권 포함 여부를 다시 확인한 뒤 최대 10곳을 수집합니다.`}</p>
       {session ? <button type="button" disabled={searching || running || candidates.length === 0} onClick={() => void run()}>{running ? "공개 리뷰 표본 수집 중…" : "이 상권의 리뷰 표본 분석"}</button> : <button type="button" onClick={() => void signInWithKakao()}>카카오 로그인 후 분석하기</button>}
@@ -123,14 +126,14 @@ export function ReviewAreaFlow() {
       <p>요청할 때마다 새로 수집합니다. 한 번에 최대 10곳, 가게당 공개 화면에서 확인되는 텍스트 리뷰 최대 40건을 사용합니다.</p>
     </div> : null}
     {error ? <p className="error-banner" role="alert">{error}</p> : null}
-    {report ? <AreaReviewResult report={report} /> : null}
+    {report ? <AreaReviewResult report={report} quarterText={latestLabel} /> : null}
   </section>;
 }
 
-function AreaReviewResult({ report }: { report: AreaReviewReport }) {
+function AreaReviewResult({ report, quarterText }: { report: AreaReviewReport; quarterText: string }) {
   return <section className="review-auto-report" aria-live="polite">
     <div className="review-section-heading"><div><p className="eyebrow">상권 리뷰 표본 · {report.industry_name}</p><h2>{report.area.name}의 동종 가게 반응</h2></div><p>{report.message}</p></div>
-    <div className="review-auto-metadata"><span>카카오 공개 리뷰</span><span>상권 {report.area.code} · 2025년 4분기 업종 분류</span><span>{!report.captured_at ? "수집 미실행" : report.from_cache ? "이전 보관본" : "이번 요청 신규 수집"}</span><span>분석 {report.analyzed_review_count}건 / 수집 {report.total_review_count}건</span><span>수집 {report.captured_at ? new Date(report.captured_at).toLocaleString("ko-KR") : "미실행"}</span><span>보관 만료 {report.expires_at ? new Date(report.expires_at).toLocaleDateString("ko-KR") : "해당 없음"}</span></div>
+    <div className="review-auto-metadata"><span>카카오 공개 리뷰</span><span>상권 {report.area.code} · {quarterText} 업종 분류</span><span>{!report.captured_at ? "수집 미실행" : report.from_cache ? "이전 보관본" : "이번 요청 신규 수집"}</span><span>분석 {report.analyzed_review_count}건 / 수집 {report.total_review_count}건</span><span>수집 {report.captured_at ? new Date(report.captured_at).toLocaleString("ko-KR") : "미실행"}</span><span>보관 만료 {report.expires_at ? new Date(report.expires_at).toLocaleDateString("ko-KR") : "해당 없음"}</span></div>
     <div className="review-auto-counts">{report.place_samples.map((sample) => <div key={sample.label}><small>가게 {sample.label}{sample.included_in_analysis ? "" : " · 분석 제외"}</small><strong>{sample.review_count}건</strong></div>)}</div>
     {report.failed_labels.length ? <p className="review-auto-note">수집 실패: {report.failed_labels.map((label) => `가게 ${label}`).join(", ")}. 자동 재시도는 하지 않았습니다.</p> : null}
     {report.topics.length ? <div className="review-auto-topics">{report.topics.filter((topic) => topic.mentions > 0).map((topic) => <article key={topic.topic_key}><h3>{topic.label}</h3><p>언급 {topic.mentions}회</p><small>긍정 {topic.positive} · 부정 {topic.negative} · 중립 {topic.neutral}</small></article>)}</div> : null}

@@ -26,6 +26,7 @@ from .review_capture import CaptureConfigurationError
 from .review_report import append_audit, collect_or_load_area_review_report, collect_or_load_report, purge_expired_captures, purge_expired_reports, select_peer_places
 from .review_industry import EXCLUSIONS, category_matches, category_terms, verified_kakao_place
 from .trade_area_geometry import locate_area
+from .quarters import available_quarters, default_quarter, quarter_label, resolve_quarter
 from .support_programs import NormalizedProgram, SupportProfile, select_candidates
 from .schemas import (
     AreaReportResponse,
@@ -36,10 +37,13 @@ from .schemas import (
     AreaMapInsightResponse,
     ChecklistResponse,
     ComparisonMetric,
+    ComparisonExportResponse,
     ComparisonResponse,
     EvidenceArea,
     EvidenceResponse,
     IndustryOption,
+    QuarterListResponse,
+    QuarterOption,
     MetricAreaValue,
     RecommendationCandidate,
     RecommendationReason,
@@ -60,7 +64,6 @@ from .schemas import (
 )
 
 
-SUPPORTED_QUARTERS = {"20254": "2025년 4분기"}
 INDUSTRY_CODE = "CS100010"
 REVIEW_CAPTURE_DIR = Path(__file__).resolve().parents[2] / "database" / "raw" / "reviews"
 
@@ -71,7 +74,7 @@ def number(value):
     return value
 
 
-def data_status(session: Session, code: str, quarter: str = "20254", industry: str = INDUSTRY_CODE) -> dict[str, bool]:
+def data_status(session: Session, code: str, quarter: str, industry: str = INDUSTRY_CODE) -> dict[str, bool]:
     return {
         "store": session.get(StoreMetric, (quarter, code, industry)) is not None,
         "sales": session.get(SalesMetric, (quarter, code, industry)) is not None,
@@ -91,7 +94,8 @@ def industry_name(session: Session, industry_code: str, quarter: str) -> str | N
     return store or sales
 
 
-def area_out(session: Session, area: TradeArea, status: dict[str, bool] | None = None, *, quarter: str = "20254", industry: str = INDUSTRY_CODE) -> TradeAreaOut:
+def area_out(session: Session, area: TradeArea, status: dict[str, bool] | None = None, *, quarter: str | None = None, industry: str = INDUSTRY_CODE) -> TradeAreaOut:
+    quarter = quarter or default_quarter(session)
     return TradeAreaOut(
         code=area.code,
         name=area.name,
@@ -104,8 +108,7 @@ def area_out(session: Session, area: TradeArea, status: dict[str, bool] | None =
 
 
 def validate_comparison(session: Session, codes_text: str, quarter: str) -> tuple[list[str], list[TradeArea]]:
-    if quarter not in SUPPORTED_QUARTERS:
-        raise HTTPException(400, "지원하지 않는 기준분기입니다.")
+    resolve_quarter(session, quarter)
     codes = [code.strip() for code in codes_text.split(",") if code.strip()]
     if not 2 <= len(codes) <= 4:
         raise HTTPException(400, "비교할 상권은 2개 이상 4개 이하여야 합니다.")
@@ -152,7 +155,7 @@ def build_comparison(session: Session, codes: list[str], areas: list[TradeArea],
     return ComparisonResponse(
         comparison_id=comparison_id(quarter, codes, industry),
         quarter_code=quarter,
-        quarter_label=SUPPORTED_QUARTERS[quarter],
+        quarter_label=quarter_label(quarter),
         industry_code=industry,
         industry_name=industry_name(session, industry, quarter) or "선택 업종",
         trade_areas=[area_out(session, area, quarter=quarter, industry=industry) for area in areas],
@@ -238,7 +241,7 @@ def review_capture_status() -> dict[str, object]:
 
 @app.get("/api/v1/review-industry/{code}")
 def review_industry_mapping(code: str, session: Session = Depends(get_db)) -> dict:
-    name = industry_name(session, code, "20254")
+    name = industry_name(session, code, default_quarter(session))
     if name is None:
         raise HTTPException(404, "공식 점포 원천에서 업종을 찾을 수 없습니다.")
     terms = category_terms(code, name)
@@ -281,7 +284,7 @@ def captured_review_report(
 ) -> CapturedReviewReportResponse:
     if not payload.ownership_confirmed:
         raise HTTPException(400, "내 가게 운영·관리 여부를 확인해 주세요.")
-    selected_industry_name = industry_name(session, payload.industry_code, "20254")
+    selected_industry_name = industry_name(session, payload.industry_code, default_quarter(session))
     if selected_industry_name is None or not category_terms(payload.industry_code, selected_industry_name):
         raise HTTPException(400, "선택 업종과 카카오 장소 분류의 대응을 확인할 수 없습니다.")
     if not settings.kakao_rest_api_key:
@@ -294,6 +297,7 @@ def captured_review_report(
         selected_candidates = select_peer_places(
             verified_own, payload.candidates,
             own_location.code if own_location.status == "inside" else None,
+            locator=locate_area,
             limit=24,
         )
         verified_candidates = []
@@ -320,7 +324,10 @@ def captured_review_report(
         district_name=area.district_name, area_type_name=area.area_type_name,
     ) if area else None
     location_status = location.status if area or location.status == "unmapped" else "unmapped"
-    peers = select_peer_places(verified_own, verified_candidates, area.code if location_status == "inside" and area else None, limit=9)
+    peers = select_peer_places(
+        verified_own, verified_candidates, area.code if location_status == "inside" and area else None,
+        locator=locate_area, limit=9,
+    )
     try:
         return collect_or_load_report(
             own=verified_own,
@@ -349,7 +356,7 @@ def area_review_report(
     area = session.get(TradeArea, payload.trade_area_code)
     if area is None:
         raise HTTPException(404, "공식 상권을 찾을 수 없습니다.")
-    selected_industry_name = industry_name(session, payload.industry_code, "20254")
+    selected_industry_name = industry_name(session, payload.industry_code, default_quarter(session))
     if selected_industry_name is None or not category_terms(payload.industry_code, selected_industry_name):
         raise HTTPException(400, "선택 업종과 카카오 장소 분류의 대응을 확인할 수 없습니다.")
     if not settings.kakao_rest_api_key:
@@ -413,9 +420,11 @@ def area_review_report(
 def list_trade_areas(
     district: str | None = Query(default=None),
     industry: str = Query(default=INDUSTRY_CODE),
+    quarter: str | None = Query(default=None),
     session: Session = Depends(get_db),
 ) -> list[TradeAreaOut]:
-    if industry_name(session, industry, "20254") is None:
+    quarter = resolve_quarter(session, quarter)
+    if industry_name(session, industry, quarter) is None:
         raise HTTPException(400, "해당 업종의 검증된 통계가 없습니다.")
     query = select(TradeArea).order_by(TradeArea.district_name, TradeArea.name)
     if district:
@@ -423,33 +432,48 @@ def list_trade_areas(
     areas = session.scalars(query).all()
     codes = {area.code for area in areas}
     store_codes = set(session.scalars(select(StoreMetric.trade_area_code).where(
-        StoreMetric.quarter_code == "20254",
+        StoreMetric.quarter_code == quarter,
         StoreMetric.industry_code == industry,
         StoreMetric.trade_area_code.in_(codes),
     )).all())
     sales_codes = set(session.scalars(select(SalesMetric.trade_area_code).where(
-        SalesMetric.quarter_code == "20254",
+        SalesMetric.quarter_code == quarter,
         SalesMetric.industry_code == industry,
         SalesMetric.trade_area_code.in_(codes),
     )).all())
     population_codes = set(session.scalars(select(PopulationMetric.trade_area_code).where(
-        PopulationMetric.quarter_code == "20254",
+        PopulationMetric.quarter_code == quarter,
         PopulationMetric.trade_area_code.in_(codes),
     )).all())
     return [area_out(session, area, {
         "store": area.code in store_codes,
         "sales": area.code in sales_codes,
         "population": area.code in population_codes,
-    }) for area in areas]
+    }, quarter=quarter, industry=industry) for area in areas]
+
+
+@app.get("/api/v1/quarters", response_model=QuarterListResponse)
+def list_quarters(session: Session = Depends(get_db)) -> QuarterListResponse:
+    codes = available_quarters(session)
+    def counts(model) -> dict[str, int]:
+        return dict(session.execute(select(model.quarter_code, func.count()).group_by(model.quarter_code)).all())
+    stores, sales, populations = counts(StoreMetric), counts(SalesMetric), counts(PopulationMetric)
+    return QuarterListResponse(
+        default_quarter=default_quarter(session, codes),
+        quarters=[QuarterOption(
+            code=code, label=quarter_label(code), store_rows=stores.get(code, 0),
+            sales_rows=sales.get(code, 0), population_rows=populations.get(code, 0),
+        ) for code in codes],
+        notice="비교·근거·리포트는 한 기준분기의 원천만 사용합니다. 서로 다른 분기의 값을 섞지 않습니다.",
+    )
 
 
 @app.get("/api/v1/industries", response_model=list[IndustryOption])
 def list_industries(
-    quarter: str = Query(default="20254"),
+    quarter: str | None = Query(default=None),
     session: Session = Depends(get_db),
 ) -> list[IndustryOption]:
-    if quarter not in SUPPORTED_QUARTERS:
-        raise HTTPException(400, "지원하지 않는 기준분기입니다.")
+    quarter = resolve_quarter(session, quarter)
     rows = session.execute(
         select(StoreMetric.industry_code, StoreMetric.industry_name, func.count(StoreMetric.trade_area_code))
         .where(StoreMetric.quarter_code == quarter)
@@ -468,25 +492,30 @@ def list_industries(
 
 
 @app.get("/api/v1/trade-areas/{code}", response_model=TradeAreaOut)
-def get_trade_area(code: str, industry: str = Query(default=INDUSTRY_CODE), session: Session = Depends(get_db)) -> TradeAreaOut:
+def get_trade_area(
+    code: str,
+    industry: str = Query(default=INDUSTRY_CODE),
+    quarter: str | None = Query(default=None),
+    session: Session = Depends(get_db),
+) -> TradeAreaOut:
     area = session.get(TradeArea, code)
     if not area:
         raise HTTPException(404, "상권을 찾을 수 없습니다.")
-    if industry_name(session, industry, "20254") is None:
+    quarter = resolve_quarter(session, quarter)
+    if industry_name(session, industry, quarter) is None:
         raise HTTPException(400, "해당 업종의 검증된 통계가 없습니다.")
-    return area_out(session, area, industry=industry)
+    return area_out(session, area, quarter=quarter, industry=industry)
 
 
 @app.get("/api/v1/trade-areas/{code}/map-insight", response_model=AreaMapInsightResponse)
 def get_trade_area_map_insight(
     code: str,
-    quarter: str = Query(default="20254"),
+    quarter: str | None = Query(default=None),
     industry: str = Query(default=INDUSTRY_CODE),
     session: Session = Depends(get_db),
 ) -> AreaMapInsightResponse:
     """Return only the official, trade-area-level metrics usable beside the map."""
-    if quarter not in SUPPORTED_QUARTERS:
-        raise HTTPException(400, "지원하지 않는 기준분기입니다.")
+    quarter = resolve_quarter(session, quarter)
     selected_industry_name = industry_name(session, industry, quarter)
     if not selected_industry_name:
         raise HTTPException(400, "해당 업종의 검증된 통계가 없습니다.")
@@ -546,7 +575,7 @@ def get_trade_area_map_insight(
 
     return AreaMapInsightResponse(
         quarter_code=quarter,
-        quarter_label=SUPPORTED_QUARTERS[quarter],
+        quarter_label=quarter_label(quarter),
         trade_area=area_out(session, area, quarter=quarter, industry=industry),
         total_population=metric_out("total_population"),
         sales_amount=metric_out("sales_amount"),
@@ -564,12 +593,11 @@ def get_trade_area_map_insight(
 @app.get("/api/v1/trade-areas/{code}/report", response_model=AreaReportResponse)
 def get_trade_area_report(
     code: str,
-    quarter: str = Query(default="20254"),
+    quarter: str | None = Query(default=None),
     industry: str = Query(default=INDUSTRY_CODE),
     session: Session = Depends(get_db),
 ) -> AreaReportResponse:
-    if quarter not in SUPPORTED_QUARTERS:
-        raise HTTPException(400, "지원하지 않는 기준분기입니다.")
+    quarter = resolve_quarter(session, quarter)
     selected_industry_name = industry_name(session, industry, quarter)
     if not selected_industry_name:
         raise HTTPException(400, "해당 업종의 검증된 통계가 없습니다.")
@@ -578,7 +606,7 @@ def get_trade_area_report(
         raise HTTPException(404, "상권을 찾을 수 없습니다.")
     return AreaReportResponse(
         quarter_code=quarter,
-        quarter_label=SUPPORTED_QUARTERS[quarter],
+        quarter_label=quarter_label(quarter),
         industry_code=industry,
         industry_name=selected_industry_name,
         comparison_count=report["comparison_count"],
@@ -829,13 +857,14 @@ def recommend_trade_areas(
     profile: RecommendationRequest,
     session: Session = Depends(get_db),
 ) -> RecommendationResponse:
-    selected_industry_name = industry_name(session, profile.industry_code, "20254")
+    quarter = default_quarter(session)
+    selected_industry_name = industry_name(session, profile.industry_code, quarter)
     if selected_industry_name is None:
         return RecommendationResponse(
             status="unsupported_business",
             message="선택한 업종의 점포 원천이 없어 후보 상권을 계산할 수 없습니다.",
-            quarter_code="20254",
-            quarter_label=SUPPORTED_QUARTERS["20254"],
+            quarter_code=quarter,
+            quarter_label=quarter_label(quarter),
             industry_code=profile.industry_code,
             industry_name="선택 업종",
             weights_version="industry-v1",
@@ -849,13 +878,14 @@ def recommend_trade_areas(
         demand=profile.demand,
         risk=profile.risk,
         competition=profile.competition,
+        quarter=quarter,
         industry=profile.industry_code,
     )
     if not scored:
         return RecommendationResponse(
             status="unsupported_business",
             message="이 업종에서 같은 지표로 비교할 수 있는 상권이 3곳 미만입니다. 상권 탐색에서 원천 보유 상태를 확인해 주세요.",
-            quarter_code="20254", quarter_label=SUPPORTED_QUARTERS["20254"],
+            quarter_code=quarter, quarter_label=quarter_label(quarter),
             industry_code=profile.industry_code, industry_name=selected_industry_name,
             weights_version="industry-v1", candidate_pool_size=0,
             diversity_rule="적용 안 함", candidates=[],
@@ -883,7 +913,7 @@ def recommend_trade_areas(
         candidates.append(RecommendationCandidate(
             rank=rank,
             score=candidate.score,
-            trade_area=area_out(session, candidate.area, industry=profile.industry_code),
+            trade_area=area_out(session, candidate.area, quarter=quarter, industry=profile.industry_code),
             reasons=reasons,
             cautions=cautions,
             data_completeness=f"{candidate.available_count}/14",
@@ -891,8 +921,8 @@ def recommend_trade_areas(
     return RecommendationResponse(
         status="available",
         message="성공을 예측한 결과가 아니에요. 내가 고른 답과 현재 확인할 수 있는 숫자를 바탕으로 먼저 살펴볼 순서를 정했어요.",
-        quarter_code="20254",
-        quarter_label=SUPPORTED_QUARTERS["20254"],
+        quarter_code=quarter,
+        quarter_label=quarter_label(quarter),
         industry_code=profile.industry_code,
         industry_name=selected_industry_name,
         weights_version="industry-v1",
@@ -905,10 +935,11 @@ def recommend_trade_areas(
 @app.get("/api/v1/comparisons", response_model=ComparisonResponse)
 def compare_trade_areas(
     codes: str = Query(..., description="쉼표로 구분한 상권 코드 2~4개"),
-    quarter: str = Query(default="20254"),
+    quarter: str | None = Query(default=None),
     industry: str = Query(default=INDUSTRY_CODE),
     session: Session = Depends(get_db),
 ) -> ComparisonResponse:
+    quarter = resolve_quarter(session, quarter)
     code_list, areas = validate_comparison(session, codes, quarter)
     if industry_name(session, industry, quarter) is None:
         raise HTTPException(400, "해당 업종의 검증된 통계가 없습니다.")
@@ -927,17 +958,7 @@ SOURCE_BY_METRIC = {
 }
 
 
-@app.get(
-    "/api/v1/comparisons/{comparison_id_value}/evidence/{metric_key}",
-    response_model=EvidenceResponse,
-)
-def get_evidence(
-    comparison_id_value: str,
-    metric_key: str,
-    session: Session = Depends(get_db),
-) -> EvidenceResponse:
-    quarter, industry, codes_text = parse_comparison_id(comparison_id_value)
-    codes, areas = validate_comparison(session, codes_text, quarter)
+def build_evidence(session: Session, quarter: str, industry: str, codes: list[str], areas: list[TradeArea], metric_key: str) -> EvidenceResponse:
     selected_industry_name = industry_name(session, industry, quarter)
     if not selected_industry_name:
         raise HTTPException(400, "해당 업종의 검증된 통계가 없습니다.")
@@ -953,9 +974,12 @@ def get_evidence(
     source_key = SOURCE_BY_METRIC.get(metric_key)
     if metric_key.startswith("population_"):
         source_key = "population"
+    elif metric_key.startswith("sales_") and metric_key.endswith("_ratio"):
+        source_key = "sales"
     if not source_key:
         raise HTTPException(404, "지표 출처를 찾을 수 없습니다.")
-    source = session.get(DataSource, source_key)
+    # Open API로 받은 분기는 분기별 출처(`store:20262`)를, 연도별 ZIP은 기존 키를 쓴다.
+    source = session.get(DataSource, f"{source_key}:{quarter}") or session.get(DataSource, source_key)
     if not source:
         raise HTTPException(500, "데이터 출처 정보가 없습니다.")
 
@@ -993,6 +1017,43 @@ def get_evidence(
                 denominator=metric.calculation.denominator if metric.calculation else None,
             )
             for code, metric in selected_metrics
+        ],
+    )
+
+
+
+
+@app.get(
+    "/api/v1/comparisons/{comparison_id_value}/evidence/{metric_key}",
+    response_model=EvidenceResponse,
+)
+def get_evidence(
+    comparison_id_value: str,
+    metric_key: str,
+    session: Session = Depends(get_db),
+) -> EvidenceResponse:
+    quarter, industry, codes_text = parse_comparison_id(comparison_id_value)
+    codes, areas = validate_comparison(session, codes_text, quarter)
+    return build_evidence(session, quarter, industry, codes, areas, metric_key)
+
+
+@app.get("/api/v1/comparisons/{comparison_id_value}/export", response_model=ComparisonExportResponse)
+def export_comparison(comparison_id_value: str, session: Session = Depends(get_db)) -> ComparisonExportResponse:
+    """비교 리포트 저장용: 비교표와 모든 지표의 근거를 한 번에 돌려준다 (Phase 42)."""
+    quarter, industry, codes_text = parse_comparison_id(comparison_id_value)
+    codes, areas = validate_comparison(session, codes_text, quarter)
+    if industry_name(session, industry, quarter) is None:
+        raise HTTPException(400, "해당 업종의 검증된 통계가 없습니다.")
+    comparison = build_comparison(session, codes, areas, quarter, industry)
+    return ComparisonExportResponse(
+        comparison=comparison,
+        evidence=[build_evidence(session, quarter, industry, codes, areas, metric.metric_key) for metric in comparison.metrics],
+        generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        limitations=[
+            "이 리포트는 상권을 추천하거나 창업 성공 가능성을 판단하지 않습니다.",
+            "공공데이터는 추정 통계이며, 같은 기준분기·업종의 공식 상권 단위 값입니다. 개별 가게의 매출이나 실제 임대료가 아닙니다.",
+            "비교 불가로 표시된 값은 원천 행이 없거나 계산할 수 없는 값이며 0으로 바꾸지 않았습니다.",
+            "현장 보행 흐름, 매물 조건, 인허가·계약 사항은 직접 확인하고 필요하면 공식 기관이나 전문가에게 확인하세요.",
         ],
     )
 

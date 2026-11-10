@@ -78,6 +78,14 @@ def average_payment(sales_amount: int | None, sales_count: int | None) -> Calcul
     return CalculationResult("available", value, None, formula, sales_amount, sales_count)
 
 
+def time_slot_sales_ratio(slot_sales: int | None, total_sales: int | None) -> CalculationResult:
+    return percentage(
+        slot_sales,
+        total_sales,
+        formula="시간대 매출 금액 ÷ 전체 매출 금액 × 100",
+    )
+
+
 def time_slot_ratio(slot_population: int | None, total_population: int | None) -> CalculationResult:
     return percentage(
         slot_population,

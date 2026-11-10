@@ -164,6 +164,7 @@ quarter_code + trade_area_code + industry_code
 | 주중 매출 비중 | `weekday_sales_amount / sales_amount × 100` | 분모가 0 또는 누락이면 비교 불가 |
 | 건당 평균 결제액 | `sales_amount / sales_count` | 분모가 0 또는 누락이면 비교 불가 |
 | 시간대별 유동인구 분포 | `time_slot_population / total_population × 100` | 인구 원천 계약 확정 후 구현 |
+| 시간대별 매출 비중 (Phase 41) | `시간대_XX~YY_매출_금액 / 당월_매출_금액 × 100` (6개 시간대: 00~06, 06~11, 11~14, 14~17, 17~21, 21~24) | 분모 0·시간대 값 누락(Phase 41 이전 적재 행 포함)은 비교 불가. 비교표·근거 보기에만 표시하고 추천 점수·강점/주의 문장에는 쓰지 않음 |
 
 - 백엔드는 원본 정밀도로 계산하고, 화면은 소수 첫째 자리까지 반올림합니다.
 - 원 단위의 금액은 정수로 표시하고, `건당 평균 결제액`도 원 단위로 반올림합니다.
@@ -179,14 +180,18 @@ quarter_code + trade_area_code + industry_code
 
 모든 응답은 JSON을 사용합니다. API는 계산 실패를 0으로 바꾸지 않습니다.
 
+기준분기 규칙 (Phase 40): `quarter`를 생략하면 DB에 점포 원천이 적재된 가장 최근 분기를 씁니다(`DEFAULT_QUARTER` 환경 변수로 고정 가능). 적재되지 않았거나 형식이 틀린 분기는 400을 반환합니다. 한 응답의 모든 값은 같은 분기 원천에서만 나오며, 새 분기에 행이 없는 상권·업종·유동인구를 이전 분기 값으로 채우지 않습니다. `comparison_id`는 분기를 포함하므로 저장한 비교는 저장 당시 분기로 다시 열립니다. 근거 보기의 출처는 분기별 Open API 출처(`store:20262` 등)가 있으면 그것을, 없으면 연도별 ZIP 출처를 표시합니다.
+
 | 메서드·경로 | 목적 | 성공 응답 핵심 |
 | --- | --- | --- |
-| `GET /api/v1/industries?quarter=20254` | 검증·적재 완료 업종 목록 조회 | 업종 코드, 업종명 |
-| `GET /api/v1/trade-areas?industry={code}` | 탐색 가능한 상권 목록 조회 | `trade_area_code`, `name`, `district`, `area_type`, `latitude`, `longitude`, 업종별 `data_status` |
+| `GET /api/v1/quarters` | 적재된 기준분기 목록과 기본 분기 조회 (Phase 40) | `default_quarter`, 분기별 코드·이름·점포/매출/유동인구 행 수 |
+| `GET /api/v1/industries[?quarter={code}]` | 검증·적재 완료 업종 목록 조회 | 업종 코드, 업종명 |
+| `GET /api/v1/trade-areas?industry={code}[&quarter={code}]` | 탐색 가능한 상권 목록 조회 | `trade_area_code`, `name`, `district`, `area_type`, `latitude`, `longitude`, 업종별 `data_status` |
 | `GET /api/v1/trade-areas/{code}` | 상권 기본 정보 조회 | 상권 코드, 이름, 구, 구분, 지도 정보 |
 | `GET /api/v1/trade-areas/{code}/map-insight?industry={code}` | 지도 선택 근거 조회 | 같은 기준분기의 상권 단위 유동·선택 업종 매출·시간대 비중·동일 자치구 상대 위치와 결측 사유 |
-| `GET /api/v1/comparisons?codes={code1},{code2}[,{code3},{code4}]&quarter=20254` | 2~4개 상권 비교 | 기준분기, 선택 상권 배열, 지표 배열 |
+| `GET /api/v1/comparisons?codes={code1},{code2}[,{code3},{code4}][&quarter={code}]` | 2~4개 상권 비교 | 기준분기, 선택 상권 배열, 지표 배열 |
 | `GET /api/v1/comparisons/{comparison_id}/evidence/{metric_key}` | 지표 근거 조회 | 출처, 원천값, 필터, 계산식, 상태 |
+| `GET /api/v1/comparisons/{comparison_id}/export` | 비교 리포트 저장용 묶음 (Phase 42) | 비교 응답 전체, 모든 지표의 근거 배열, 생성 시각(UTC), 읽을 때 주의할 점. 화면은 이 값으로 인쇄 전용 리포트를 만들고 브라우저의 ‘PDF로 저장’을 쓴다. 공개 링크는 만들지 않는다 |
 | `GET /api/v1/field-checklist` | 현장 확인 질문 조회 | 질문 배열, 분류, 안내 문구 |
 
 ### 7.1 비교 응답의 지표 구조
@@ -346,6 +351,7 @@ quarter_code + trade_area_code + industry_code
 - 로그인 상태에서 새로 만드는 테스트/리포트는 ‘내 기록에 저장’으로 저장합니다. 로그인 시 익명 기록 자동 이관과 구분합니다. 관심 상권과 워크시트는 저장 상태를 표시하며 동기화합니다.
 - 공통 필드: record_id, user_id, kind, title, created_at, updated_at, schema_version. 이름 변경은 표시 제목/상권 개인 별칭만 수정하고 공식 상권명·기준분기·과거 수치를 변경하지 않습니다. 세부 스키마는 Phase 25에서 확정합니다.
 - 소유권은 서버/DB에서 검증하며 프런트 user_id 필터만 신뢰하지 않습니다. 인증 제공자의 이름·이메일을 제품 테이블에 중복 수집하지 않고 이메일이 없는 사용자도 식별은 user.id로 처리합니다.
+- 태그·검색·내보내기 (Phase 43): `user_records.tags`(JSON 배열, 기본 `[]`, Alembic `20261110_0009`)에 기록마다 최대 5개, 각 20자의 태그를 둡니다. 같은 행에 있으므로 기존 소유자 RLS와 전체 삭제·탈퇴가 그대로 적용됩니다. 태그 컬럼이 아직 없는 DB에서는 프런트가 태그 없이 기록을 다시 읽고 태그 기능을 숨깁니다. 검색은 기록 제목·태그·관심 상권 이름/코드·매물 별칭/위치 설명에서 찾고, 태그로 거르는 동안에는 태그가 붙는 기록만 보여 줍니다. 내보내기는 로그인한 본인의 기록·관심 상권·매물 워크시트를 JSON 파일로 저장하며 계정 식별자·이메일은 넣지 않습니다. 폴더는 두지 않습니다.
 - 계정 전체 기록 삭제·회원 탈퇴는 다른 기능이며 범위 안내와 확인 후 수행합니다. 카카오 계정 자체 삭제와 서비스 탈퇴도 구분합니다. 관련 서버 권한·재인증·연결 해제·실패 복구는 Phase 27에서 검증합니다.
 
 ### 12.6 기존 기록 전환과 테스트

@@ -87,8 +87,9 @@ Push-Location backend
 ```powershell
 cd frontend
 Copy-Item .env.example .env
-npm install
-npm run dev -- --host 127.0.0.1
+corepack enable pnpm   # pnpm이 없을 때 한 번만
+pnpm install --frozen-lockfile
+pnpm run dev --host 127.0.0.1
 ```
 
 <http://127.0.0.1:5173>에서 확인합니다. 카카오 개발자 콘솔에서 카카오맵 API를 활성화하고, JavaScript 키의 SDK 도메인에 `http://localhost:5173`과 `http://127.0.0.1:5173`을 등록한 뒤 `frontend/.env`의 `VITE_KAKAO_MAP_KEY`에 키를 넣어야 실제 지도가 나타납니다. 키가 없거나 카카오맵 API가 비활성화되어 있으면 상권 목록과 비교 기능은 그대로 동작하고 지도 영역에는 설정 안내가 표시됩니다.
@@ -111,12 +112,12 @@ Push-Location backend
 Pop-Location
 
 Push-Location frontend
-npm test -- --run
-npm run build
+pnpm test
+pnpm run build
 Pop-Location
 ```
 
-2026-11-10 기준 백엔드 pytest 99개, 프런트엔드 Vitest 71개 테스트가 있고 프런트엔드 빌드가 통과합니다. 백엔드 테스트 중 4개는 Git에서 제외한 원천 파일이 있을 때만 실행됩니다. 원천 파일이 없는 환경에서는 리뷰 API 테스트 1개도 실패하며, 이 테스트 격리 문제는 `docs/plan.md` Phase 38에서 고칩니다. 지표의 손계산 기대값은 [docs/지표_손계산_기준표.xlsx](docs/지표_손계산_기준표.xlsx)에 고정되어 있습니다.
+Phase 38(2026-11-10) 기준 백엔드 pytest 99개, 프런트엔드 Vitest 71개 테스트가 있고 프런트엔드 빌드가 통과합니다. 백엔드 테스트 중 원천 파일이 필요한 4개(적재 통합 3개, 공식 경계 1개)는 필요한 `database/raw/` 파일이 모두 있을 때만 실행되고, 없으면 빠진 파일 이름과 함께 건너뜁니다. 지표의 손계산 기대값은 [docs/지표_손계산_기준표.xlsx](docs/지표_손계산_기준표.xlsx)에 고정되어 있습니다.
 
 ## Supabase 연결
 

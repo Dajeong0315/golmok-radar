@@ -294,6 +294,7 @@ def captured_review_report(
         selected_candidates = select_peer_places(
             verified_own, payload.candidates,
             own_location.code if own_location.status == "inside" else None,
+            locator=locate_area,
             limit=24,
         )
         verified_candidates = []
@@ -320,7 +321,10 @@ def captured_review_report(
         district_name=area.district_name, area_type_name=area.area_type_name,
     ) if area else None
     location_status = location.status if area or location.status == "unmapped" else "unmapped"
-    peers = select_peer_places(verified_own, verified_candidates, area.code if location_status == "inside" and area else None, limit=9)
+    peers = select_peer_places(
+        verified_own, verified_candidates, area.code if location_status == "inside" and area else None,
+        locator=locate_area, limit=9,
+    )
     try:
         return collect_or_load_report(
             own=verified_own,

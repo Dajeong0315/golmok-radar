@@ -3,10 +3,12 @@ from pathlib import Path
 import pytest
 
 
-RAW_STORE = Path(__file__).resolve().parents[2] / "database" / "raw" / "store"
+RAW = Path(__file__).resolve().parents[2] / "database" / "raw"
+REQUIRED_RAW = ("area/*.zip", "store/*_2025년.zip", "sales/*_2025년.zip", "population/*.csv", "population/*.meta.json")
+MISSING_RAW = [pattern for pattern in REQUIRED_RAW if not any(RAW.glob(pattern))]
 pytestmark = pytest.mark.skipif(
-    not any(RAW_STORE.glob("*.zip")),
-    reason="Git에서 제외한 원천 파일이 있을 때만 적재 통합 테스트를 실행합니다.",
+    bool(MISSING_RAW),
+    reason=f"Git에서 제외한 원천 파일이 모두 있을 때만 적재 통합 테스트를 실행합니다. 없음: {', '.join(MISSING_RAW)}",
 )
 
 

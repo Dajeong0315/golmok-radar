@@ -111,8 +111,8 @@ Phase 0~37과 2026-11-09 화면 디자인 개편까지 완료한 뒤의 계획�
 | 42 | 비교 리포트 내보내기 | Phase 41 완료 | 완료 — 2026-11-10 |
 | 43 | 마이페이지 기록 관리 확장 | Phase 42 완료 | 완료 — 2026-11-10, 운영 DB 마이그레이션 0009 적용. 실제 계정 태그 확인은 아래 ‘남은 확인’ |
 | 44 | 맞히기 퀴즈·상권 대결 카드 | Phase 43 완료 | 완료 — 2026-11-10 |
-| 45 | 배포 준비 | Phase 38~44 완료, 호스팅·도메인 결정 | 대부분 완료 — 2026-11-10 수업 과정(클라우드 01~09)으로 진행. 문서화 항목만 남음 |
-| 46 | 운영 배포·모니터링 | Phase 45 완료, 사용자의 배포 승인 | 배포 완료 — 2026-11-10. 모니터링·리뷰 수집 운영 확인 남음 |
+| 45 | 배포 준비 | Phase 38~44 완료, 호스팅·도메인 결정 | 완료 — 2026-11-10, 수업 과정(클라우드 01~09)으로 배포하고 README ‘배포·운영’ 정리 |
+| 46 | 운영 배포·모니터링 | Phase 45 완료, 사용자의 배포 승인 | 완료 — 2026-11-10, 점검 도구·문서 완료. 서버에서 리뷰 수집 준비 실행은 사용자 과제 |
 
 ### 2026-11-10 운영 반영·배포 기록 (Phase 40~46 현황)
 
@@ -139,6 +139,30 @@ Phase 0~37과 2026-11-09 화면 디자인 개편까지 완료한 뒤의 계획�
 - 문서: README에 실제 배포 구조(Cloudflare Pages + Lightsail + Caddy), 서버 갱신 명령(`git pull` → 필요 시 `pip install`·`alembic upgrade head` → `systemctl restart golmok-radar-backend`)과 되돌리기 방법을 정리. `.env.example`에 `CORS_ORIGINS` 운영 예시(JSON 배열, 끝 `/` 금지) 추가
 - 리뷰 수집 운영: 서버 `.env`에 `KAKAO_REST_API_KEY`·`REVIEW_CAPTURE_ENCRYPTION_KEY`가 있는지, Playwright 브라우저가 Lightsail에 설치돼 있는지, 90일 암호화 보관 파일 위치와 디스크 여유를 확인. 아직 확인하지 않음
 - 모니터링: `journalctl -u golmok-radar-backend` 확인 습관, 로그에 개인정보가 남지 않는지 점검, `python -m app.review_metrics`로 리뷰 생성률 정기 집계
+
+### Phase 45·46 마무리 기록 (2026-11-10)
+
+- 사용자 확인 (배포 사이트): 내 기록 이름·태그가 새로고침 후 유지됨, 로그인 전 성향 테스트 두 결과가 모두 이관됨, 비교 카드 이미지·맞혀 보기 정상, PDF 저장은 되지만 일부 한글이 깨짐.
+- **PDF 한글 깨짐 수정**
+  - 원인: Google Fonts의 한글 글꼴은 글자 묶음 조각(unicode-range)으로 나뉘어, 화면에 보인 글자만 받습니다. 인쇄본은 화면에서 숨겨져 있어서, 인쇄 창을 여는 순간 IBM Plex Sans KR·Black Han Sans 조각 27개가 아직 `loading`이었습니다. 실제 브라우저 인쇄는 기다리지 않아 일부 글자가 다른 글꼴로 대체됐습니다.
+  - 수정: 인쇄 창을 열기 전에 `printFonts.ts`가 리포트 글자로 `document.fonts.load`를 굵기별(400·600·700, Black Han Sans)로 호출하고 `document.fonts.ready`를 기다립니다. 글꼴이 막힌 환경을 위해 최대 6초 뒤에는 그대로 인쇄합니다.
+  - 확인: 인쇄 시점 `loading` 0개, 리포트 글자에 대한 `document.fonts.check` 3종 모두 `true`.
+- **리뷰 수집 운영 점검**
+  - 수집 브라우저 경로: 그동안 Windows의 Chrome·Edge 경로만 찾고 `REVIEW_CAPTURE_BROWSER_PATH` 설정은 쓰지 않았습니다. 이제 설정값이 실제 파일일 때만 그 경로를 씁니다. `.env.example`의 설명 문장이 값으로 남아 있어도 무시합니다. 없으면 Playwright가 설치한 Chromium을 씁니다.
+  - 브라우저를 실행하지 못하면 500 대신 기존 ‘리뷰 수집 저장 설정이 준비되지 않았습니다’(503)로 안내합니다.
+  - `.env.example`: `REVIEW_CAPTURE_ENCRYPTION_KEY`·`REVIEW_CAPTURE_BROWSER_PATH`에 들어 있던 설명 문장 값을 비우고, 키 생성 명령과 운영 `CORS_ORIGINS` 예시를 주석으로 정리했습니다.
+- **모니터링 도구**
+  - `python -m app.env_check [--browser]`: 기능별(기본·로그인·회원 탈퇴·리뷰 비교·공식 지원 정보) 설정 유무, DB 연결과 분기별 행 수, CORS 형식(끝 `/`, 로컬 주소만), Fernet 키 형식, 리뷰 보관 폴더 쓰기·디스크 여유, 수집 브라우저 실행을 점검합니다. 비밀값은 출력하지 않습니다.
+  - `scripts/server_status.sh <백엔드 도메인>`: 서비스·Caddy 상태, 서버 안과 HTTPS 응답, 최근 24시간 오류 로그, 코드 버전·디스크, 설정 점검, 리뷰 생성률을 한 번에 보여 줍니다.
+- **문서**: README ‘배포·운영’에 실제 구성, 갱신 순서(`git pull` → 필요 시 `pip install`·`alembic upgrade head` → 재시작 → 상태 점검), 되돌리기(Cloudflare 롤백, `git switch --detach`), 리뷰 수집 준비, 로그·개인정보 범위를 적었습니다.
+  - 로그 점검 결과: 접속 로그에는 IP와 경로·쿼리(상권 코드·업종·리뷰 대상 가게 좌표)만 남고, 요청 본문·리뷰 원문·이메일·토큰은 남지 않습니다.
+- **검증**
+  - 이 환경에서 `env_check --browser`로 실제 Chromium 실행·DB 행 수·보관 폴더 점검이 동작했습니다. 비밀키가 없는 항목은 `XX`로 표시되고 종료 코드 1을 돌려줬습니다.
+  - `tests/test_server_readiness.py` 10개(비밀값 미출력, 잘못된 CORS·키·누락, DB 행 수, 보관 폴더, 브라우저 없음 → 설정 오류, 설정 경로 사용·설명 문장 무시), `printFonts.test.ts` 2개. 백엔드 158개 통과·3개 건너뜀, Vitest 21개 파일 102개, `tsc -b`, 빌드 통과.
+- **남은 사용자 작업 (Lightsail)**
+  1. `git pull` 후 재시작
+  2. `bash scripts/server_status.sh api-golmok-radar.axworks.site`로 XX 항목 확인
+  3. 리뷰 비교를 쓰려면 PC `backend/.env`의 `KAKAO_REST_API_KEY`·`REVIEW_CAPTURE_ENCRYPTION_KEY`(·회원 탈퇴용 키)를 서버 `.env`에 옮기고, README의 Chromium 설치 명령 실행 후 `env_check --browser`로 확인
 
 ### Phase 38 — 회귀 기준선 정리
 

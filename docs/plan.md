@@ -413,7 +413,13 @@ Phase 0~37과 2026-11-09 화면 디자인 개편까지 완료한 뒤의 계획�
 
 **후속 수정 (2026-11-10):** 사용자 Windows PC의 개발 서버에서 비교 화면이 `The requested module '/src/ComparisonQuiz.ts' does not provide an export named 'ComparisonQuiz'` 오류로 열리지 않았습니다.
 - 원인: 같은 폴더에 `ComparisonQuiz.tsx`(화면)와 `comparisonQuiz.ts`(문제 생성)가 함께 있었습니다. Windows·macOS는 대소문자를 구분하지 않고, Vite는 `.ts`를 `.tsx`보다 먼저 찾습니다. 그래서 `./ComparisonQuiz`가 문제 생성 파일로 연결됐습니다. 검증한 Linux 환경과 Cloudflare 빌드에서는 생기지 않는 문제였습니다.
-- 수정: 문제 생성 파일과 테스트를 `quizQuestions.ts`·`quizQuestions.test.ts`로 이름을 바꿨습니다. 대소문자만 다른 TypeScript 파일이 생기면 실패하는 `fileNames.test.ts`도 추가했습니다. Vitest 19개 파일 97개, 빌드 통과.
+- 수정: 문제 생성 파일과 테스트를 `quizQuestions.ts`·`quizQuestions.test.ts`로 이름을 바꿨습니다. 대소문자만 다른 TypeScript 파일이 생기면 실패하는 `fileNames.test.ts`도 추가했습니다.
+  - 처음 작성한 검사 테스트는 Node 모듈(`node:fs`)을 써서 프론트 빌드(`tsc -b`)를 깨뜨렸습니다. 그래서 Vite의 `import.meta.glob`으로 바꿨습니다.
+  - 임시 충돌 파일(`comparisonquiz.ts`)을 만들면 이 테스트가 실패하는 것을 확인했습니다.
+- 함께 고친 점: 배포 사이트의 상권 탐색에서 목록이 잠시 ‘0곳·조건에 맞는 상권이 없습니다’로 보였습니다.
+  - 원인: 첫 화면은 기준분기를 모르는 채로 상권 목록을 한 번 요청하고, 기준분기 목록을 받은 뒤 다시 요청합니다. 이때 취소된 첫 요청의 `finally`가 로딩 표시를 꺼서, 두 번째 응답이 오기 전까지 빈 목록이 보였습니다.
+  - 수정: 취소된 요청은 로딩 표시를 끄지 않게 했습니다(`App.tsx`). Phase 40에서 기준분기 의존성을 추가하면서 드러난 문제입니다.
+- 결과: Vitest 19개 파일 97개, `tsc -b`, 빌드 통과.
 
 ### Phase 45 — 배포 준비
 

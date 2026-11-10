@@ -70,6 +70,14 @@ def validate_targets(targets: list[CaptureTarget]) -> None:
             raise ValueError("Capture targets must use public HTTPS URLs.")
 
 
+def configured_browser_path() -> str | None:
+    from .config import get_settings
+
+    path = (get_settings().review_capture_browser_path or "").strip()
+    # 예시 문장이 값으로 남아 있는 등 실제 파일이 아니면 무시하고 Playwright 기본 브라우저를 씁니다.
+    return path if path and Path(path).is_file() else None
+
+
 class PublicReviewBrowserCollector:
     """Captures rendered review text only; it does not call private APIs or authenticate."""
 
@@ -80,7 +88,8 @@ class PublicReviewBrowserCollector:
 
     def __init__(self, encryption_key: str | None, executable_path: str | None = None) -> None:
         self._cipher = cipher_from_key(encryption_key)
-        self._executable_path = executable_path or self._find_local_browser()
+        # 서버(Linux)에서는 `.env`의 REVIEW_CAPTURE_BROWSER_PATH, 없으면 `playwright install chromium`으로 받은 브라우저를 씁니다.
+        self._executable_path = executable_path or configured_browser_path() or self._find_local_browser()
 
     @staticmethod
     def _find_local_browser() -> str | None:
@@ -103,10 +112,14 @@ class PublicReviewBrowserCollector:
         captured: list[CapturedReview] = []
         failed_labels: list[str] = []
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(
-                headless=True,
-                executable_path=self._executable_path,
-            )
+            try:
+                browser = playwright.chromium.launch(
+                    headless=True,
+                    executable_path=self._executable_path,
+                )
+            except PlaywrightError as error:
+                # 브라우저가 설치되지 않은 서버에서는 500 대신 ‘설정 준비 안 됨’(503)으로 안내합니다.
+                raise CaptureConfigurationError("Review capture browser is not available on this server.") from error
             try:
                 page = browser.new_page()
                 for target in targets:

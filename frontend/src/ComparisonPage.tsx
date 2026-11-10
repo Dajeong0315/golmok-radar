@@ -6,6 +6,7 @@ import { buildCardModel, cardFileName, drawCard } from "./comparisonCard";
 import { ComparisonQuiz } from "./ComparisonQuiz";
 import { ComparisonReportPrint } from "./ComparisonReportPrint";
 import { EvidenceDrawer } from "./EvidenceDrawer";
+import { loadPrintFonts } from "./printFonts";
 import type { ChecklistResponse, ComparisonExportResponse, ComparisonResponse } from "./types";
 import { TopNavigation } from "./TopNavigation";
 
@@ -36,9 +37,13 @@ export function ComparisonPage({ codes, industry, quarter }: Props) {
 
   useEffect(() => {
     if (printState !== "ready" || !printReport) return;
-    // 인쇄본이 화면에 그려진 다음 인쇄 창을 엽니다. 사용자는 대상에서 'PDF로 저장'을 고릅니다.
-    const frame = requestAnimationFrame(() => window.print());
-    return () => cancelAnimationFrame(frame);
+    // 인쇄본이 화면에 그려지고 그 글자의 한글 글꼴을 받은 다음 인쇄 창을 엽니다. 사용자는 대상에서 'PDF로 저장'을 고릅니다.
+    let cancelled = false;
+    const frame = requestAnimationFrame(() => {
+      const text = document.querySelector(".print-report")?.textContent || "";
+      void loadPrintFonts(text).then(() => { if (!cancelled) window.print(); });
+    });
+    return () => { cancelled = true; cancelAnimationFrame(frame); };
   }, [printState, printReport]);
 
   const savePdf = () => {

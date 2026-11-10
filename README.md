@@ -131,6 +131,51 @@ pnpm run dev --host 127.0.0.1
 
 적재가 끝나면 API와 화면의 기본 기준분기가 가장 최근 적재 분기로 바뀌고, 탐색 화면에서 이전 분기를 고를 수 있습니다. 특정 분기로 고정하려면 `backend/.env`에 `DEFAULT_QUARTER=20254`처럼 적습니다.
 
+## 배포·운영 (2026-11-10 기준)
+
+| 구성 | 위치 | 주소·이름 |
+| --- | --- | --- |
+| 프런트엔드 (React) | Cloudflare Pages, GitHub `main` 자동 배포 | `https://golmok-radar.axworks.site` |
+| 백엔드 (FastAPI) | AWS Lightsail `~/apps/ax-webapp`, systemd `golmok-radar-backend` (uvicorn 8000) | `https://api-golmok-radar.axworks.site` |
+| HTTPS 입구 | Lightsail의 Caddy → `127.0.0.1:8000` | `/etc/caddy/Caddyfile` |
+| DB·로그인 | Supabase (운영 프로젝트) | Auth URL Configuration에 사이트 주소 등록 |
+
+Cloudflare Pages 환경 변수: `VITE_API_BASE_URL=https://api-golmok-radar.axworks.site`(끝에 `/api` 없음), `VITE_KAKAO_MAP_KEY`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. 서버 `backend/.env`는 `backend/.env.example`의 항목을 따르며 `CORS_ORIGINS=["https://golmok-radar.axworks.site"]` 한 줄만 둡니다. 카카오 JavaScript SDK 도메인에도 사이트 주소를 등록합니다.
+
+**코드 갱신**: 프런트는 `main`에 올리면 자동 배포됩니다. 백엔드는 Lightsail SSH에서 다음 순서로 갱신합니다.
+
+```bash
+cd ~/apps/ax-webapp && git pull origin main
+```
+
+```bash
+cd ~/apps/ax-webapp/backend && .venv/bin/python -m pip install -r requirements.txt && .venv/bin/python -m alembic upgrade head
+```
+
+```bash
+sudo systemctl restart golmok-radar-backend && bash ~/apps/ax-webapp/scripts/server_status.sh api-golmok-radar.axworks.site
+```
+
+두 번째 줄은 `requirements.txt`나 `backend/alembic/versions`가 바뀐 경우에만 필요합니다. 마이그레이션은 운영 DB를 바꾸므로 먼저 테스트 DB에서 확인합니다.
+
+**되돌리기**: 프런트는 Cloudflare Deployments에서 이전 배포의 `⋯ → Rollback to this deployment`를 누릅니다. 백엔드는 `git log --oneline -5`로 이전 커밋을 찾아 `git switch --detach <커밋>` 후 서비스를 재시작하고, 문제를 고친 뒤 `git switch main && git pull origin main`으로 돌아옵니다. 그 사이에 적용한 마이그레이션이 원인일 때만 `alembic downgrade -1`을 씁니다.
+
+**상태 점검**: `bash scripts/server_status.sh api-golmok-radar.axworks.site`가 서비스·Caddy 상태, 서버 안과 HTTPS 응답, 최근 24시간 오류 로그, 코드 버전·디스크, 설정 점검(`python -m app.env_check`, 비밀값 미출력), 리뷰 보고서 생성률(`python -m app.review_metrics`)을 차례로 보여 줍니다. 오류가 보이면 `journalctl -u golmok-radar-backend -n 100 --no-pager`로 자세히 봅니다.
+
+**리뷰 비교 준비 (서버)**: `KAKAO_REST_API_KEY`, `REVIEW_CAPTURE_ENCRYPTION_KEY`가 `backend/.env`에 있어야 하고, 수집용 Chromium을 설치합니다.
+
+```bash
+cd ~/apps/ax-webapp/backend && sudo .venv/bin/python -m playwright install-deps chromium && .venv/bin/python -m playwright install chromium
+```
+
+```bash
+cd ~/apps/ax-webapp/backend && .venv/bin/python -m app.env_check --browser
+```
+
+준비되지 않은 상태에서 리뷰 분석을 누르면 사용자에게 503 ‘리뷰 수집 저장 설정이 준비되지 않았습니다’가 표시됩니다. 비식별 리뷰 암호문은 서버의 `database/raw/reviews/`에 90일 보관 후 자동 삭제되며, 감사 기록에는 건수만 남습니다.
+
+**로그와 개인정보**: uvicorn 접속 로그에는 접속 IP와 요청 경로·쿼리(상권 코드, 업종, 리뷰 대상 가게 좌표)가 남습니다. 요청 본문, 리뷰 원문, 계정 이메일, 토큰은 로그에 남지 않습니다.
+
 ## 테스트
 
 전체 자동 검증은 루트에서 한 번에 실행할 수 있습니다.
@@ -152,7 +197,7 @@ pnpm run build
 Pop-Location
 ```
 
-Phase 44(2026-11-10) 기준 백엔드 pytest 151개, 프런트엔드 Vitest 96개 테스트가 있고 프런트엔드 빌드가 통과합니다. 백엔드 테스트 중 원천 파일이 필요한 4개(적재 통합 3개, 공식 경계 1개)는 필요한 `database/raw/` 파일이 모두 있을 때만 실행되고, 없으면 빠진 파일 이름과 함께 건너뜁니다. 지표의 손계산 기대값은 [docs/지표_손계산_기준표.xlsx](docs/지표_손계산_기준표.xlsx)에 고정되어 있습니다.
+2026-11-10 기준 백엔드 pytest 161개, 프런트엔드 Vitest 102개 테스트가 있고 프런트엔드 빌드가 통과합니다. 백엔드 테스트 중 원천 파일이 필요한 4개(적재 통합 3개, 공식 경계 1개)는 필요한 `database/raw/` 파일이 모두 있을 때만 실행되고, 없으면 빠진 파일 이름과 함께 건너뜁니다. 지표의 손계산 기대값은 [docs/지표_손계산_기준표.xlsx](docs/지표_손계산_기준표.xlsx)에 고정되어 있습니다.
 
 ## Supabase 연결
 
@@ -192,4 +237,4 @@ Pop-Location
 - 로그인 없이 저장한 관심 상권·기록은 현재 브라우저에 보관하며, 유효한 기록은 카카오 로그인 시 계정으로 이관됩니다.
 - 공공데이터는 추정 통계이며 매물 상태·임대료·시간대별 보행 동선 등은 현장에서 확인해야 합니다.
 - R-ONE 값은 서울 전체 또는 사용자가 직접 고른 공식 조사상권의 소규모상가 표본통계입니다. 서울시 골목상권과 경계가 다르며 개별 매물의 고유 임대료·평균 보증금이 아닙니다.
-- Supabase와 카카오맵의 로컬 실연결은 확인했습니다. 배포할 때는 운영 도메인을 카카오 JavaScript 키의 SDK 도메인에 별도로 등록해야 합니다.
+- 운영 배포(2026-11-10)에서 카카오 지도·로그인, Supabase, HTTPS 백엔드 연결을 확인했습니다. 도메인을 바꾸면 카카오 SDK 도메인, Supabase Auth URL, Cloudflare `VITE_API_BASE_URL`, 서버 `CORS_ORIGINS`, Caddyfile을 함께 바꿔야 합니다.
